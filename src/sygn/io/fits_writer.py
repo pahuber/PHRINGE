@@ -1,3 +1,3 @@
 class FITSWriter():
     def write(self, data):
-        pass
+        print('data written')

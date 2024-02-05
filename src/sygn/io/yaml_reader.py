@@ -1,4 +1,5 @@
 from pathlib import Path
+import yaml
 
 
 class YAMLReader:
@@ -6,4 +7,6 @@ class YAMLReader:
 
     def read(self, file_path: Path) -> dict:
         """Read a YAML file and return its content as a dictionary."""
-        pass
+        with open(file_path, 'r') as file:
+            dict = yaml.load(file, Loader=yaml.SafeLoader)
+        return dict

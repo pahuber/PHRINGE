@@ -16,8 +16,11 @@ classifiers = [
 Changelog = "https://github.com/pahuber/sygn/releases"
 
 [tool.poetry.dependencies]
-python = ">=3.7"
+python = "^3.9"
 click = ">=8.0.1"
+numpy = "^1.26.3"
+astropy = "^6.0.0"
+pydantic = "^2.6.1"
 
 [tool.poetry.dev-dependencies]
 Pygments = ">=2.10.0"

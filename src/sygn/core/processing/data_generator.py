@@ -1,7 +1,7 @@
-from sygn.src.sygn.core.entities.observation import Observation
-from sygn.src.sygn.core.entities.observatory.observatory import Observatory
-from sygn.src.sygn.core.entities.settings import Settings
-from sygn.src.sygn.core.entities.system import System
+from src.sygn.core.entities.observation import Observation
+from src.sygn.core.entities.observatory.observatory import Observatory
+from src.sygn.core.entities.settings import Settings
+from src.sygn.core.entities.system import System
 
 
 class DataGenerator():

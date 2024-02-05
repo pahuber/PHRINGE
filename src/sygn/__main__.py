@@ -1,38 +1,43 @@
 """Command-line interface."""
 from pathlib import Path
 
-import numpy as np
 import click
 
-from sygn.src.sygn.core.entities.observation import Observation
-from sygn.src.sygn.core.entities.observatory.observatory import Observatory
-from sygn.src.sygn.core.entities.settings import Settings
-from sygn.src.sygn.core.entities.system import System
-from sygn.src.sygn.core.processing.data_generator import DataGenerator
-from sygn.src.sygn.io.fits_writer import FITSWriter
-from sygn.src.sygn.io.txt_reader import TXTReader
-from sygn.src.sygn.io.yaml_reader import YAMLReader
+from src.sygn.core.entities.observation import Observation
+from src.sygn.core.entities.observatory.observatory import Observatory
+from src.sygn.core.entities.settings import Settings
+from src.sygn.core.entities.system import System
+from src.sygn.core.processing.data_generator import DataGenerator
+from src.sygn.io.fits_writer import FITSWriter
+from src.sygn.io.txt_reader import TXTReader
+from src.sygn.io.yaml_reader import YAMLReader
 
 
 @click.command()
 @click.version_option()
-@click.option('--config', type=Path, help="Path to the configuration YAML file.", required=True)
-@click.option('--system', type=Path, help="Path to the planetary system context YAML file.", required=True)
-@click.option('--spectrum', type=Path, help="Path to the spectrum text file.", required=False)
-def main(config, system, spectrum=None) -> None:
+@click.argument('config_file_path', type=Path, help="Path to the configuration YAML file.", required=True)
+@click.argument('system_context_file_path', type=Path, help="Path to the planetary system context YAML file.",
+                required=True)
+@click.option('--spectrum_file_path', '-s', type=Path, help="Path to the spectrum text file.", required=False)
+def parse_arguments(config_file_path, system_context_file_path, spectrum_file_path=None) -> None:
     """SYGN. Generate synthetic photometry data for space-based nulling interferometers."""
-    config_dict = YAMLReader().read(config)
-    system_dict = YAMLReader().read(system)
-    spectrum = TXTReader().read(spectrum) if spectrum else None
+    return main(config_file_path, system_context_file_path, spectrum_file_path)
 
-    settings = Settings(**config_dict)
-    observation = Observation(**config_dict)
-    observatory = Observatory(**config_dict)
+
+def main(config_file_path, system_context_file_path, spectrum_file_path=None) -> None:
+    """SYGN. Generate synthetic photometry data for space-based nulling interferometers."""
+    config_dict = YAMLReader().read(config_file_path)
+    system_dict = YAMLReader().read(system_context_file_path)
+    spectrum = TXTReader().read(spectrum_file_path) if spectrum_file_path else None
+
+    settings = Settings(**config_dict['settings'])
+    observation = Observation(**config_dict['observation'])
+    observatory = Observatory(**config_dict['observatory'])
     system = System(**system_dict)
 
     settings.prepare(observation)
     observation.prepare()
-    observatory.prepare(settings)
+    observatory.prepare(settings, observation)
     system.prepare(settings, observatory, spectrum)
 
     data_generator = DataGenerator(settings=settings,
@@ -46,4 +51,4 @@ def main(config, system, spectrum=None) -> None:
 
 
 if __name__ == "__main__":
-    main(prog_name="sygn")  # pragma: no cover
+    parse_arguments(prog_name="SYGN")
