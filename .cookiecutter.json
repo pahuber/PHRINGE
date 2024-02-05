@@ -1,0 +1,16 @@
+{
+  "_checkout": "2022.6.3",
+  "_output_dir": "C:\\Users\\huber\\Desktop\\SYGN",
+  "_repo_dir": "C:\\Users\\huber\\.cookiecutters\\cookiecutter-hypermodern-python",
+  "_template": "gh:cjolowicz/cookiecutter-hypermodern-python",
+  "author": "Philipp A. Huber",
+  "copyright_year": "2024",
+  "development_status": "Development Status :: 4 - Beta",
+  "email": "huberph@phys.ethz.ch",
+  "friendly_name": "SYGN",
+  "github_user": "pahuber",
+  "license": "MIT",
+  "package_name": "sygn",
+  "project_name": "sygn",
+  "version": "0.0.0"
+}
