@@ -1,1 +1,1 @@
-"""Test suite for the sygn package."""
+"""Test suite for the SYGN package."""
