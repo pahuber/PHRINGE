@@ -11,7 +11,7 @@ star:
   luminosity: 1 Lsun
   right_ascension: 0 h
   declination: -75 deg
-zodi:
+exozodi:
   level: 3
   inclination: 0 deg
 planets:

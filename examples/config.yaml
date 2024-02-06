@@ -22,7 +22,7 @@ settings:
 # -------------------------------------------
 observation:
   total_integration_time: 1 d
-  exposure_time: 1 min
+  exposure_time: 10 min
   modulation_period: 1 d
   baseline_ratio: 6
   baseline_maximum: 600 m
@@ -43,7 +43,7 @@ observatory:
   unperturbed_instrument_throughput: 0.1
   amplitude_perturbation_rms: 0.7
   amplitude_falloff_exponent: 1
-  phase_rms: 0.1 rad
+  phase_perturbation_rms: 0.1 nm
   phase_falloff_exponent: 1
   polarization_perturbation_rms: 0.1 rad
   polarization_falloff_exponent: 1
