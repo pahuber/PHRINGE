@@ -9,11 +9,11 @@ class DataGenerator():
                  settings: Settings,
                  observation: Observation,
                  observatory: Observatory,
-                 system: Scene):
+                 scene: Scene):
         self.settings = settings
         self.observation = observation
         self.observatory = observatory
-        self.system = system
+        self.scene = scene
 
     def run(self) -> dict:
         # ...
