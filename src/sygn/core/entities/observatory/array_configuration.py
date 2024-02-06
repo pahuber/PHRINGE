@@ -19,8 +19,6 @@ class ArrayConfigurationEnum(Enum):
 class ArrayConfiguration(ABC, BaseModel):
     """Class representation of a collector array configuration.
     """
-    _modulation_period: Any
-    _baseline_ratio: int
     baseline_length: Any = None
     type: Any = None
 
