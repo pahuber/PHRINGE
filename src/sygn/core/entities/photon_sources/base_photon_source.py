@@ -1,15 +1,15 @@
 from abc import ABC, abstractmethod
-from typing import Any, Union
+from typing import Any
 
 import numpy as np
 from pydantic import BaseModel
+
+from src.sygn.core.util.helpers import Coordinates
 
 
 class BasePhotonSource(ABC, BaseModel):
     """Class representation of a photon source.
 
-    :param mean_spectral_flux_density: An array containing for each wavelength the mean spectral flux density in units
-        of ph/(s * um * m**2)
     :param sky_brightness_distribution: An array containing for each time and wavelength a grid with the sky
         brightness distribution of the photon source in units of ph/(s * um * m**2). If the sky brightness distribution
         is constant over time, then the time axis is omitted
@@ -22,16 +22,17 @@ class BasePhotonSource(ABC, BaseModel):
     sky_coordinates: Any = None
 
     @abstractmethod
-    def _calculate_mean_spectral_flux_density(self, context: Context) -> np.ndarray:
-        """Calculate and return the mean spectral flux density of the source object for each wavelength.
+    def _calculate_mean_spectral_flux_density(self,
+                                              wavelength_steps: np.ndarray,
+                                              **kwargs) -> np.ndarray:
+        """Return the mean spectral flux density of the source object for each wavelength.
 
-        :param context: The context
         :return: The mean spectral flux density
         """
         pass
 
     @abstractmethod
-    def _calculate_sky_brightness_distribution(self, context: Context) -> np.ndarray:
+    def _calculate_sky_brightness_distribution(self, grid_size: int, **kwargs) -> np.ndarray:
         """Calculate and return the sky brightness distribution of the source object for each (time and) wavelength.
 
         :param context: The context
@@ -40,52 +41,21 @@ class BasePhotonSource(ABC, BaseModel):
         pass
 
     @abstractmethod
-    def _calculate_sky_coordinates(
-            self, context: Context
-    ) -> Union[np.ndarray, Coordinates]:
-        """Calculate and return the sky coordinates of the source (for each time).
+    def _calculate_sky_coordinates(self, grid_size: int, **kwargs) -> Coordinates:
+        """Calculate and return the sky coordinates of the source for a given time. For moving sources, such as planets,
+         the sky coordinates might change over time.
 
-        :param context: The context
         :return: A tuple containing the x- and y-sky coordinate maps
         """
         pass
 
-    @abstractmethod
-    def get_sky_brightness_distribution(
-            self, index_time: int, index_wavelength: int
-    ) -> np.ndarray:
-        """Return the sky brightness distribution for the respective time and wavelength index.
-
-        :param index_time: The time index
-        :param index_wavelength: The wavelength index
-        :return: The sky brightness distribution
+    def prepare(self,
+                wavelength_steps,
+                grid_size,
+                **kwargs):
+        """Prepare the photon source for the simulation. This method is called before the simulation starts and can be
+        used to pre-calculate values that are constant over time and/or wavelength.
         """
-        pass
-
-    @abstractmethod
-    def get_sky_coordinates(
-            self, index_time: int, index_wavelength: int
-    ) -> Coordinates:
-        """Return the sky coordinates for the respective time and wavelength index.
-
-        :param index_time: The time index
-        :param index_wavelength: The wavelength index
-        :return: The sky coordinates
-        """
-        pass
-
-    def setup(self, context: Context):
-        """Set up the main properties of the photon source. Rather than calling this method on initialization of the
-        class instance, it has to be called explicitly after initiating the photon source object. This ensures a
-        flexibility in adapting source properties (e.g. temperature) on the fly without having to load a separate
-        configuration file for each adaptation, as the setup also requires information that is not source specific.
-
-        :param context: The context
-        """
-        self.mean_spectral_flux_density = self._calculate_mean_spectral_flux_density(
-            context
-        )
-        self.sky_coordinates = self._calculate_sky_coordinates(context)
-        self.sky_brightness_distribution = self._calculate_sky_brightness_distribution(
-            context
-        )
+        self.mean_spectral_flux_density = self._calculate_mean_spectral_flux_density(wavelength_steps, **kwargs)
+        self.sky_coordinates = self._calculate_sky_coordinates(grid_size, **kwargs)
+        self.sky_brightness_distribution = self._calculate_sky_brightness_distribution(grid_size, **kwargs)
