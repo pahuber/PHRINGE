@@ -5,7 +5,7 @@ from src.sygn.core.entities.photon_sources.base_photon_source import BasePhotonS
 
 
 class Exozodi(BasePhotonSource, BaseModel):
-    pass
+    # TODO: Implement class
 
     def _calculate_mean_spectral_flux_density(self) -> np.ndarray:
         pass
