@@ -15,17 +15,16 @@ from src.sygn.io.yaml_reader import YAMLReader
 
 @click.command()
 @click.version_option()
-@click.argument('config_file_path', type=Path, required=True)
-@click.argument('system_context_file_path', type=Path, required=True)
+@click.argument('config_file_path', type=click.Path(exists=True), required=True)
+@click.argument('system_context_file_path', type=click.Path(exists=True), required=True)
 @click.option('--spectrum_file_path', '-s', type=Path, help="Path to the spectrum text file.", required=False)
-def parse_arguments(config_file_path, system_context_file_path, spectrum_file_path=None) -> None:
+def cli(config_file_path: Path, system_context_file_path: Path, spectrum_file_path=None) -> None:
     """SYGN. Generate synthetic photometry data for space-based nulling interferometers."""
     main(config_file_path, system_context_file_path, spectrum_file_path)
 
 
 def main(config_file_path, system_context_file_path, spectrum_file_path=None) -> None:
-    """SYGN. Generate synthetic photometry data for space-based nulling interferometers.
-    """
+    """Main function."""
     config_dict = YAMLReader().read(config_file_path)
     system_dict = YAMLReader().read(system_context_file_path)
     planet_spectrum = TXTReader().read(spectrum_file_path) if spectrum_file_path else None
@@ -40,7 +39,7 @@ def main(config_file_path, system_context_file_path, spectrum_file_path=None) ->
     observatory.prepare(settings, observation)
     scene.prepare(settings, observatory, planet_spectrum)
 
-    data_generator = DataGenerator(settings=settings, observation=observation, observatory=observatory, system=system)
+    data_generator = DataGenerator(settings=settings, observation=observation, observatory=observatory, scene=scene)
     data = data_generator.run()
 
     fits_writer = FITSWriter()
@@ -48,4 +47,4 @@ def main(config_file_path, system_context_file_path, spectrum_file_path=None) ->
 
 
 if __name__ == "__main__":
-    parse_arguments(prog_name="SYGN")
+    cli(prog_name="SYGN")
