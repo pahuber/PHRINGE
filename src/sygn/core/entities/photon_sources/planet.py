@@ -140,7 +140,7 @@ class Planet(BasePhotonSource, BaseModel):
                 (number_of_wavelength_steps, grid_size, grid_size)) * self.mean_spectral_flux_density.unit
             index_x = get_index_of_closest_value(self.sky_coordinates.x[0, :], self.angular_separation_from_star_x)
             index_y = get_index_of_closest_value(self.sky_coordinates.y[:, 0], self.angular_separation_from_star_y)
-            sky_brightness_distribution[:, index_x, index_y] = self.mean_spectral_flux_density
+            sky_brightness_distribution[:, index_y, index_x] = self.mean_spectral_flux_density
         return sky_brightness_distribution
 
     def _calculate_sky_coordinates(self, grid_size, **kwargs) -> Coordinates:
