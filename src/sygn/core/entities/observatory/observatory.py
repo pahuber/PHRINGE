@@ -126,6 +126,15 @@ class Observatory(BaseComponent, BaseModel):
         """
         return self._wavelength_bins[1]
 
+    @cached_property
+    def wavelength_bin_edges(self) -> np.ndarray:
+        """Return the wavelength bin edges.
+
+        :return: An array containing the wavelength bin edges
+        """
+        return np.concatenate((self.wavelength_bin_centers - self.wavelength_bin_widths / 2,
+                               self.wavelength_bin_centers[-1:] + self.wavelength_bin_widths[-1:] / 2))
+
     def _calculate_amplitude_perturbation_time_series(self, settings) -> np.ndarray:
         return np.random.uniform(0.8, 0.9, (self.beam_combination_scheme.number_of_inputs, len(settings.time_steps))) \
             if settings.has_amplitude_perturbations else np.ones(
@@ -140,7 +149,7 @@ class Observatory(BaseComponent, BaseModel):
             self.phase_falloff_exponent
         ) \
             if settings.has_phase_perturbations else np.zeros(
-            (self.beam_combination_scheme.number_of_inputs, len(settings.time_steps)))
+            (self.beam_combination_scheme.number_of_inputs, len(settings.time_steps))) * u.um
 
     def _calculate_polarization_perturbation_time_series(self, settings, observation) -> np.ndarray:
         return get_perturbation_time_series(
@@ -151,7 +160,7 @@ class Observatory(BaseComponent, BaseModel):
             self.polarization_falloff_exponent
         ) \
             if settings.has_polarization_perturbations else np.zeros(
-            (self.beam_combination_scheme.number_of_inputs, len(settings.time_steps)))
+            (self.beam_combination_scheme.number_of_inputs, len(settings.time_steps))) * u.rad
 
     def _calculate_wavelength_bins(self) -> Tuple[np.ndarray, np.ndarray]:
         """Return the wavelength bin centers and widths. The wavelength bin widths are calculated starting from the
@@ -182,6 +191,7 @@ class Observatory(BaseComponent, BaseModel):
                               optimized_differential_output: int,
                               optimized_wavelength: astropy.units.Quantity,
                               optimized_angular_distance: astropy.units.Quantity):
+        # TODO: Check all factors again
         factors = (1,)
         match (self.array_configuration.type, self.beam_combination_scheme.type):
 
@@ -301,7 +311,7 @@ class Observatory(BaseComponent, BaseModel):
                 baseline_minimum.to(u.m).value <= optimal_baseline.value
                 and optimal_baseline.value <= baseline_maximum.to(u.m).value
         ):
-            self.array_configuration.baseline = optimal_baseline
+            self.array_configuration.baseline_length = optimal_baseline
         else:
             raise ValueError(
                 f"Optimal baseline of {optimal_baseline} is not within allowed ranges of baselines {self.array_configuration.baseline_minimum}-{self.array_configuration.baseline_maximum}"
