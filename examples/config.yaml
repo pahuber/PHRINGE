@@ -9,20 +9,20 @@
 # Simulation Settings Configuration
 # -------------------------------------------
 settings:
-  grid_size: 60
+  grid_size: 20
   has_planet_orbital_motion: false
-  has_stellar_leakage: true
-  has_local_zodi_leakage: true
-  has_exozodi_leakage: true
-  has_amplitude_perturbations: true
-  has_phase_perturbations: true
-  has_polarization_perturbations: true
+  has_stellar_leakage: false
+  has_local_zodi_leakage: false
+  has_exozodi_leakage: false
+  has_amplitude_perturbations: false
+  has_phase_perturbations: false
+  has_polarization_perturbations: false
 # -------------------------------------------
 # Observation (Strategy) Configuration
 # -------------------------------------------
 observation:
   total_integration_time: 1 d
-  exposure_time: 10 min
+  exposure_time: 0.01 d
   modulation_period: 1 d
   baseline_ratio: 6
   baseline_maximum: 600 m
@@ -37,7 +37,7 @@ observatory:
   array_configuration: emma-x-circular-rotation
   beam_combination_scheme: double-bracewell
   aperture_diameter: 4 m
-  spectral_resolving_power: 30
+  spectral_resolving_power: 20
   wavelength_range_lower_limit: 4 um
   wavelength_range_upper_limit: 18 um
   unperturbed_instrument_throughput: 0.1
