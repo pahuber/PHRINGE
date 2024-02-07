@@ -1,6 +1,8 @@
+from functools import cached_property
 from typing import Any
 
 import numpy as np
+from astropy.units import Quantity
 from pydantic import BaseModel
 
 from src.sygn.core.entities.base_component import BaseComponent
@@ -18,6 +20,14 @@ class Settings(BaseComponent, BaseModel):
     has_polarization_perturbations: bool
     time_steps: Any = None
     wavelength_steps: Any = None
+
+    @cached_property
+    def time_step_duration(self) -> Quantity:
+        """Return the time step duration.
+
+        :return: The time step duration
+        """
+        return self.time_steps[1] - self.time_steps[0]
 
     def _calculate_time_steps(self, observation) -> np.ndarray:
         """Calculate the time steps.
