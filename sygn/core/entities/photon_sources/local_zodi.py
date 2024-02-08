@@ -7,9 +7,9 @@ from astropy.units import Quantity
 from pydantic import BaseModel
 
 from sygn.core.entities.photon_sources.base_photon_source import BasePhotonSource
-from sygn.util import Coordinates
-from sygn.util import create_blackbody_spectrum
-from sygn.util import get_meshgrid
+from sygn.util.blackbody import create_blackbody_spectrum
+from sygn.util.grid import get_meshgrid
+from sygn.util.helpers import Coordinates
 
 
 class LocalZodi(BasePhotonSource, BaseModel):
@@ -34,7 +34,7 @@ class LocalZodi(BasePhotonSource, BaseModel):
                    * ((1 * u.Rsun).to(u.au) / (1.5 * u.au)) ** 2)
                 * (
                         (np.pi / np.arccos(
-                            np.cos(relative_ecliptic_longitude) * np.cos(ecliptic_latitude))) / (
+                            np.cos(relative_ecliptic_longitude) * np.cos(ecliptic_latitude)).value) / (
                                 np.sin(ecliptic_latitude) ** 2 + 0.6 * (
                                 wavelength_steps / (
                                 11 * u.um)) ** (

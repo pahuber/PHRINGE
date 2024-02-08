@@ -9,21 +9,21 @@
 # Simulation Settings Configuration
 # -------------------------------------------
 settings:
-  grid_size: 20
+  grid_size: 30
   has_planet_orbital_motion: false
   has_stellar_leakage: true
   has_local_zodi_leakage: false
   has_exozodi_leakage: false
   has_amplitude_perturbations: false
-  has_phase_perturbations: true
-  has_polarization_perturbations: true
+  has_phase_perturbations: false
+  has_polarization_perturbations: false
 # -------------------------------------------
 # Observation (Strategy) Configuration
 # -------------------------------------------
 observation:
-  total_integration_time: 100 d
-  exposure_time: 1 d
-  modulation_period: 100 d
+  total_integration_time: 1 d
+  exposure_time: 0.01 d
+  modulation_period: 1 d
   baseline_ratio: 6
   baseline_maximum: 600 m
   baseline_minimum: 5 m
