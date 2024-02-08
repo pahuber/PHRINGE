@@ -1,5 +1,6 @@
 import numpy as np
 from astropy import units as u
+from numba import jit, complex128, float64, uint64
 from numpy.random import normal, poisson
 from tqdm.contrib.itertools import product
 
@@ -11,6 +12,36 @@ from sygn.core.entities.scene import Scene
 from sygn.core.entities.settings import Settings
 from sygn.util.grid import get_index_of_closest_value
 from sygn.util.helpers import Coordinates
+
+
+@jit(complex128[:, :](float64, uint64, uint64, float64, float64[:, :], float64[:, :], float64[:], float64[:],
+                      float64[:, :], float64[:, :]), nopython=True, nogil=True, fastmath=True)
+def _calculate_complex_amplitude_base_jit(
+        aperture_radius: float,
+        index_input: int,
+        index_time: int,
+        wavelength: float,
+        amplitude_perturbation_time_series: np.ndarray,
+        phase_perturbation_time_series: np.ndarray,
+        observatory_coordinates_x: np.ndarray,
+        observatory_coordinates_y: np.ndarray,
+        source_sky_coordinates_x: np.ndarray,
+        source_sky_coordinates_y: np.ndarray,
+) -> np.ndarray:
+    """Calculate the complex amplitude element for a single polarization.
+
+    :param index_input: The index of the input
+    :param index_time: The index of the time
+    :param wavelength: The wavelength
+    :param observatory_coordinates: The observatory coordinates
+    :param source_sky_coordinates: The source sky coordinates
+    :return: The complex amplitude element
+    """
+    return (amplitude_perturbation_time_series[index_input][index_time] * aperture_radius
+            * np.exp(1j * 2 * np.pi / wavelength * (
+                    observatory_coordinates_x[index_input] * source_sky_coordinates_x +
+                    observatory_coordinates_y[index_input] * source_sky_coordinates_y +
+                    phase_perturbation_time_series[index_input][index_time])))
 
 
 class DataGenerator():
@@ -117,29 +148,6 @@ class DataGenerator():
         #     return round(normal(mean_photon_counts, 1))
         # return np.random.poisson(mean_photon_counts)
 
-    def _calculate_complex_amplitude_base(
-            self,
-            index_input,
-            index_time,
-            wavelength,
-            observatory_coordinates,
-            source_sky_coordinates
-    ) -> np.ndarray:
-        """Calculate the complex amplitude element for a single polarization.
-
-        :param index_input: The index of the input
-        :param index_time: The index of the time
-        :param wavelength: The wavelength
-        :param observatory_coordinates: The observatory coordinates
-        :param source_sky_coordinates: The source sky coordinates
-        :return: The complex amplitude element
-        """
-        return (self.amplitude_perturbation_time_series[index_input][index_time] * self.aperture_radius
-                * np.exp(1j * 2 * np.pi / wavelength * (
-                        observatory_coordinates.x[index_input] * source_sky_coordinates.x +
-                        observatory_coordinates.y[index_input] * source_sky_coordinates.y +
-                        self.phase_perturbation_time_series[index_input][index_time])))
-
     def _calculate_complex_amplitude(self, time, wavelength, source) -> np.ndarray:
         """Calculate the complex amplitude.
 
@@ -163,25 +171,75 @@ class DataGenerator():
 
         for index_input in range(self.number_of_inputs):
             complex_amplitude[index_input][0] = (
-                    self._calculate_complex_amplitude_base(
+                    _calculate_complex_amplitude_base_jit(
+                        self.aperture_radius,
                         index_input,
                         index_time,
                         wavelength,
-                        observatory_coordinates,
-                        source_sky_coordinates
+                        self.amplitude_perturbation_time_series,
+                        self.phase_perturbation_time_series,
+                        observatory_coordinates.x,
+                        observatory_coordinates.y,
+                        source_sky_coordinates.x,
+                        source_sky_coordinates.y
                     )
+
+                    # self._calculate_complex_amplitude_base(
+                    #     index_input,
+                    #     index_time,
+                    #     wavelength,
+                    #     observatory_coordinates,
+                    #     source_sky_coordinates
+                    # )
+
                     * np.cos(polarization_angle + self.polarization_perturbation_time_series[index_input][index_time]))
 
             complex_amplitude[index_input][1] = (
-                    self._calculate_complex_amplitude_base(
+                    _calculate_complex_amplitude_base_jit(
+                        self.aperture_radius,
                         index_input,
                         index_time,
                         wavelength,
-                        observatory_coordinates,
-                        source_sky_coordinates
+                        self.amplitude_perturbation_time_series,
+                        self.phase_perturbation_time_series,
+                        observatory_coordinates.x,
+                        observatory_coordinates.y,
+                        source_sky_coordinates.x,
+                        source_sky_coordinates.y
                     )
+
+                    # self._calculate_complex_amplitude_base(
+                    #     index_input,
+                    #     index_time,
+                    #     wavelength,
+                    #     observatory_coordinates,
+                    #     source_sky_coordinates
+                    # )
                     * np.sin(polarization_angle + self.polarization_perturbation_time_series[index_input][index_time]))
         return complex_amplitude
+
+    def _calculate_complex_amplitude_base(
+            self,
+            index_input: int,
+            index_time: int,
+            wavelength: float,
+            observatory_coordinates: Coordinates,
+            source_sky_coordinates: Coordinates
+    ) -> np.ndarray:
+        """Calculate the complex amplitude element for a single polarization.
+
+        :param index_input: The index of the input
+        :param index_time: The index of the time
+        :param wavelength: The wavelength
+        :param observatory_coordinates: The observatory coordinates
+        :param source_sky_coordinates: The source sky coordinates
+        :return: The complex amplitude element
+        """
+        return (self.amplitude_perturbation_time_series[index_input][index_time] * self.aperture_radius
+                * np.exp(1j * 2 * np.pi / wavelength * (
+                        observatory_coordinates.x[index_input] * source_sky_coordinates.x +
+                        observatory_coordinates.y[index_input] * source_sky_coordinates.y +
+                        self.phase_perturbation_time_series[index_input][index_time])))
 
     def _calculate_intensity_response(self, time, wavelength, source) -> np.ndarray:
         """Calculate the intensity response.
