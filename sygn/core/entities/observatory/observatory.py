@@ -8,8 +8,8 @@ from astropy.units import Quantity
 from pydantic import BaseModel, field_validator
 from pydantic_core.core_schema import ValidationInfo
 
-from src.sygn.core.entities.base_component import BaseComponent
-from src.sygn.core.entities.observatory.array_configuration import (
+from sygn.core.entities.base_component import BaseComponent
+from sygn.core.entities.observatory.array_configuration import (
     ArrayConfiguration,
     ArrayConfigurationEnum,
     EmmaXCircularRotation,
@@ -17,7 +17,7 @@ from src.sygn.core.entities.observatory.array_configuration import (
     EquilateralTriangleCircularRotation,
     RegularPentagonCircularRotation,
 )
-from src.sygn.core.entities.observatory.beam_combination_scheme import (
+from sygn.core.entities.observatory.beam_combination_scheme import (
     BeamCombinationScheme,
     BeamCombinationSchemeEnum,
     DoubleBracewell,
@@ -25,9 +25,9 @@ from src.sygn.core.entities.observatory.beam_combination_scheme import (
     Kernel4,
     Kernel5,
 )
-from src.sygn.core.entities.photon_sources.star import Star
-from src.sygn.core.util.noise_generator import get_perturbation_time_series
-from src.sygn.io.validators import validate_quantity_units
+from sygn.core.entities.photon_sources.star import Star
+from sygn.core.util.noise_generator import get_perturbation_time_series
+from sygn.io.validators import validate_quantity_units
 
 
 class Observatory(BaseComponent, BaseModel):

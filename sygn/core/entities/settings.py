@@ -5,7 +5,7 @@ import numpy as np
 from astropy.units import Quantity
 from pydantic import BaseModel
 
-from src.sygn.core.entities.base_component import BaseComponent
+from sygn.core.entities.base_component import BaseComponent
 
 
 class Settings(BaseComponent, BaseModel):

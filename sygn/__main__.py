@@ -4,14 +4,14 @@ from pathlib import Path
 import click
 from matplotlib import pyplot as plt
 
-from src.sygn.core.entities.observation import Observation
-from src.sygn.core.entities.observatory.observatory import Observatory
-from src.sygn.core.entities.scene import Scene
-from src.sygn.core.entities.settings import Settings
-from src.sygn.core.processing.data_generator import DataGenerator
-from src.sygn.io.fits_writer import FITSWriter
-from src.sygn.io.txt_reader import TXTReader
-from src.sygn.io.yaml_reader import YAMLReader
+from sygn.core.entities.observation import Observation
+from sygn.core.entities.observatory.observatory import Observatory
+from sygn.core.entities.scene import Scene
+from sygn.core.entities.settings import Settings
+from sygn.core.processing.data_generator import DataGenerator
+from sygn.io.fits_writer import FITSWriter
+from sygn.io.txt_reader import TXTReader
+from sygn.io.yaml_reader import YAMLReader
 
 
 @click.command()
@@ -27,8 +27,14 @@ def cli(config_file_path: Path, system_context_file_path: Path, spectrum_file_pa
     main(config_file_path, system_context_file_path, spectrum_file_path, output_dir)
 
 
-def main(config_file_path, system_context_file_path, spectrum_file_path=None, output_dir: Path = None) -> None:
-    """Main function."""
+def main(config_file_path, system_context_file_path, spectrum_file_path=None, output_dir: Path = None):
+    """Main function.
+
+    :param config_file_path: Path to the configuration file
+    :param system_context_file_path: Path to the system context file
+    :param spectrum_file_path: Path to the spectrum file
+    :param output_dir: Path to the output directory
+    """
     config_dict = YAMLReader().read(config_file_path)
     system_dict = YAMLReader().read(system_context_file_path)
     planet_spectrum = TXTReader().read(spectrum_file_path) if spectrum_file_path else None

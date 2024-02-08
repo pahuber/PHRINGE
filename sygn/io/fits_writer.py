@@ -15,5 +15,5 @@ class FITSWriter():
             hdu = fits.ImageHDU(data_per_output)
             hdu_list.append(hdu)
         hdul = fits.HDUList(hdu_list)
-        output_dir = Path(output_dir) if output_dir else Path('.')
+        output_dir = Path(output_dir) if output_dir else Path('')
         hdul.writeto(output_dir.joinpath(f'data_{datetime.now().strftime("%Y%m%d_%H%M%S.%f")}.fits'))

@@ -1,7 +1,7 @@
 import numpy as np
 from pydantic import BaseModel
 
-from src.sygn.core.entities.photon_sources.base_photon_source import BasePhotonSource
+from sygn.core.entities.photon_sources.base_photon_source import BasePhotonSource
 
 
 class Exozodi(BasePhotonSource, BaseModel):

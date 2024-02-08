@@ -8,8 +8,8 @@ from astropy import units as u
 from astropy.units import Quantity
 from pydantic import BaseModel
 
-from src.sygn.core.util.helpers import Coordinates
-from src.sygn.io.matrix import get_2d_rotation_matrix
+from sygn.core.util.helpers import Coordinates
+from sygn.io.matrix import get_2d_rotation_matrix
 
 
 class ArrayConfigurationEnum(Enum):
@@ -23,19 +23,26 @@ class ArrayConfigurationEnum(Enum):
 
 class ArrayConfiguration(ABC, BaseModel):
     """Class representation of a collector array configuration.
+
+    :param baseline_length: The length of the baseline
+    :param type: The type of the array configuration
     """
     baseline_length: Any = None
     type: Any = None
 
     @abstractmethod
-    def get_collector_positions(self,
-                                time_step: Quantity,
-                                modulation_period: Quantity,
-                                baseline_ratio: int) -> Coordinates:
-        """Return an array containing the time-dependent x- and y-coordinates of the collectors.
+    def get_collector_coordinates(
+            self,
+            time_step: Quantity,
+            modulation_period: Quantity,
+            baseline_ratio: int
+    ) -> Coordinates:
+        """Return time-dependent x- and y-coordinates of the collectors.
 
-        :param time_step: Time variable in seconds
-        :return: An array containing the coordinates.
+        :param time_step: The time step for which the collector positions are calculated
+        :param modulation_period: The modulation period of the array
+        :param baseline_ratio: The baseline ratio of the array
+        :return: The coordinates of the collectors
         """
         pass
 
@@ -45,10 +52,10 @@ class EmmaXCircularRotation(ArrayConfiguration):
     """
     type: Any = ArrayConfigurationEnum.EMMA_X_CIRCULAR_ROTATION
 
-    def get_collector_positions(self,
-                                time_step: Quantity,
-                                modulation_period: Quantity,
-                                baseline_ratio: int) -> Coordinates:
+    def get_collector_coordinates(self,
+                                  time_step: Quantity,
+                                  modulation_period: Quantity,
+                                  baseline_ratio: int) -> Coordinates:
         rotation_matrix = get_2d_rotation_matrix(time_step, modulation_period)
         emma_x_static = self.baseline_length / 2 * np.array(
             [[baseline_ratio, baseline_ratio, -baseline_ratio, -baseline_ratio], [1, -1, -1, 1]])
@@ -61,10 +68,10 @@ class EmmaXDoubleStretch(ArrayConfiguration):
     """
     type: Any = ArrayConfigurationEnum.EMMA_X_DOUBLE_STRETCH
 
-    def get_collector_positions(self,
-                                time_step: Quantity,
-                                modulation_period: Quantity,
-                                baseline_ratio: int) -> Coordinates:
+    def get_collector_coordinates(self,
+                                  time_step: Quantity,
+                                  modulation_period: Quantity,
+                                  baseline_ratio: int) -> Coordinates:
         emma_x_static = self.baseline_length / 2 * np.array(
             [[baseline_ratio, baseline_ratio, -baseline_ratio, -baseline_ratio], [1, -1, -1, 1]])
         # TODO: fix calculations
@@ -78,10 +85,10 @@ class EquilateralTriangleCircularRotation(ArrayConfiguration):
     """
     type: Any = ArrayConfigurationEnum.EQUILATERAL_TRIANGLE_CIRCULAR_ROTATION
 
-    def get_collector_positions(self,
-                                time_step: Quantity,
-                                modulation_period: Quantity,
-                                baseline_ratio: int) -> Coordinates:
+    def get_collector_coordinates(self,
+                                  time_step: Quantity,
+                                  modulation_period: Quantity,
+                                  baseline_ratio: int) -> Coordinates:
         height = np.sqrt(3) / 2 * self.baseline
         height_to_center = height / 3
         rotation_matrix = get_2d_rotation_matrix(time_step, modulation_period)
@@ -114,10 +121,10 @@ class RegularPentagonCircularRotation(ArrayConfiguration):
         """
         return 0.851 * self.baseline_length.value * np.sin(angle)
 
-    def get_collector_positions(self,
-                                time_step: Quantity,
-                                modulation_period: Quantity,
-                                baseline_ratio: int) -> Coordinates:
+    def get_collector_coordinates(self,
+                                  time_step: Quantity,
+                                  modulation_period: Quantity,
+                                  baseline_ratio: int) -> Coordinates:
         angles = [0, 2 * np.pi / 5, 4 * np.pi / 5, 6 * np.pi / 5, 8 * np.pi / 5]
         rotation_matrix = get_2d_rotation_matrix(time_step, modulation_period)
         pentagon_static = np.array([

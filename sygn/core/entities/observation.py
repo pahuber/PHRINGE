@@ -6,8 +6,8 @@ from astropy.units import Quantity
 from pydantic import BaseModel, field_validator
 from pydantic_core.core_schema import ValidationInfo
 
-from src.sygn.core.entities.base_component import BaseComponent
-from src.sygn.io.validators import validate_quantity_units
+from sygn.core.entities.base_component import BaseComponent
+from sygn.io.validators import validate_quantity_units
 
 
 class Observation(BaseComponent, BaseModel):

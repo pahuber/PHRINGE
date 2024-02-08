@@ -6,10 +6,10 @@ from astropy.coordinates import SkyCoord, GeocentricTrueEcliptic
 from astropy.units import Quantity
 from pydantic import BaseModel
 
-from src.sygn.core.entities.photon_sources.base_photon_source import BasePhotonSource
-from src.sygn.core.util.blackbody import create_blackbody_spectrum
-from src.sygn.core.util.grid import get_meshgrid
-from src.sygn.core.util.helpers import Coordinates
+from sygn.core.entities.photon_sources.base_photon_source import BasePhotonSource
+from sygn.core.util.blackbody import create_blackbody_spectrum
+from sygn.core.util.grid import get_meshgrid
+from sygn.core.util.helpers import Coordinates
 
 
 class LocalZodi(BasePhotonSource, BaseModel):

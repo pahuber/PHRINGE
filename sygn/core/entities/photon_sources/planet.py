@@ -10,11 +10,11 @@ from poliastro.twobody import Orbit
 from pydantic import BaseModel, field_validator
 from pydantic_core.core_schema import ValidationInfo
 
-from src.sygn.core.entities.photon_sources.base_photon_source import BasePhotonSource
-from src.sygn.core.util.blackbody import create_blackbody_spectrum
-from src.sygn.core.util.grid import get_index_of_closest_value, get_meshgrid
-from src.sygn.core.util.helpers import Coordinates
-from src.sygn.io.validators import validate_quantity_units
+from sygn.core.entities.photon_sources.base_photon_source import BasePhotonSource
+from sygn.core.util.blackbody import create_blackbody_spectrum
+from sygn.core.util.grid import get_index_of_closest_value, get_meshgrid
+from sygn.core.util.helpers import Coordinates
+from sygn.io.validators import validate_quantity_units
 
 
 class Planet(BasePhotonSource, BaseModel):

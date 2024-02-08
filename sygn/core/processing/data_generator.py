@@ -3,11 +3,11 @@ from astropy import units as u
 from numpy.random import normal
 from tqdm.contrib.itertools import product
 
-from src.sygn.core.entities.observation import Observation
-from src.sygn.core.entities.observatory.observatory import Observatory
-from src.sygn.core.entities.scene import Scene
-from src.sygn.core.entities.settings import Settings
-from src.sygn.core.util.grid import get_index_of_closest_value
+from sygn.core.entities.observation import Observation
+from sygn.core.entities.observatory.observatory import Observatory
+from sygn.core.entities.scene import Scene
+from sygn.core.entities.settings import Settings
+from sygn.core.util.grid import get_index_of_closest_value
 
 
 class DataGenerator():
