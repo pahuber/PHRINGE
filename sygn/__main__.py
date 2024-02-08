@@ -2,7 +2,6 @@
 from pathlib import Path
 
 import click
-from matplotlib import pyplot as plt
 
 from sygn.core.entities.observation import Observation
 from sygn.core.entities.observatory.observatory import Observatory
@@ -53,10 +52,6 @@ def main(config_file_path, system_context_file_path, spectrum_file_path=None, ou
     data = data_generator.run()
 
     fits_writer = FITSWriter().write(data, output_dir)
-
-    plt.imshow(data[0].value)
-    plt.colorbar()
-    plt.show()
 
 
 if __name__ == "__main__":
