@@ -183,15 +183,6 @@ class DataGenerator():
                         source_sky_coordinates.x,
                         source_sky_coordinates.y
                     )
-
-                    # self._calculate_complex_amplitude_base(
-                    #     index_input,
-                    #     index_time,
-                    #     wavelength,
-                    #     observatory_coordinates,
-                    #     source_sky_coordinates
-                    # )
-
                     * np.cos(polarization_angle + self.polarization_perturbation_time_series[index_input][index_time]))
 
             complex_amplitude[index_input][1] = (
@@ -207,39 +198,8 @@ class DataGenerator():
                         source_sky_coordinates.x,
                         source_sky_coordinates.y
                     )
-
-                    # self._calculate_complex_amplitude_base(
-                    #     index_input,
-                    #     index_time,
-                    #     wavelength,
-                    #     observatory_coordinates,
-                    #     source_sky_coordinates
-                    # )
                     * np.sin(polarization_angle + self.polarization_perturbation_time_series[index_input][index_time]))
         return complex_amplitude
-
-    def _calculate_complex_amplitude_base(
-            self,
-            index_input: int,
-            index_time: int,
-            wavelength: float,
-            observatory_coordinates: Coordinates,
-            source_sky_coordinates: Coordinates
-    ) -> np.ndarray:
-        """Calculate the complex amplitude element for a single polarization.
-
-        :param index_input: The index of the input
-        :param index_time: The index of the time
-        :param wavelength: The wavelength
-        :param observatory_coordinates: The observatory coordinates
-        :param source_sky_coordinates: The source sky coordinates
-        :return: The complex amplitude element
-        """
-        return (self.amplitude_perturbation_time_series[index_input][index_time] * self.aperture_radius
-                * np.exp(1j * 2 * np.pi / wavelength * (
-                        observatory_coordinates.x[index_input] * source_sky_coordinates.x +
-                        observatory_coordinates.y[index_input] * source_sky_coordinates.y +
-                        self.phase_perturbation_time_series[index_input][index_time])))
 
     def _calculate_intensity_response(self, time, wavelength, source) -> np.ndarray:
         """Calculate the intensity response.
