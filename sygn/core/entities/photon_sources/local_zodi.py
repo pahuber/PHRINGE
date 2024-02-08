@@ -34,7 +34,7 @@ class LocalZodi(BasePhotonSource, BaseModel):
                    * ((1 * u.Rsun).to(u.au) / (1.5 * u.au)) ** 2)
                 * (
                         (np.pi / np.arccos(
-                            np.cos(relative_ecliptic_longitude) * np.cos(ecliptic_latitude))) / (
+                            np.cos(relative_ecliptic_longitude) * np.cos(ecliptic_latitude)).value) / (
                                 np.sin(ecliptic_latitude) ** 2 + 0.6 * (
                                 wavelength_steps / (
                                 11 * u.um)) ** (

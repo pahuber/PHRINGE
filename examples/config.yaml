@@ -11,12 +11,12 @@
 settings:
   grid_size: 20
   has_planet_orbital_motion: false
-  has_stellar_leakage: true
+  has_stellar_leakage: false
   has_local_zodi_leakage: false
   has_exozodi_leakage: false
   has_amplitude_perturbations: false
-  has_phase_perturbations: true
-  has_polarization_perturbations: true
+  has_phase_perturbations: false
+  has_polarization_perturbations: false
 # -------------------------------------------
 # Observation (Strategy) Configuration
 # -------------------------------------------
