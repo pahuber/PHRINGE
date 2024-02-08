@@ -5,6 +5,7 @@ from tqdm.contrib.itertools import product
 
 from sygn.core.entities.observation import Observation
 from sygn.core.entities.observatory.observatory import Observatory
+from sygn.core.entities.photon_sources.planet import Planet
 from sygn.core.entities.scene import Scene
 from sygn.core.entities.settings import Settings
 from sygn.core.util.grid import get_index_of_closest_value
@@ -26,6 +27,7 @@ class DataGenerator():
     :param measured_wavelength_bin_widths: The measured wavelength bin widths
     :param measured_time_steps: The measured time steps
     :param grid_size: The grid size
+    :param has_planet_orbital_motion: The flag indicating whether the planet has orbital motion
     :param modulation_period: The modulation period
     :param number_of_inputs: The number of inputs
     :param number_of_outputs: The number of outputs
@@ -70,6 +72,7 @@ class DataGenerator():
         self.measured_time_steps = np.linspace(0, observation.total_integration_time,
                                                int(observation.total_integration_time / observation.exposure_time))
         self.grid_size = settings.grid_size
+        self.has_planet_orbital_motion = settings.has_planet_orbital_motion
         self.modulation_period = observation.modulation_period
         self.number_of_inputs = observatory.beam_combination_scheme.number_of_inputs
         self.number_of_outputs = observatory.beam_combination_scheme.number_of_outputs
@@ -125,12 +128,12 @@ class DataGenerator():
                         observatory_coordinates.y[index_input] * source_sky_coordinates.y.to(u.rad).value +
                         self.phase_perturbation_time_series[index_input][index_time].to(u.um))))
 
-    def _calculate_complex_amplitude(self, time, wavelength, source_sky_coordinates) -> np.ndarray:
+    def _calculate_complex_amplitude(self, time, wavelength, source) -> np.ndarray:
         """Calculate the complex amplitude.
 
         :param time: The time
         :param wavelength: The wavelength
-        :param source_sky_coordinates: The source sky coordinates
+        :param source: The source
         :return: The complex amplitude
         """
         complex_amplitude = np.zeros((self.number_of_inputs, 2, self.grid_size, self.grid_size), dtype=complex) * u.m
@@ -141,6 +144,11 @@ class DataGenerator():
         )
         index_time = int(np.where(self.time_steps == time)[0])
         polarization_angle = 0 * u.rad  # TODO: Check that we can set this to 0 without loss of generality
+
+        if self.has_planet_orbital_motion and isinstance(source, Planet):
+            source_sky_coordinates = source.sky_coordinates[index_time]
+        else:
+            source_sky_coordinates = source.sky_coordinates
 
         for index_input in range(self.number_of_inputs):
             complex_amplitude[index_input][0] = (
@@ -174,7 +182,7 @@ class DataGenerator():
         :param source: The source
         :return: The intensity response
         """
-        complex_amplitude = (self._calculate_complex_amplitude(time, wavelength, source.sky_coordinates)
+        complex_amplitude = (self._calculate_complex_amplitude(time, wavelength, source)
                              .reshape(self.number_of_inputs, 2, self.grid_size ** 2))
         return ((abs(np.dot(self.beam_combination_matrix, complex_amplitude[:, 0])) ** 2 +
                  abs(np.dot(self.beam_combination_matrix, complex_amplitude[:, 1])) ** 2)
@@ -191,17 +199,25 @@ class DataGenerator():
 
     def _calculate_photon_counts(
             self,
+            time,
             wavelength,
-            source_sky_brightness_distribution,
+            source,
             intensity_response
     ) -> np.ndarray:
         """Calculate the photon counts.
 
+        :param time: The time
         :param wavelength: The wavelength
-        :param source_sky_brightness_distribution: The source sky brightness distribution
+        :param source: The source
         :param intensity_response: The intensity response
         :return: The photon counts
         """
+        if self.has_planet_orbital_motion and isinstance(source, Planet):
+            index_time = int(np.where(self.time_steps == time)[0])
+            source_sky_brightness_distribution = source.sky_brightness_distribution[index_time]
+        else:
+            source_sky_brightness_distribution = source.sky_brightness_distribution
+
         photon_counts = np.zeros(self.number_of_outputs)
         normalization = self._calculate_normalization(source_sky_brightness_distribution)
         # TODO: Note this only holds for regular wavelength steps
@@ -237,11 +253,6 @@ class DataGenerator():
     def run(self) -> np.ndarray:
         """Run the data generator.
         """
-        # Set optimal baseline length
-        self.observatory.set_optimal_baseline(self.star, self.optimized_differential_output, self.optimized_wavelength,
-                                              self.optimized_star_separation, self.baseline_minimum,
-                                              self.baseline_maximum)
-
         # Run animation, if applicable
         # TODO: add animation
 
@@ -252,8 +263,12 @@ class DataGenerator():
             intensity_response = self._calculate_intensity_response(time, wavelength, source)
 
             # Calc photon counts
-            photon_counts = self._calculate_photon_counts(wavelength, source.sky_brightness_distribution,
-                                                          intensity_response)
+            photon_counts = self._calculate_photon_counts(
+                time,
+                wavelength,
+                source,
+                intensity_response
+            )
 
             # Bin the photon counts into the measured time and wavelength intervals
             index_wavelength, index_time = self._get_binning_indices(time, wavelength)

@@ -48,7 +48,7 @@ class Settings(BaseComponent, BaseModel):
         :return: The time steps
         """
         # TODO: Implement sensible calculation of the time steps
-        number_of_steps = int(observation.total_integration_time / observation.exposure_time)
+        # number_of_steps = int(observation.total_integration_time / observation.exposure_time)
         return np.linspace(0, observation.total_integration_time, 200)
 
     def _calculate_wavelength_steps(self, observatory) -> np.ndarray:

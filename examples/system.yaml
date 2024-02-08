@@ -21,7 +21,7 @@ planets:
     temperature: 288 K
     semi_major_axis: 1 au
     eccentricity: 0
-    inclination: 0 deg
+    inclination: 180 deg
     raan: 0 deg
     argument_of_periapsis: 0 deg
     true_anomaly: 0 deg

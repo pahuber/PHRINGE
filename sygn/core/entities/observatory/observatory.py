@@ -311,7 +311,7 @@ class Observatory(BaseComponent, BaseModel):
             case BeamCombinationSchemeEnum.KERNEL_5.value:
                 return Kernel5()
 
-    def prepare(self, settings, observation):
+    def prepare(self, settings, observation, scene):
         """Prepare the observatory for the simulation.
 
         :param settings: The settings object
@@ -325,6 +325,15 @@ class Observatory(BaseComponent, BaseModel):
 
         self.polarization_perturbation_time_series = self._calculate_polarization_perturbation_time_series(settings,
                                                                                                            observation)
+
+        self.set_optimal_baseline(
+            scene.star,
+            observation.optimized_differential_output,
+            observation.optimized_wavelength,
+            observation.optimized_star_separation,
+            observation.baseline_minimum,
+            observation.baseline_maximum
+        )
 
     def set_optimal_baseline(self,
                              star: Star,

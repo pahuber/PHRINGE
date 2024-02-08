@@ -89,7 +89,7 @@ class EquilateralTriangleCircularRotation(ArrayConfiguration):
                                   time_step: Quantity,
                                   modulation_period: Quantity,
                                   baseline_ratio: int) -> Coordinates:
-        height = np.sqrt(3) / 2 * self.baseline
+        height = np.sqrt(3) / 2 * self.baseline_length
         height_to_center = height / 3
         rotation_matrix = get_2d_rotation_matrix(time_step, modulation_period)
 
