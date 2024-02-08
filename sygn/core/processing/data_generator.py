@@ -1,6 +1,7 @@
 import numpy as np
 from astropy import units as u
 from numpy.random import normal, poisson
+from sygn.util.grid import get_index_of_closest_value
 from tqdm.contrib.itertools import product
 
 from sygn.core.entities.observation import Observation
@@ -8,7 +9,6 @@ from sygn.core.entities.observatory.observatory import Observatory
 from sygn.core.entities.photon_sources.planet import Planet
 from sygn.core.entities.scene import Scene
 from sygn.core.entities.settings import Settings
-from sygn.util import get_index_of_closest_value
 
 
 class DataGenerator():

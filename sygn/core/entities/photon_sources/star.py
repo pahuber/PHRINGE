@@ -9,9 +9,9 @@ from pydantic_core.core_schema import ValidationInfo
 
 from sygn.core.entities.photon_sources.base_photon_source import BasePhotonSource
 from sygn.io.validators import validate_quantity_units
-from sygn.util import Coordinates
-from sygn.util import create_blackbody_spectrum
-from sygn.util import get_meshgrid
+from sygn.util.blackbody import create_blackbody_spectrum
+from sygn.util.grid import get_meshgrid
+from sygn.util.helpers import Coordinates
 
 
 class Star(BasePhotonSource, BaseModel):
