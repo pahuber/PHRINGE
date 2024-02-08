@@ -1,14 +1,15 @@
 import numpy as np
 from astropy import units as u
 from numpy.random import normal, poisson
-from sygn.util.grid import get_index_of_closest_value
 from tqdm.contrib.itertools import product
 
 from sygn.core.entities.observation import Observation
 from sygn.core.entities.observatory.observatory import Observatory
+from sygn.core.entities.photon_sources.local_zodi import LocalZodi
 from sygn.core.entities.photon_sources.planet import Planet
 from sygn.core.entities.scene import Scene
 from sygn.core.entities.settings import Settings
+from sygn.util.grid import get_index_of_closest_value
 
 
 class DataGenerator():
@@ -149,10 +150,13 @@ class DataGenerator():
             self.baseline_ratio
         )
         index_time = int(np.where(self.time_steps == time)[0])
+        index_wavelength = int(np.where(self.wavelength_steps == wavelength)[0])
         polarization_angle = 0 * u.rad  # TODO: Check that we can set this to 0 without loss of generality
 
         if self.has_planet_orbital_motion and isinstance(source, Planet):
             source_sky_coordinates = source.sky_coordinates[index_time]
+        elif isinstance(source, LocalZodi):
+            source_sky_coordinates = source.sky_coordinates[index_wavelength]
         else:
             source_sky_coordinates = source.sky_coordinates
 
