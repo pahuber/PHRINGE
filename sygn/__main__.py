@@ -46,7 +46,7 @@ def main(config_file_path, system_context_file_path, spectrum_file_path=None, ou
 
     settings.prepare(observation, observatory)
     observation.prepare()
-    observatory.prepare(settings, observation)
+    observatory.prepare(settings, observation, scene)
     scene.prepare(settings, observatory, planet_spectrum)
 
     data_generator = DataGenerator(settings=settings, observation=observation, observatory=observatory, scene=scene)

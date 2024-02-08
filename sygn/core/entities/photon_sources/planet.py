@@ -38,7 +38,7 @@ class Planet(BasePhotonSource, BaseModel):
     radius: str
     temperature: str
     semi_major_axis: str
-    eccentricity: int
+    eccentricity: float
     inclination: str
     raan: str
     argument_of_periapsis: str
@@ -142,19 +142,23 @@ class Planet(BasePhotonSource, BaseModel):
         number_of_wavelength_steps = kwargs.get('number_of_wavelength_steps')
 
         if has_planet_orbital_motion:
-            sky_brightness_distribution = np.zeros(
-                (len(self.sky_coordinates), number_of_wavelength_steps, grid_size, grid_size)) * \
-                                          self.mean_spectral_flux_density[0].unit
-            for index_sky_coordinates, sky_coordinates in enumerate(self.sky_coordinates):
-                index_x = get_index_of_closest_value(sky_coordinates.x[0, :], self.angular_separation_from_star_x)
-                index_y = get_index_of_closest_value(sky_coordinates.y[:, 0], self.angular_separation_from_star_y)
-                sky_brightness_distribution[index_sky_coordinates][:][index_x][
-                    index_y] = self.mean_spectral_flux_density
+            sky_brightness_distribution = np.zeros((len(self.sky_coordinates), number_of_wavelength_steps, grid_size,
+                                                    grid_size)) * self.mean_spectral_flux_density[0].unit
+            for index_sc, sky_coordinates in enumerate(self.sky_coordinates):
+                index_x = get_index_of_closest_value(
+                    sky_coordinates.x[0, :],
+                    self.angular_separation_from_star_x[index_sc]
+                )
+                index_y = get_index_of_closest_value(
+                    sky_coordinates.y[:, 0],
+                    self.angular_separation_from_star_y[index_sc]
+                )
+                sky_brightness_distribution[index_sc, :, index_y, index_x] = self.mean_spectral_flux_density
         else:
             sky_brightness_distribution = np.zeros(
                 (number_of_wavelength_steps, grid_size, grid_size)) * self.mean_spectral_flux_density.unit
-            index_x = get_index_of_closest_value(self.sky_coordinates.x[0, :], self.angular_separation_from_star_x)
-            index_y = get_index_of_closest_value(self.sky_coordinates.y[:, 0], self.angular_separation_from_star_y)
+            index_x = get_index_of_closest_value(self.sky_coordinates.x[0, :], self.angular_separation_from_star_x[0])
+            index_y = get_index_of_closest_value(self.sky_coordinates.y[:, 0], self.angular_separation_from_star_y[0])
             sky_brightness_distribution[:, index_y, index_x] = self.mean_spectral_flux_density
         return sky_brightness_distribution
 
@@ -171,22 +175,32 @@ class Planet(BasePhotonSource, BaseModel):
         has_planet_orbital_motion = kwargs.get('has_planet_orbital_motion')
         star_distance = kwargs.get('star_distance')
         star_mass = kwargs.get('star_mass')
+        self.angular_separation_from_star_x = np.zeros(len(time_steps)) * u.arcsec
+        self.angular_separation_from_star_y = np.zeros(len(time_steps)) * u.arcsec
 
-        # If planet motion is being considered, then the sky coordinates may change with eah time step
+        # If planet motion is being considered, then the sky coordinates may change with each time step and thus
+        # coordinates are created for each time step, rather than just once
         if has_planet_orbital_motion:
             sky_coordinates = np.zeros((len(time_steps)), dtype=object)
             for index_time, time_step in enumerate(time_steps):
-                sky_coordinates[index_time] = self._get_coordinates(grid_size, time_step, has_planet_orbital_motion,
-                                                                    star_distance,
-                                                                    star_mass)
+                sky_coordinates[index_time] = self._get_coordinates(
+                    grid_size,
+                    time_step,
+                    index_time,
+                    has_planet_orbital_motion,
+                    star_distance,
+                    star_mass
+                )
             return sky_coordinates
         else:
-            return self._get_coordinates(grid_size, time_steps[0], has_planet_orbital_motion, star_distance, star_mass)
+            return self._get_coordinates(grid_size, time_steps[0], 0, has_planet_orbital_motion, star_distance,
+                                         star_mass)
 
     def _get_coordinates(
             self,
             grid_size: int,
             time_step: Quantity,
+            index_time: int,
             has_planet_orbital_motion: bool,
             star_distance: Quantity,
             star_mass: Quantity
@@ -195,15 +209,17 @@ class Planet(BasePhotonSource, BaseModel):
 
         :param grid_size: The grid size
         :param time_step: The time step
+        :param index_time: The index of the time step
         :param has_planet_orbital_motion: Whether the planet orbital motion is to be considered
         :param star_distance: The distance of the star
         :param star_mass: The mass of the star
         :return: The sky coordinates
         """
-        self.angular_separation_from_star_x, self.angular_separation_from_star_y = (
+        self.angular_separation_from_star_x[index_time], self.angular_separation_from_star_y[index_time] = (
             self._get_x_y_angular_separation_from_star(time_step, has_planet_orbital_motion, star_distance, star_mass))
 
-        angular_radius = np.sqrt(self.angular_separation_from_star_x ** 2 + self.angular_separation_from_star_y ** 2)
+        angular_radius = np.sqrt(
+            self.angular_separation_from_star_x[index_time] ** 2 + self.angular_separation_from_star_y[index_time] ** 2)
 
         sky_coordinates_at_time_step = get_meshgrid(2 * (1.2 * angular_radius), grid_size)
 

@@ -10,7 +10,7 @@
 # -------------------------------------------
 settings:
   grid_size: 20
-  has_planet_orbital_motion: false
+  has_planet_orbital_motion: true
   has_stellar_leakage: false
   has_local_zodi_leakage: false
   has_exozodi_leakage: false
@@ -21,9 +21,9 @@ settings:
 # Observation (Strategy) Configuration
 # -------------------------------------------
 observation:
-  total_integration_time: 1 d
-  exposure_time: 0.01 d
-  modulation_period: 1 d
+  total_integration_time: 100 d
+  exposure_time: 1 d
+  modulation_period: 100 d
   baseline_ratio: 6
   baseline_maximum: 600 m
   baseline_minimum: 5 m
