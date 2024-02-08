@@ -8,7 +8,7 @@ from sygn.core.entities.observatory.observatory import Observatory
 from sygn.core.entities.photon_sources.planet import Planet
 from sygn.core.entities.scene import Scene
 from sygn.core.entities.settings import Settings
-from sygn.core.util.grid import get_index_of_closest_value
+from sygn.util import get_index_of_closest_value
 
 
 class DataGenerator():

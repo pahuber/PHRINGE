@@ -10,13 +10,13 @@
 # -------------------------------------------
 settings:
   grid_size: 20
-  has_planet_orbital_motion: true
-  has_stellar_leakage: false
+  has_planet_orbital_motion: false
+  has_stellar_leakage: true
   has_local_zodi_leakage: false
   has_exozodi_leakage: false
   has_amplitude_perturbations: false
-  has_phase_perturbations: false
-  has_polarization_perturbations: false
+  has_phase_perturbations: true
+  has_polarization_perturbations: true
 # -------------------------------------------
 # Observation (Strategy) Configuration
 # -------------------------------------------
@@ -43,7 +43,7 @@ observatory:
   unperturbed_instrument_throughput: 0.1
   amplitude_perturbation_rms: 0.7
   amplitude_falloff_exponent: 1
-  phase_perturbation_rms: 0.1 nm
+  phase_perturbation_rms: 1 nm
   phase_falloff_exponent: 1
   polarization_perturbation_rms: 0.1 rad
   polarization_falloff_exponent: 1
