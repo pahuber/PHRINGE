@@ -42,6 +42,12 @@ $ pip install sygn
 
 ## Usage
 
+To run `SYGN` open a terminal and write:
+```console
+$ sygn PATH_TO_CONFIG_FILE PATH_TO_SYSTEM_CONTEXT_FILE
+```
+
+
 Please see the [Command-line Reference] for details.
 
 ## Contributing
