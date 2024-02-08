@@ -18,6 +18,21 @@ from sygn.io.validators import validate_quantity_units
 
 
 class Planet(BasePhotonSource, BaseModel):
+    """Class representation of a planet.
+
+    :param name: The name of the planet
+    :param mass: The mass of the planet
+    :param radius: The radius of the planet
+    :param temperature: The temperature of the planet
+    :param semi_major_axis: The semi-major axis of the planet
+    :param eccentricity: The eccentricity of the planet
+    :param inclination: The inclination of the planet
+    :param raan: The right ascension of the ascending node of the planet
+    :param argument_of_periapsis: The argument of periapsis of the planet
+    :param true_anomaly: The true anomaly of the planet
+    :param angular_separation_from_star_x: The angular separation of the planet from the star in x-direction
+    :param angular_separation_from_star_y: The angular separation of the planet from the star in y-direction
+    """
     name: str
     mass: str
     radius: str
@@ -148,7 +163,8 @@ class Planet(BasePhotonSource, BaseModel):
         that a circle with the radius of the planet's separation lies well (i.e. + 2x 20%) within the map. The construction
         of such a circle will be important to estimate the noise during signal extraction.
 
-        :param context: Context
+        :param grid_size: The grid size
+        :param kwargs: The keyword arguments
         :return: The sky coordinates
         """
         time_steps = kwargs.get('time_steps')
@@ -167,12 +183,23 @@ class Planet(BasePhotonSource, BaseModel):
         else:
             return self._get_coordinates(grid_size, time_steps[0], has_planet_orbital_motion, star_distance, star_mass)
 
-    def _get_coordinates(self,
-                         grid_size: int,
-                         time_step: Quantity,
-                         has_planet_orbital_motion: bool,
-                         star_distance: Quantity,
-                         star_mass: Quantity) -> Coordinates:
+    def _get_coordinates(
+            self,
+            grid_size: int,
+            time_step: Quantity,
+            has_planet_orbital_motion: bool,
+            star_distance: Quantity,
+            star_mass: Quantity
+    ) -> Coordinates:
+        """Return the sky coordinates of the planet.
+
+        :param grid_size: The grid size
+        :param time_step: The time step
+        :param has_planet_orbital_motion: Whether the planet orbital motion is to be considered
+        :param star_distance: The distance of the star
+        :param star_mass: The mass of the star
+        :return: The sky coordinates
+        """
         self.angular_separation_from_star_x, self.angular_separation_from_star_y = (
             self._get_x_y_angular_separation_from_star(time_step, has_planet_orbital_motion, star_distance, star_mass))
 
@@ -182,15 +209,18 @@ class Planet(BasePhotonSource, BaseModel):
 
         return Coordinates(sky_coordinates_at_time_step[0], sky_coordinates_at_time_step[1])
 
-    def _get_x_y_separation_from_star(self,
-                                      time_step: astropy.units.Quantity,
-                                      has_planet_orbital_motion: bool,
-                                      star_mass: Quantity) -> Tuple:
+    def _get_x_y_separation_from_star(
+            self,
+            time_step: Quantity,
+            has_planet_orbital_motion: bool,
+            star_mass: Quantity
+    ) -> Tuple:
         """Return the separation of the planet from the star in x- and y-direction. If the planet orbital motion is
         considered, calculate the new position for each time step.
 
-        :param time: The time
-        :param planet_orbital_motion: Whether the planet orbital motion is to be considered
+        :param time_step: The time step
+        :param has_planet_orbital_motion: Whether the planet orbital motion is to be considered
+        :param star_mass: The mass of the star
         :return: A tuple containing the x- and y- coordinates
         """
         star = Body(parent=None, k=G * (star_mass + self.mass), name='Star')
@@ -204,13 +234,19 @@ class Planet(BasePhotonSource, BaseModel):
             orbit_propagated = orbit
         return (orbit_propagated.r[0], orbit_propagated.r[1])
 
-    def _get_x_y_angular_separation_from_star(self, time_step: astropy.units.Quantity,
-                                              planet_orbital_motion: bool, star_distance: Quantity,
-                                              star_mass: Quantity) -> Tuple:
+    def _get_x_y_angular_separation_from_star(
+            self,
+            time_step: Quantity,
+            planet_orbital_motion: bool,
+            star_distance: Quantity,
+            star_mass: Quantity
+    ) -> Tuple:
         """Return the angular separation of the planet from the star in x- and y-direction.
 
-        :param time: The time
+        :param time_step: The time step
         :param planet_orbital_motion: Whether the planet orbital motion is to be considered
+        :param star_distance: The distance of the star
+        :param star_mass: The mass of the star
         :return: A tuple containing the x- and y- coordinates
         """
         separation_from_star_x, separation_from_star_y = self._get_x_y_separation_from_star(time_step,

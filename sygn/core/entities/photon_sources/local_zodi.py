@@ -16,8 +16,10 @@ class LocalZodi(BasePhotonSource, BaseModel):
     """Class representation of a local zodi."""
 
     def _calculate_mean_spectral_flux_density(self, wavelength_steps: Quantity, **kwargs) -> np.ndarray:
-        # The local zodi mean spectral flux density is calculated as described in Dannert et al. 2022
+        """Calculate the mean spectral flux density of the local zodi as described in Dannert et al. 2022.
 
+        :param wavelength_steps: The wavelength steps
+        """
         field_of_view = kwargs['field_of_view']
         star_right_ascension = kwargs['star_right_ascension']
         star_declination = kwargs['star_declination']
@@ -57,6 +59,8 @@ class LocalZodi(BasePhotonSource, BaseModel):
     def _get_ecliptic_coordinates(self, star_right_ascension, star_declination) -> Tuple:
         """Return the ecliptic latitude and relative ecliptic longitude that correspond to the star position in the sky.
 
+        :param star_right_ascension: The right ascension of the star
+        :param star_declination: The declination of the star
         :return: Tuple containing the two coordinates
         """
         coordinates = SkyCoord(ra=star_right_ascension, dec=star_declination, frame='icrs')

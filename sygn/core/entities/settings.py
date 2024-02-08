@@ -9,7 +9,19 @@ from sygn.core.entities.base_component import BaseComponent
 
 
 class Settings(BaseComponent, BaseModel):
-    """Class representing the settings."""
+    """Class representing the simulation settings.
+
+    :param grid_size: The size of the grid
+    :param has_planet_orbital_motion: Whether the planet has orbital motion
+    :param has_stellar_leakage: Whether the stellar leakage is present
+    :param has_local_zodi_leakage: Whether the local zodiacal light leakage is present
+    :param has_exozodi_leakage: Whether the exozodiacal light leakage is present
+    :param has_amplitude_perturbations: Whether amplitude perturbations are present
+    :param has_phase_perturbations: Whether phase perturbations are present
+    :param has_polarization_perturbations: Whether polarization perturbations are present
+    :param time_steps: The time steps
+    :param wavelength_steps: The wavelength steps
+    """
     grid_size: int
     has_planet_orbital_motion: bool
     has_stellar_leakage: bool

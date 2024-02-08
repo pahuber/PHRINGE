@@ -16,6 +16,8 @@ class BeamCombinationSchemeEnum(Enum):
 
 class BeamCombinationScheme(ABC):
     """Class representation of a beam combination scheme.
+
+    :param type: The type of the beam combination scheme
     """
     type: Any = None
 
@@ -46,6 +48,8 @@ class BeamCombinationScheme(ABC):
 
 class DoubleBracewell(BeamCombinationScheme):
     """Class representation of a double Bracewell beam combination scheme.
+
+    :param type: The type of the beam combination scheme
     """
     type: Any = BeamCombinationSchemeEnum.DOUBLE_BRACEWELL.value
 
@@ -61,6 +65,8 @@ class DoubleBracewell(BeamCombinationScheme):
 
 class Kernel3(BeamCombinationScheme):
     """Class representation of a Kernel nulling beam combination scheme.
+
+    :param type: The type of the beam combination scheme
     """
     type: Any = BeamCombinationSchemeEnum.KERNEL_3.value
 
@@ -75,6 +81,8 @@ class Kernel3(BeamCombinationScheme):
 
 class Kernel4(BeamCombinationScheme):
     """Class representation of a Kernel nulling beam combination scheme.
+
+    :param type: The type of the beam combination scheme
     """
     type: Any = BeamCombinationSchemeEnum.KERNEL_4.value
 
@@ -95,10 +103,12 @@ class Kernel4(BeamCombinationScheme):
 
 class Kernel5(BeamCombinationScheme):
     """Class representation of a Kernel nulling beam combination scheme.
+
+    :param type: The type of the beam combination scheme
     """
     type: Any = BeamCombinationSchemeEnum.KERNEL_5.value
 
-    def _exp(self, number: int) -> float:
+    def _get_exp_function(self, number: int) -> float:
         """Return the exponent.
 
         :param number: The number in the numerator
@@ -108,10 +118,14 @@ class Kernel5(BeamCombinationScheme):
 
     def get_beam_combination_transfer_matrix(self) -> np.ndarray:
         return 1 / np.sqrt(5) * np.array([[1, 1, 1, 1, 1],
-                                          [1, self._exp(2), self._exp(4), self._exp(6), self._exp(8)],
-                                          [1, self._exp(4), self._exp(8), self._exp(2), self._exp(6)],
-                                          [1, self._exp(6), self._exp(2), self._exp(8), self._exp(4)],
-                                          [1, self._exp(8), self._exp(6), self._exp(4), self._exp(2)]])
+                                          [1, self._get_exp_function(2), self._get_exp_function(4),
+                                           self._get_exp_function(6), self._get_exp_function(8)],
+                                          [1, self._get_exp_function(4), self._get_exp_function(8),
+                                           self._get_exp_function(2), self._get_exp_function(6)],
+                                          [1, self._get_exp_function(6), self._get_exp_function(2),
+                                           self._get_exp_function(8), self._get_exp_function(4)],
+                                          [1, self._get_exp_function(8), self._get_exp_function(6),
+                                           self._get_exp_function(4), self._get_exp_function(2)]])
 
     def get_differential_output_pairs(self) -> list:
         return [(1, 4), (2, 3)]

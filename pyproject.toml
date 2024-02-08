@@ -23,6 +23,7 @@ astropy = ">=5.3,<6"
 pydantic = "^2.6.1"
 spectres = "^2.2.0"
 poliastro = "^0.17.0"
+tqdm = "^4.66.1"
 
 [tool.poetry.dev-dependencies]
 Pygments = ">=2.10.0"

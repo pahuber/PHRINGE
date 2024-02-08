@@ -5,8 +5,15 @@ from astropy.io import fits
 
 
 class FITSWriter():
+    """Class representation of the FITS writer.
+    """
 
     def write(self, data, output_dir: Path = None):
+        """Write the data to a FITS file.
+
+        :param data: The data to be written to FITS
+        :param output_dir: The output directory of the FITS file
+        """
         primary = fits.PrimaryHDU()
         header = primary.header
         hdu_list = []

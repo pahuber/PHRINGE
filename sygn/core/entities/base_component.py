@@ -6,5 +6,9 @@ class BaseComponent(ABC):
 
     @abstractmethod
     def prepare(self, *args, **kwargs):
-        """Prepare the component for the simulation."""
+        """Prepare the component for the simulation.
+
+        :param args: Additional arguments
+        :param kwargs: Additional keyword arguments
+        """
         pass

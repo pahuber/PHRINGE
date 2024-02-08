@@ -8,13 +8,21 @@ from sygn.core.entities.photon_sources.star import Star
 
 
 class Scene(BaseComponent, BaseModel):
-    """Class representing the observation scene."""
+    """Class representing the observation scene.
+
+    :param star: The star in the scene
+    :param planets: The planets in the scene
+    :param exozodi: The exozodi in the scene
+    :param local_zodi: The local zodi in the scene
+    """
     star: Star
     planets: list[Planet]
     exozodi: Exozodi
     local_zodi: LocalZodi = None
 
     def __init__(self, **data):
+        """Constructor method.
+        """
         super().__init__(**data)
         self.local_zodi = LocalZodi()
 
@@ -31,7 +39,12 @@ class Scene(BaseComponent, BaseModel):
         return sources
 
     def prepare(self, settings, observatory, spectrum):
-        """Prepare the system for the simulation."""
+        """Prepare the system for the simulation.
+
+        :param settings: The settings object
+        :param observatory: The observatory object
+        :param spectrum: The spectrum object
+        """
         for planet in self.planets:
             planet.prepare(
                 settings.wavelength_steps,

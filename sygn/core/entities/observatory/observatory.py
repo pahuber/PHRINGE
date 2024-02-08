@@ -31,7 +31,26 @@ from sygn.io.validators import validate_quantity_units
 
 
 class Observatory(BaseComponent, BaseModel):
-    """Class representing the observatory."""
+    """Class representing the observatory.
+
+    :param array_configuration: The array configuration
+    :param beam_combination_scheme: The beam combination scheme
+    :param aperture_diameter: The aperture diameter
+    :param spectral_resolving_power: The spectral resolving power
+    :param wavelength_range_lower_limit: The lower limit of the wavelength range
+    :param wavelength_range_upper_limit: The upper limit of the wavelength range
+    :param unperturbed_instrument_throughput: The unperturbed instrument throughput
+    :param amplitude_perturbation_rms: The amplitude perturbation rms
+    :param amplitude_falloff_exponent: The amplitude falloff exponent
+    :param phase_perturbation_rms: The phase perturbation rms
+    :param phase_falloff_exponent: The phase falloff exponent
+    :param polarization_perturbation_rms: The polarization perturbation rms
+    :param polarization_falloff_exponent: The polarization falloff exponent
+    :param field_of_view: The field of view
+    :param amplitude_perturbation_time_series: The amplitude perturbation time series
+    :param phase_perturbation_time_series: The phase perturbation time series
+    :param polarization_perturbation_time_series: The polarization perturbation time series
+    """
 
     array_configuration: str
     beam_combination_scheme: str
@@ -52,6 +71,8 @@ class Observatory(BaseComponent, BaseModel):
     polarization_perturbation_time_series: Any = None
 
     def __init__(self, **data):
+        """Constructor method.
+        """
         super().__init__(**data)
         self.array_configuration = self._load_array_configuration(self.array_configuration)
         self.beam_combination_scheme = self._load_beam_combination_scheme(self.beam_combination_scheme)
@@ -136,11 +157,22 @@ class Observatory(BaseComponent, BaseModel):
                                self.wavelength_bin_centers[-1:] + self.wavelength_bin_widths[-1:] / 2))
 
     def _calculate_amplitude_perturbation_time_series(self, settings) -> np.ndarray:
+        """Return the amplitude perturbation time series.
+
+        :param settings: The settings object
+        :return: The amplitude perturbation time series
+        """
         return np.random.uniform(0.8, 0.9, (self.beam_combination_scheme.number_of_inputs, len(settings.time_steps))) \
             if settings.has_amplitude_perturbations else np.ones(
             (self.beam_combination_scheme.number_of_inputs, len(settings.time_steps)))
 
     def _calculate_phase_perturbation_time_series(self, settings, observation) -> np.ndarray:
+        """Return the phase perturbation time series.
+
+        :param settings: The settings object
+        :param observation: The observation object
+        :return: The phase perturbation time series
+        """
         return get_perturbation_time_series(
             self.beam_combination_scheme.number_of_inputs,
             observation.exposure_time,
@@ -152,6 +184,12 @@ class Observatory(BaseComponent, BaseModel):
             (self.beam_combination_scheme.number_of_inputs, len(settings.time_steps))) * u.um
 
     def _calculate_polarization_perturbation_time_series(self, settings, observation) -> np.ndarray:
+        """Return the polarization perturbation time series.
+
+        :param settings: The settings object
+        :param observation: The observation object
+        :return: The polarization perturbation time series
+        """
         return get_perturbation_time_series(
             self.beam_combination_scheme.number_of_inputs,
             observation.exposure_time,
@@ -190,7 +228,14 @@ class Observatory(BaseComponent, BaseModel):
     def _get_optimal_baseline(self,
                               optimized_differential_output: int,
                               optimized_wavelength: astropy.units.Quantity,
-                              optimized_angular_distance: astropy.units.Quantity):
+                              optimized_angular_distance: astropy.units.Quantity) -> Quantity:
+        """Return the optimal baseline for the given parameters.
+
+        :param optimized_differential_output: The optimized differential output index
+        :param optimized_wavelength: The optimized wavelength
+        :param optimized_angular_distance: The optimized angular distance
+        :return: The optimal baseline
+        """
         # TODO: Check all factors again
         factors = (1,)
         match (self.array_configuration.type, self.beam_combination_scheme.type):
@@ -249,7 +294,7 @@ class Observatory(BaseComponent, BaseModel):
     def _load_beam_combination_scheme(self, beam_combination_scheme_type) -> BeamCombinationScheme:
         """Return the beam combination scheme object from the dictionary.
 
-        :param config_dict: The dictionary
+        :param beam_combination_scheme_type: The beam combination scheme type
         :return: The beam combination object.
         """
 
@@ -267,7 +312,11 @@ class Observatory(BaseComponent, BaseModel):
                 return Kernel5()
 
     def prepare(self, settings, observation):
-        """Prepare the observatory for the simulation."""
+        """Prepare the observatory for the simulation.
+
+        :param settings: The settings object
+        :param observation: The observation object
+        """
         self.field_of_view = settings.wavelength_steps.to(u.m) / self.aperture_diameter * u.rad
 
         self.amplitude_perturbation_time_series = self._calculate_amplitude_perturbation_time_series(settings)
@@ -291,6 +340,8 @@ class Observatory(BaseComponent, BaseModel):
         :param optimized_differential_output: The optimized differential output index
         :param optimized_wavelength: The optimized wavelength
         :param optimzied_star_separation: The angular radius of the habitable zone
+        :param baseline_minimum: The minimum baseline
+        :param baseline_maximum: The maximum baseline
         """
         # Get the optimized separation in angular units, if it is not yet in angular units
         if optimized_star_separation == "habitable-zone":

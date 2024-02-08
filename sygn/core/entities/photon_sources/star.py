@@ -1,9 +1,9 @@
 from functools import cached_property
 from typing import Any
 
-import astropy
 import numpy as np
 from astropy import units as u
+from astropy.units import Quantity
 from pydantic import BaseModel, field_validator
 from pydantic_core.core_schema import ValidationInfo
 
@@ -15,6 +15,17 @@ from sygn.io.validators import validate_quantity_units
 
 
 class Star(BasePhotonSource, BaseModel):
+    """Class representation of a star.
+
+    :param name: The name of the star
+    :param distance: The distance to the star
+    :param mass: The mass of the star
+    :param radius: The radius of the star
+    :param temperature: The temperature of the star
+    :param luminosity: The luminosity of the star
+    :param right_ascension: The right ascension of the star
+    :param declination: The declination of the star
+    """
     name: str
     distance: str
     mass: str
@@ -25,7 +36,7 @@ class Star(BasePhotonSource, BaseModel):
     declination: str
 
     @field_validator('distance')
-    def _validate_distance(cls, value: Any, info: ValidationInfo) -> astropy.units.Quantity:
+    def _validate_distance(cls, value: Any, info: ValidationInfo) -> Quantity:
         """Validate the distance input.
 
         :param value: Value given as input
@@ -35,7 +46,7 @@ class Star(BasePhotonSource, BaseModel):
         return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,))
 
     @field_validator('luminosity')
-    def _validate_luminosity(cls, value: Any, info: ValidationInfo) -> astropy.units.Quantity:
+    def _validate_luminosity(cls, value: Any, info: ValidationInfo) -> Quantity:
         """Validate the luminosity input.
 
         :param value: Value given as input
@@ -45,7 +56,7 @@ class Star(BasePhotonSource, BaseModel):
         return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.Lsun,)).to(u.Lsun)
 
     @field_validator('mass')
-    def _validate_mass(cls, value: Any, info: ValidationInfo) -> astropy.units.Quantity:
+    def _validate_mass(cls, value: Any, info: ValidationInfo) -> Quantity:
         """Validate the mass input.
 
         :param value: Value given as input
@@ -55,7 +66,7 @@ class Star(BasePhotonSource, BaseModel):
         return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.kg,))
 
     @field_validator('radius')
-    def _validate_radius(cls, value: Any, info: ValidationInfo) -> astropy.units.Quantity:
+    def _validate_radius(cls, value: Any, info: ValidationInfo) -> Quantity:
         """Validate the radius input.
 
         :param value: Value given as input
@@ -65,7 +76,7 @@ class Star(BasePhotonSource, BaseModel):
         return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,))
 
     @field_validator('temperature')
-    def _validate_temperature(cls, value: Any, info: ValidationInfo) -> astropy.units.Quantity:
+    def _validate_temperature(cls, value: Any, info: ValidationInfo) -> Quantity:
         """Validate the temperature input.
 
         :param value: Value given as input
@@ -75,7 +86,7 @@ class Star(BasePhotonSource, BaseModel):
         return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.K,))
 
     @cached_property
-    def angular_radius(self) -> astropy.units.Quantity:
+    def angular_radius(self) -> Quantity:
         """Return the solid angle covered by the star on the sky.
 
         :return: The solid angle
@@ -83,7 +94,7 @@ class Star(BasePhotonSource, BaseModel):
         return ((self.radius.to(u.m) / self.distance.to(u.m)) * u.rad).to(u.arcsec)
 
     @cached_property
-    def habitable_zone_central_angular_radius(self) -> astropy.units.Quantity:
+    def habitable_zone_central_angular_radius(self) -> Quantity:
         """Return the central habitable zone radius in angular units.
 
         :return: The central habitable zone radius in angular units
@@ -91,7 +102,7 @@ class Star(BasePhotonSource, BaseModel):
         return (self.habitable_zone_central_radius / self.distance * u.rad).to(u.arcsec)
 
     @cached_property
-    def habitable_zone_central_radius(self) -> astropy.units.Quantity:
+    def habitable_zone_central_radius(self) -> Quantity:
         """Return the central habitable zone radius of the star. Calculated as defined in Kopparapu et al. 2013.
 
         :return: The central habitable zone radius
@@ -114,7 +125,7 @@ class Star(BasePhotonSource, BaseModel):
         return ((radius_outer + radius_inner) / 2 * u.au).to(u.m)
 
     @cached_property
-    def solid_angle(self) -> astropy.units.Quantity:
+    def solid_angle(self) -> Quantity:
         """Return the solid angle that the source object covers on the sky.
 
         :return: The solid angle
@@ -141,9 +152,8 @@ class Star(BasePhotonSource, BaseModel):
         allows the source to fill the grid, thus, each source needs to define its own sky coordinate map. Add 10% to the
         angular radius to account for rounding issues and make sure the source is fully covered within the map.
 
-        :param time: The time
         :param grid_size: The grid size
-        :return: A tuple containing the x- and y-sky coordinate maps
+        :return: A coordinates object containing the x- and y-sky coordinate maps
         """
         sky_coordinates = get_meshgrid(2 * (1.05 * self.angular_radius), grid_size)
         return Coordinates(sky_coordinates[0], sky_coordinates[1])

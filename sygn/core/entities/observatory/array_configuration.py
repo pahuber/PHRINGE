@@ -105,7 +105,7 @@ class RegularPentagonCircularRotation(ArrayConfiguration):
     """
     type: Any = ArrayConfigurationEnum.REGULAR_PENTAGON_CIRCULAR_ROTATION
 
-    def _x(self, angle) -> astropy.units.Quantity:
+    def _get_x_position(self, angle) -> astropy.units.Quantity:
         """Return the x position.
 
         :param angle: The angle at which the collector is located
@@ -113,7 +113,7 @@ class RegularPentagonCircularRotation(ArrayConfiguration):
         """
         return 0.851 * self.baseline_length.value * np.cos(angle)
 
-    def _y(self, angle) -> astropy.units.Quantity:
+    def _get_y_position(self, angle) -> astropy.units.Quantity:
         """Return the y position.
 
         :param angle: The angle at which the collector is located
@@ -128,7 +128,9 @@ class RegularPentagonCircularRotation(ArrayConfiguration):
         angles = [0, 2 * np.pi / 5, 4 * np.pi / 5, 6 * np.pi / 5, 8 * np.pi / 5]
         rotation_matrix = get_2d_rotation_matrix(time_step, modulation_period)
         pentagon_static = np.array([
-            [self._x(angles[0]), self._x(angles[1]), self._x(angles[2]), self._x(angles[3]), self._x(angles[4])],
-            [self._y(angles[0]), self._y(angles[1]), self._y(angles[2]), self._y(angles[3]), self._y(angles[4])]])
+            [self._get_x_position(angles[0]), self._get_x_position(angles[1]), self._get_x_position(angles[2]),
+             self._get_x_position(angles[3]), self._get_x_position(angles[4])],
+            [self._get_y_position(angles[0]), self._get_y_position(angles[1]), self._get_y_position(angles[2]),
+             self._get_y_position(angles[3]), self._get_y_position(angles[4])]])
         collector_positions = np.matmul(rotation_matrix, pentagon_static) * self.baseline_length.unit
         return Coordinates(collector_positions[0], collector_positions[1])

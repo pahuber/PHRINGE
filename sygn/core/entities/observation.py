@@ -11,7 +11,18 @@ from sygn.io.validators import validate_quantity_units
 
 
 class Observation(BaseComponent, BaseModel):
-    """Class representing the observation."""
+    """Class representing the observation.
+
+    :param total_integration_time: The total integration time
+    :param exposure_time: The exposure time
+    :param modulation_period: The modulation period
+    :param baseline_ratio: The baseline ratio
+    :param baseline_maximum: The maximum baseline
+    :param baseline_minimum: The minimum baseline
+    :param optimized_differential_output: The optimized differential output
+    :param optimized_star_separation: The optimized star separation
+    :param optimized_wavelength: The optimized wavelength
+    """
     total_integration_time: str
     exposure_time: str
     modulation_period: str

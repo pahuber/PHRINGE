@@ -11,11 +11,52 @@ from sygn.core.util.grid import get_index_of_closest_value
 
 
 class DataGenerator():
+    """Class representation of the data generator. This class is responsible for generating the synthetic photometry
+     data for space-based nulling interferometers.
+
+    :param amplitude_perturbation_time_series: The amplitude perturbation time series
+    :param aperture_radius: The aperture radius
+    :param baseline_maximum: The maximum baseline
+    :param baseline_minimum: The minimum baseline
+    :param baseline_ratio: The baseline ratio
+    :param beam_combination_matrix: The beam combination matrix
+    :param differential_output_pairs: The differential output pairs
+    :param measured_wavelength_bin_centers: The measured wavelength bin centers
+    :param measured_wavelength_bin_edges: The measured wavelength bin edges
+    :param measured_wavelength_bin_widths: The measured wavelength bin widths
+    :param measured_time_steps: The measured time steps
+    :param grid_size: The grid size
+    :param modulation_period: The modulation period
+    :param number_of_inputs: The number of inputs
+    :param number_of_outputs: The number of outputs
+    :param observatory: The observatory
+    :param optimized_differential_output: The optimized differential output
+    :param optimized_star_separation: The optimized star separation
+    :param optimized_wavelength: The optimized wavelength
+    :param phase_perturbation_time_series: The phase perturbation time series
+    :param polarization_perturbation_time_series: The polarization perturbation time series
+    :param sources: The sources
+    :param star: The star
+    :param time_step_duration: The time step duration
+    :param time_steps: The time steps
+    :param unperturbed_instrument_throughput: The unperturbed instrument throughput
+    :param wavelength_steps: The wavelength steps
+    :param differential_photon_counts: The differential photon counts
+    :param photon_counts_binned: The photon counts binned
+    """
+
     def __init__(self,
                  settings: Settings,
                  observation: Observation,
                  observatory: Observatory,
                  scene: Scene):
+        """Constructor method.
+
+        :param settings: The settings object
+        :param observation: The observation object
+        :param observatory: The observatory object
+        :param scene: The scene object
+        """
         self.amplitude_perturbation_time_series = observatory.amplitude_perturbation_time_series
         self.aperture_radius = observatory.aperture_diameter / 2
         self.baseline_maximum = observation.baseline_maximum
@@ -51,22 +92,49 @@ class DataGenerator():
                                               len(self.measured_wavelength_bin_centers),
                                               len(self.measured_time_steps))) * u.ph
 
-    def _apply_shot_noise(self, mean_photon_counts):
+    def _apply_shot_noise(self, mean_photon_counts) -> int:
+        """Apply shot noise to the mean photon counts.
+
+        :param mean_photon_counts: The mean photon counts
+        :return: The value corresponding to the expected shot noise
+        """
         if mean_photon_counts > 30:
             return round(normal(mean_photon_counts, 1))
         return np.random.poisson(mean_photon_counts)
 
-    def _calculate_complex_amplitude_base(self, index_input, index_time, wavelength, observatory_coordinates,
-                                          source_sky_coordinates):
+    def _calculate_complex_amplitude_base(
+            self,
+            index_input,
+            index_time,
+            wavelength,
+            observatory_coordinates,
+            source_sky_coordinates
+    ) -> np.ndarray:
+        """Calculate the complex amplitude element for a single polarization.
+
+        :param index_input: The index of the input
+        :param index_time: The index of the time
+        :param wavelength: The wavelength
+        :param observatory_coordinates: The observatory coordinates
+        :param source_sky_coordinates: The source sky coordinates
+        :return: The complex amplitude element
+        """
         return (self.amplitude_perturbation_time_series[index_input][index_time] * self.aperture_radius.to(u.m)
                 * np.exp(1j * 2 * np.pi / wavelength * (
                         observatory_coordinates.x[index_input] * source_sky_coordinates.x.to(u.rad).value +
                         observatory_coordinates.y[index_input] * source_sky_coordinates.y.to(u.rad).value +
                         self.phase_perturbation_time_series[index_input][index_time].to(u.um))))
 
-    def _calculate_complex_amplitude(self, time, wavelength, source_sky_coordinates):
+    def _calculate_complex_amplitude(self, time, wavelength, source_sky_coordinates) -> np.ndarray:
+        """Calculate the complex amplitude.
+
+        :param time: The time
+        :param wavelength: The wavelength
+        :param source_sky_coordinates: The source sky coordinates
+        :return: The complex amplitude
+        """
         complex_amplitude = np.zeros((self.number_of_inputs, 2, self.grid_size, self.grid_size), dtype=complex) * u.m
-        observatory_coordinates = self.observatory.array_configuration.get_collector_positions(
+        observatory_coordinates = self.observatory.array_configuration.get_collector_coordinates(
             time,
             self.modulation_period,
             self.baseline_ratio
@@ -76,31 +144,64 @@ class DataGenerator():
 
         for index_input in range(self.number_of_inputs):
             complex_amplitude[index_input][0] = (
-                    self._calculate_complex_amplitude_base(index_input, index_time, wavelength, observatory_coordinates,
-                                                           source_sky_coordinates)
+                    self._calculate_complex_amplitude_base(
+                        index_input,
+                        index_time,
+                        wavelength,
+                        observatory_coordinates,
+                        source_sky_coordinates
+                    )
                     * np.cos(polarization_angle + self.polarization_perturbation_time_series[index_input][index_time]
                              .to(u.rad)))
 
             complex_amplitude[index_input][1] = (
-                    self._calculate_complex_amplitude_base(index_input, index_time, wavelength, observatory_coordinates,
-                                                           source_sky_coordinates)
+                    self._calculate_complex_amplitude_base(
+                        index_input,
+                        index_time,
+                        wavelength,
+                        observatory_coordinates,
+                        source_sky_coordinates
+                    )
                     * np.sin(polarization_angle + self.polarization_perturbation_time_series[index_input][index_time]
                              .to(u.rad)))
         return complex_amplitude
 
-    def _calculate_intensity_response(self, time, wavelength, source):
+    def _calculate_intensity_response(self, time, wavelength, source) -> np.ndarray:
+        """Calculate the intensity response.
+
+        :param time: The time
+        :param wavelength: The wavelength
+        :param source: The source
+        :return: The intensity response
+        """
         complex_amplitude = (self._calculate_complex_amplitude(time, wavelength, source.sky_coordinates)
                              .reshape(self.number_of_inputs, 2, self.grid_size ** 2))
         return ((abs(np.dot(self.beam_combination_matrix, complex_amplitude[:, 0])) ** 2 +
                  abs(np.dot(self.beam_combination_matrix, complex_amplitude[:, 1])) ** 2)
                 .reshape(self.number_of_outputs, self.grid_size, self.grid_size))
 
-    def _calculate_normalization(self, source_sky_brightness_distribution):
+    def _calculate_normalization(self, source_sky_brightness_distribution) -> int:
+        """Calculate the normalization.
+
+        :param source_sky_brightness_distribution: The source sky brightness distribution
+        :return: The normalization
+        """
         return len(source_sky_brightness_distribution[source_sky_brightness_distribution.value > 0]) if not len(
             source_sky_brightness_distribution[source_sky_brightness_distribution.value > 0]) == 0 else 1
 
-    def _calculate_photon_counts(self, wavelength, source_sky_brightness_distribution,
-                                 intensity_response):
+    def _calculate_photon_counts(
+            self,
+            wavelength,
+            source_sky_brightness_distribution,
+            intensity_response
+    ) -> np.ndarray:
+        """Calculate the photon counts.
+
+        :param wavelength: The wavelength
+        :param source_sky_brightness_distribution: The source sky brightness distribution
+        :param intensity_response: The intensity response
+        :return: The photon counts
+        """
         photon_counts = np.zeros(self.number_of_outputs)
         normalization = self._calculate_normalization(source_sky_brightness_distribution)
         # TODO: Note this only holds for regular wavelength steps
@@ -114,7 +215,13 @@ class DataGenerator():
             photon_counts[index_ir] = self._apply_shot_noise(mean_photon_counts)
         return photon_counts * u.ph
 
-    def _get_binning_indices(self, time, wavelength):
+    def _get_binning_indices(self, time, wavelength) -> tuple:
+        """Get the binning indices.
+
+        :param time: The time
+        :param wavelength: The wavelength
+        :return: The binning indices
+        """
         index_closest_wavelength_edge = get_index_of_closest_value(self.measured_wavelength_bin_edges, wavelength)
         if wavelength <= self.measured_wavelength_bin_edges[index_closest_wavelength_edge]:
             index_wavelength = index_closest_wavelength_edge - 1
@@ -127,7 +234,9 @@ class DataGenerator():
             index_time = index_closest_time_edge
         return index_wavelength, index_time
 
-    def run(self) -> dict:
+    def run(self) -> np.ndarray:
+        """Run the data generator.
+        """
         # Set optimal baseline length
         self.observatory.set_optimal_baseline(self.star, self.optimized_differential_output, self.optimized_wavelength,
                                               self.optimized_star_separation, self.baseline_minimum,

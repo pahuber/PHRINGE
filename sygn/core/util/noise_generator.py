@@ -205,7 +205,11 @@ def get_perturbation_time_series(number_of_input_beams: int,
     """Return a time series of perturbations. The shape of the underlying power spectrum is created using the power
     law 1/frequency^exponent.
 
-    :param time_step: The time step used to calculate the maximum frequency
+    :param number_of_input_beams: The number of input beams
+    :param sample_time: The sample time
+    :param number_of_samples: The number of samples
+    :param rms: The root mean square value
+    :param color_exponent: The color exponent
     :return: The distribution
     """
     noise_generator = NoiseGenerator()

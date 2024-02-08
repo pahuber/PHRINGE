@@ -1,10 +1,10 @@
 from typing import Tuple, Any
 
-import astropy.units
 import numpy as np
+from astropy.units import Quantity
 
 
-def get_meshgrid(full_extent: astropy.units.Quantity, grid_size: int) -> Tuple[np.ndarray, np.ndarray]:
+def get_meshgrid(full_extent: Quantity, grid_size: int) -> Tuple[np.ndarray, np.ndarray]:
     """Return a tuple of numpy arrays corresponding to a meshgrid.
 
     :param full_extent: Full extent in one dimension
@@ -15,7 +15,7 @@ def get_meshgrid(full_extent: astropy.units.Quantity, grid_size: int) -> Tuple[n
     return np.meshgrid(linspace, linspace) * full_extent.unit
 
 
-def get_radial_map(full_extent: astropy.units.Quantity, grid_size: int) -> Tuple[np.ndarray, np.ndarray]:
+def get_radial_map(full_extent: Quantity, grid_size: int) -> Tuple[np.ndarray, np.ndarray]:
     """Return a radial map over the full extent given.
 
     :param full_extent: The full extent
@@ -26,7 +26,7 @@ def get_radial_map(full_extent: astropy.units.Quantity, grid_size: int) -> Tuple
     return np.sqrt(meshgrid[0] ** 2 + meshgrid[1] ** 2)
 
 
-def get_index_of_closest_value(array: np.ndarray, value: astropy.units.Quantity):
+def get_index_of_closest_value(array: np.ndarray, value: Quantity):
     """Return the index of a value in an array closest to the provided value.
 
     :param array: The array to search in
