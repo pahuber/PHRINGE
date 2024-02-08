@@ -225,8 +225,11 @@ class DataGenerator():
 
         for index_ir, intensity_response in enumerate(intensity_response):
             mean_photon_counts = (
-                    np.sum(intensity_response * source_sky_brightness_distribution * self.time_step_duration.to(u.s)
-                           * wavelength_bin_width * self.unperturbed_instrument_throughput).value
+                    np.sum(intensity_response
+                           * source_sky_brightness_distribution
+                           * self.time_step_duration.to(u.s)
+                           * wavelength_bin_width
+                           * self.unperturbed_instrument_throughput).value
                     / normalization)
             photon_counts[index_ir] = self._apply_shot_noise(mean_photon_counts)
         return photon_counts * u.ph
