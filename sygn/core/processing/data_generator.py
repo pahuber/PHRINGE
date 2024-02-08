@@ -86,7 +86,7 @@ class DataGenerator():
         self.sources = scene.get_all_sources()
         self.star = scene.star
         self.time_step_duration = settings.time_step_duration
-        self.time_steps = settings.time_steps
+        self.time_steps = settings.time_steps.to(u.s)
         self.unperturbed_instrument_throughput = observatory.unperturbed_instrument_throughput
         self.wavelength_steps = settings.wavelength_steps
         self.differential_photon_counts = np.zeros((len(self.differential_output_pairs),
@@ -143,14 +143,10 @@ class DataGenerator():
         :param source: The source
         :return: The complex amplitude
         """
-        complex_amplitude = np.zeros((self.number_of_inputs, 2, self.grid_size, self.grid_size), dtype=complex) * u.m
-        observatory_coordinates = self.observatory.array_configuration.get_collector_coordinates(
-            time,
-            self.modulation_period,
-            self.baseline_ratio
-        )
         index_time = int(np.where(self.time_steps == time)[0])
         index_wavelength = int(np.where(self.wavelength_steps == wavelength)[0])
+        complex_amplitude = np.zeros((self.number_of_inputs, 2, self.grid_size, self.grid_size), dtype=complex) * u.m
+        observatory_coordinates = self.observatory.array_configuration.collector_coordinates[index_time]
         polarization_angle = 0 * u.rad  # TODO: Check that we can set this to 0 without loss of generality
 
         if self.has_planet_orbital_motion and isinstance(source, Planet):

@@ -335,6 +335,12 @@ class Observatory(BaseComponent, BaseModel):
             observation.baseline_maximum
         )
 
+        self.array_configuration.collector_coordinates = self.array_configuration.get_collector_coordinates(
+            settings.time_steps,
+            observation.modulation_period,
+            observation.baseline_ratio
+        )
+
     def set_optimal_baseline(self,
                              star: Star,
                              optimized_differential_output: int,
