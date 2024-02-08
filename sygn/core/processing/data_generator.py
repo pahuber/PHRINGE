@@ -1,6 +1,6 @@
 import numpy as np
 from astropy import units as u
-from numpy.random import normal
+from numpy.random import normal, poisson
 from tqdm.contrib.itertools import product
 
 from sygn.core.entities.observation import Observation
@@ -8,7 +8,7 @@ from sygn.core.entities.observatory.observatory import Observatory
 from sygn.core.entities.photon_sources.planet import Planet
 from sygn.core.entities.scene import Scene
 from sygn.core.entities.settings import Settings
-from sygn.core.util.grid import get_index_of_closest_value
+from sygn.util import get_index_of_closest_value
 
 
 class DataGenerator():
@@ -101,9 +101,15 @@ class DataGenerator():
         :param mean_photon_counts: The mean photon counts
         :return: The value corresponding to the expected shot noise
         """
-        if mean_photon_counts > 30:
-            return round(normal(mean_photon_counts, 1))
-        return np.random.poisson(mean_photon_counts)
+
+        try:
+            photon_counts = poisson(mean_photon_counts, 1)
+        except ValueError:
+            photon_counts = round(normal(mean_photon_counts, 1))
+        return photon_counts
+        # if mean_photon_counts > 30:
+        #     return round(normal(mean_photon_counts, 1))
+        # return np.random.poisson(mean_photon_counts)
 
     def _calculate_complex_amplitude_base(
             self,
@@ -188,12 +194,13 @@ class DataGenerator():
                  abs(np.dot(self.beam_combination_matrix, complex_amplitude[:, 1])) ** 2)
                 .reshape(self.number_of_outputs, self.grid_size, self.grid_size))
 
-    def _calculate_normalization(self, source_sky_brightness_distribution) -> int:
+    def _calculate_normalization(self, source_sky_brightness_distribution, index_wavelength: int) -> int:
         """Calculate the normalization.
 
         :param source_sky_brightness_distribution: The source sky brightness distribution
         :return: The normalization
         """
+        source_sky_brightness_distribution = source_sky_brightness_distribution[index_wavelength]
         return len(source_sky_brightness_distribution[source_sky_brightness_distribution.value > 0]) if not len(
             source_sky_brightness_distribution[source_sky_brightness_distribution.value > 0]) == 0 else 1
 
@@ -219,14 +226,18 @@ class DataGenerator():
             source_sky_brightness_distribution = source.sky_brightness_distribution
 
         photon_counts = np.zeros(self.number_of_outputs)
-        normalization = self._calculate_normalization(source_sky_brightness_distribution)
+        index_wavelength = int(np.where(self.wavelength_steps == wavelength)[0])
+        normalization = self._calculate_normalization(source_sky_brightness_distribution, index_wavelength)
         # TODO: Note this only holds for regular wavelength steps
         wavelength_bin_width = self.wavelength_steps[1] - self.wavelength_steps[0]
 
         for index_ir, intensity_response in enumerate(intensity_response):
             mean_photon_counts = (
-                    np.sum(intensity_response * source_sky_brightness_distribution * self.time_step_duration.to(u.s)
-                           * wavelength_bin_width * self.unperturbed_instrument_throughput).value
+                    np.sum(intensity_response
+                           * source_sky_brightness_distribution[index_wavelength]
+                           * self.time_step_duration.to(u.s)
+                           * wavelength_bin_width
+                           * self.unperturbed_instrument_throughput).value
                     / normalization)
             photon_counts[index_ir] = self._apply_shot_noise(mean_photon_counts)
         return photon_counts * u.ph

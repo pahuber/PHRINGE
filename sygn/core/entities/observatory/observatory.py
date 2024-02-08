@@ -26,8 +26,8 @@ from sygn.core.entities.observatory.beam_combination_scheme import (
     Kernel5,
 )
 from sygn.core.entities.photon_sources.star import Star
-from sygn.core.util.noise_generator import get_perturbation_time_series
 from sygn.io.validators import validate_quantity_units
+from sygn.util.noise_generator import get_perturbation_time_series
 
 
 class Observatory(BaseComponent, BaseModel):

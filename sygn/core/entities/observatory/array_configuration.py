@@ -8,8 +8,8 @@ from astropy import units as u
 from astropy.units import Quantity
 from pydantic import BaseModel
 
-from sygn.core.util.helpers import Coordinates
 from sygn.io.matrix import get_2d_rotation_matrix
+from sygn.util.helpers import Coordinates
 
 
 class ArrayConfigurationEnum(Enum):
