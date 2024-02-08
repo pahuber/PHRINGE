@@ -284,7 +284,7 @@ class DataGenerator():
 
     def _remove_units_from_source_sky_coordinates(self):
         for index_source, source in enumerate(self.sources):
-            if self.has_planet_orbital_motion and isinstance(self.sources[0], Planet):
+            if self.has_planet_orbital_motion and isinstance(source, Planet):
                 for index_time, time in enumerate(self.time_steps):
                     self.sources[index_source].sky_coordinates[index_time] = Coordinates(
                         source.sky_coordinates[index_time].x.to(u.rad).value,
