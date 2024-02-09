@@ -34,7 +34,15 @@
 
 ## Requirements
 
-- TODO
+As of version 0.0.3 `SYGN` requires the following packages:
+- `click`
+- `numpy`
+- `astropy`
+- `pydantic`
+- `spectres`
+- `poliastro`
+- `tqdm`
+- `numba`
 
 ## Installation
 
