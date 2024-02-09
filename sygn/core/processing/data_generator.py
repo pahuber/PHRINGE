@@ -6,6 +6,7 @@ from tqdm.contrib.itertools import product
 
 from sygn.core.entities.observation import Observation
 from sygn.core.entities.observatory.observatory import Observatory
+from sygn.core.entities.photon_sources.exozodi import Exozodi
 from sygn.core.entities.photon_sources.local_zodi import LocalZodi
 from sygn.core.entities.photon_sources.planet import Planet
 from sygn.core.entities.scene import Scene
@@ -164,7 +165,7 @@ class DataGenerator():
 
         if self.has_planet_orbital_motion and isinstance(source, Planet):
             source_sky_coordinates = source.sky_coordinates[index_time]
-        elif isinstance(source, LocalZodi):
+        elif isinstance(source, LocalZodi) or isinstance(source, Exozodi):
             source_sky_coordinates = source.sky_coordinates[index_wavelength]
         else:
             source_sky_coordinates = source.sky_coordinates
@@ -290,7 +291,7 @@ class DataGenerator():
                         source.sky_coordinates[index_time].x.to(u.rad).value,
                         source.sky_coordinates[index_time].y.to(u.rad).value
                     )
-            elif isinstance(source, LocalZodi):
+            elif isinstance(source, LocalZodi) or isinstance(source, Exozodi):
                 for index_wavelength, wavelength in enumerate(self.wavelength_steps):
                     self.sources[index_source].sky_coordinates[index_wavelength] = Coordinates(
                         source.sky_coordinates[index_wavelength].x.to(u.rad).value,

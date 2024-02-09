@@ -24,10 +24,12 @@ class BasePhotonSource(ABC, BaseModel):
     sky_coordinates: Any = None
 
     @abstractmethod
-    def _calculate_mean_spectral_flux_density(self, wavelength_steps: np.ndarray, **kwargs) -> np.ndarray:
+    def _calculate_mean_spectral_flux_density(self, wavelength_steps: np.ndarray, grid_size: int,
+                                              **kwargs) -> np.ndarray:
         """Return the mean spectral flux density of the source object for each wavelength.
 
         :param wavelength_steps: The wavelength steps
+        :param grid_size: The grid size
         :param kwargs: Additional keyword arguments
         :return: The mean spectral flux density
         """
@@ -62,6 +64,10 @@ class BasePhotonSource(ABC, BaseModel):
         :param grid_size: The grid size
         :param kwargs: Additional keyword arguments
         """
-        self.mean_spectral_flux_density = self._calculate_mean_spectral_flux_density(wavelength_steps, **kwargs)
+        self.mean_spectral_flux_density = self._calculate_mean_spectral_flux_density(
+            wavelength_steps,
+            grid_size,
+            **kwargs
+        )
         self.sky_coordinates = self._calculate_sky_coordinates(grid_size, **kwargs)
         self.sky_brightness_distribution = self._calculate_sky_brightness_distribution(grid_size, **kwargs)

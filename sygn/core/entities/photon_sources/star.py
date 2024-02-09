@@ -132,7 +132,12 @@ class Star(BasePhotonSource, BaseModel):
         """
         return np.pi * (self.radius.to(u.m) / (self.distance.to(u.m)) * u.rad) ** 2
 
-    def _calculate_mean_spectral_flux_density(self, wavelength_steps, **kwargs) -> np.ndarray:
+    def _calculate_mean_spectral_flux_density(
+            self,
+            wavelength_steps: np.ndarray,
+            grid_size: int,
+            **kwargs
+    ) -> np.ndarray:
         return create_blackbody_spectrum(self.temperature, wavelength_steps, self.solid_angle)
 
     def _calculate_sky_brightness_distribution(self, grid_size: int, **kwargs) -> np.ndarray:
