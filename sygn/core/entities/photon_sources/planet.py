@@ -126,7 +126,12 @@ class Planet(BasePhotonSource, BaseModel):
         """
         return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.deg,))
 
-    def _calculate_mean_spectral_flux_density(self, wavelength_steps, **kwargs) -> np.ndarray:
+    def _calculate_mean_spectral_flux_density(
+            self,
+            wavelength_steps: np.ndarray,
+            grid_size: int,
+            **kwargs
+    ) -> np.ndarray:
         star_distance = kwargs.get('star_distance')
         solid_angle = np.pi * (self.radius.to(u.m) / (star_distance.to(u.m)) * u.rad) ** 2
 

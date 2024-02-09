@@ -3,7 +3,6 @@ from typing import Tuple
 import numpy as np
 from astropy import units as u
 from astropy.coordinates import SkyCoord, GeocentricTrueEcliptic
-from astropy.units import Quantity
 from pydantic import BaseModel
 
 from sygn.core.entities.photon_sources.base_photon_source import BasePhotonSource
@@ -15,7 +14,12 @@ from sygn.util.helpers import Coordinates
 class LocalZodi(BasePhotonSource, BaseModel):
     """Class representation of a local zodi."""
 
-    def _calculate_mean_spectral_flux_density(self, wavelength_steps: Quantity, **kwargs) -> np.ndarray:
+    def _calculate_mean_spectral_flux_density(
+            self,
+            wavelength_steps: np.ndarray,
+            grid_size: int,
+            **kwargs
+    ) -> np.ndarray:
         """Calculate the mean spectral flux density of the local zodi as described in Dannert et al. 2022.
 
         :param wavelength_steps: The wavelength steps

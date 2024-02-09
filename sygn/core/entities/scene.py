@@ -71,5 +71,8 @@ class Scene(BaseComponent, BaseModel):
                 number_of_wavelength_steps=len(settings.wavelength_steps)
             )
         if settings.has_exozodi_leakage:
-            pass
-            # self.exozodi.prepare(settings.time_steps, settings.wavelength_steps)
+            self.exozodi.prepare(settings.wavelength_steps,
+                                 settings.grid_size,
+                                 field_of_view=observatory.field_of_view,
+                                 star_distance=self.star.distance,
+                                 star_luminosity=self.star.luminosity, )
