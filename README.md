@@ -28,8 +28,8 @@
 - Model different array architectures including different array configurations (Emma-X, Triangle, Pentagon) and different nulling schemes (double Bracewell, Kernel)
 - Model noise contributions from astrophysical sources including stellar, local zodi and exozodi leakage
 - Model noise contributions from systematic instrument perturbations including amplitude, phase (OPD) and polarization rotation perturbations
-- Configure the osbervation and the observatory with all major parameters (see example configuration file in [this example](./examples/config.yaml))
-- Configure the observed planetary system including the star, planets and exozodi (see example system configuration in [this example](./examples/system.yaml)))
+- Configure the osbervation and the observatory with all major parameters
+- Configure the observed planetary system including the star, planets and exozodi
 - Export the photometry data as a FITS file
 
 ## Requirements
@@ -54,6 +54,7 @@ $ pip install sygn
 
 ## Usage
 
+`SYGN` requires a configuration file and a system context file to run. The configuration file contains information about the simulation settings, the observation strategy and the observatory hardware (see [examples/config.yaml](./examples/config.yaml)). The system context file contains context information about the observed system, such as stellar and planetary bulk and orbital parameters (see [examples/system.yaml](./examples/system.yaml)).
 To run `SYGN` open a terminal and write:
 ```console
 $ sygn PATH_TO_CONFIG_FILE PATH_TO_SYSTEM_CONTEXT_FILE
