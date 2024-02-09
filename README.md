@@ -46,7 +46,7 @@ As of version 0.0.3 `SYGN` requires the following packages:
 
 ## Installation
 
-You can install _SYGN_ via [pip] from [PyPI]:
+You can install `SYGN` via [pip] from [PyPI]:
 
 ```console
 $ pip install sygn
