@@ -17,7 +17,7 @@ from sygn.util.helpers import Coordinates
 
 @jit(complex128[:, :](float64, uint64, uint64, float64, float64[:, :], float64[:, :], float64[:], float64[:],
                       float64[:, :], float64[:, :]), nopython=True, nogil=True, fastmath=True)
-def _calculate_complex_amplitude_base_jit(
+def _calculate_complex_amplitude_base(
         aperture_radius: float,
         index_input: int,
         index_time: int,
@@ -145,9 +145,6 @@ class DataGenerator():
         except ValueError:
             photon_counts = round(normal(mean_photon_counts, 1))
         return photon_counts
-        # if mean_photon_counts > 30:
-        #     return round(normal(mean_photon_counts, 1))
-        # return np.random.poisson(mean_photon_counts)
 
     def _calculate_complex_amplitude(self, time, wavelength, source) -> np.ndarray:
         """Calculate the complex amplitude.
@@ -171,35 +168,23 @@ class DataGenerator():
             source_sky_coordinates = source.sky_coordinates
 
         for index_input in range(self.number_of_inputs):
-            complex_amplitude[index_input][0] = (
-                    _calculate_complex_amplitude_base_jit(
-                        self.aperture_radius,
-                        index_input,
-                        index_time,
-                        wavelength,
-                        self.amplitude_perturbation_time_series,
-                        self.phase_perturbation_time_series,
-                        observatory_coordinates.x,
-                        observatory_coordinates.y,
-                        source_sky_coordinates.x,
-                        source_sky_coordinates.y
-                    )
-                    * np.cos(polarization_angle + self.polarization_perturbation_time_series[index_input][index_time]))
+            base_complex_amplitude = _calculate_complex_amplitude_base(
+                self.aperture_radius,
+                index_input,
+                index_time,
+                wavelength,
+                self.amplitude_perturbation_time_series,
+                self.phase_perturbation_time_series,
+                observatory_coordinates.x,
+                observatory_coordinates.y,
+                source_sky_coordinates.x,
+                source_sky_coordinates.y
+            )
+            complex_amplitude[index_input][0] = (base_complex_amplitude * np.cos(
+                polarization_angle + self.polarization_perturbation_time_series[index_input][index_time]))
 
-            complex_amplitude[index_input][1] = (
-                    _calculate_complex_amplitude_base_jit(
-                        self.aperture_radius,
-                        index_input,
-                        index_time,
-                        wavelength,
-                        self.amplitude_perturbation_time_series,
-                        self.phase_perturbation_time_series,
-                        observatory_coordinates.x,
-                        observatory_coordinates.y,
-                        source_sky_coordinates.x,
-                        source_sky_coordinates.y
-                    )
-                    * np.sin(polarization_angle + self.polarization_perturbation_time_series[index_input][index_time]))
+            complex_amplitude[index_input][1] = (base_complex_amplitude * np.sin(
+                polarization_angle + self.polarization_perturbation_time_series[index_input][index_time]))
         return complex_amplitude
 
     def _calculate_intensity_response(self, time, wavelength, source) -> np.ndarray:
@@ -327,7 +312,7 @@ class DataGenerator():
             # Calculate intensity response
             intensity_response = self._calculate_intensity_response(time, wavelength, source)
 
-            # Calc photon counts
+            # Calculate photon counts
             photon_counts = self._calculate_photon_counts(
                 time,
                 wavelength,
@@ -339,7 +324,7 @@ class DataGenerator():
             index_wavelength, index_time = self._get_binning_indices(time, wavelength)
             self.photon_counts_binned[:, index_wavelength, index_time] += photon_counts
 
-            # Calc differential photon counts
+            # Calculate differential photon counts
             for index_pair, pair in enumerate(self.differential_output_pairs):
                 self.differential_photon_counts[index_pair] = self.photon_counts_binned[pair[0]] - \
                                                               self.photon_counts_binned[pair[1]]
