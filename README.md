@@ -55,6 +55,7 @@ $ pip install sygn
 ## Usage
 
 `SYGN` requires a configuration file and a system context file to run. The configuration file contains information about the simulation settings, the observation strategy and the observatory hardware (see [examples/config.yaml](./examples/config.yaml)). The system context file contains context information about the observed system, such as stellar and planetary bulk and orbital parameters (see [examples/system.yaml](./examples/system.yaml)).
+
 To run `SYGN` open a terminal and write:
 ```console
 $ sygn PATH_TO_CONFIG_FILE PATH_TO_SYSTEM_CONTEXT_FILE
