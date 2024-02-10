@@ -21,23 +21,46 @@
 [pre-commit]: https://github.com/pre-commit/pre-commit
 [black]: https://github.com/psf/black
 
+`SYGN` is a **SY**nthetic **N**ulling interferometry photometry data **G**enerator that can be used to generate synthetic data for space-based nulling interferometers. It is very flexible and can model a variety of different interferometer architectures and noise sources.
+
 ## Features
 
-- TODO
+- Model different array architectures including different array configurations (Emma-X, Triangle, Pentagon) and different nulling schemes (double Bracewell, Kernel)
+- Model noise contributions from astrophysical sources including stellar, local zodi and exozodi leakage
+- Model noise contributions from systematic instrument perturbations including amplitude, phase (OPD) and polarization rotation perturbations
+- Configure the osbervation and the observatory with all major parameters
+- Configure the observed planetary system including the star, planets and exozodi
+- Export the photometry data as a FITS file
 
 ## Requirements
 
-- TODO
+As of version 0.0.3 `SYGN` requires the following packages:
+- `click`
+- `numpy`
+- `astropy`
+- `pydantic`
+- `spectres`
+- `poliastro`
+- `tqdm`
+- `numba`
 
 ## Installation
 
-You can install _SYGN_ via [pip] from [PyPI]:
+You can install `SYGN` via [pip] from [PyPI]:
 
 ```console
 $ pip install sygn
 ```
 
 ## Usage
+
+`SYGN` requires a configuration file and a system context file to run. The configuration file contains information about the simulation settings, the observation strategy and the observatory hardware (see [examples/config.yaml](./examples/config.yaml)). The system context file contains context information about the observed system, such as stellar and planetary bulk and orbital parameters (see [examples/system.yaml](./examples/system.yaml)).
+
+To run `SYGN` open a terminal and write:
+```console
+$ sygn PATH_TO_CONFIG_FILE PATH_TO_SYSTEM_CONTEXT_FILE
+```
+
 
 Please see the [Command-line Reference] for details.
 
