@@ -3,23 +3,16 @@
 SYGN
 ====
 
-SYGN is a **SY**\ nthetic photometry data **G**\ enerator for **N**\ ulling interferometers. It can model a variety of different interferometer architectures and account for astrophysical and instrumental noise sources.
-
-.. toctree::
-   :maxdepth: 2
-   :caption: Getting Started:
-
-   installation
-   usage
-   first_example
+SYGN is a **SY**\ nthetic photometry data **G**\ enerator for **N**\ ulling interferometers. It can model a variety of
+different interferometer architectures and account for astrophysical and instrumental noise sources.
 
 .. image:: _static/planet_only.jpg
-   :width: 100%
+   :width: 54%
 
 .. image:: _static/planet_astro.jpg
-   :width: 100%
+   :width: 54%
 
 .. image:: _static/planet_astro_instru.jpg
-   :width: 100%
+   :width: 54%
 
 
