@@ -13,7 +13,7 @@ Open a terminal and enter the following command to download the configuration fi
 
 .. code-block:: console
 
-    wget -O config.yaml https://raw.githubusercontent.com/pahuber/SYGN/main/examples/config.yaml
+    wget -O config.yaml https://raw.githubusercontent.com/pahuber/SYGN/main/docs/_static/config.yaml
 
 
 Download the Spectrum Context File
@@ -23,7 +23,7 @@ In the terminal, enter the following command to download the spectrum context fi
 
 .. code-block:: console
 
-    wget -O spectrum_context.yaml https://raw.githubusercontent.com/pahuber/SYGN/main/examples/system.yaml
+    wget -O spectrum_context.yaml https://raw.githubusercontent.com/pahuber/SYGN/main/docs/_static/spectrum_context.yaml
 
 Run SYGN
 --------

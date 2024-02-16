@@ -14,6 +14,7 @@ the observatory hardware. A typical configuration file looks like this:
 
 Note that the file has three main keys: `settings`, `observation` and `observatory`.
 
+
 Keys
 ----
 

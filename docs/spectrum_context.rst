@@ -16,6 +16,33 @@ this:
 
 Note that the file has three main keys: `star`, `exozodi` and `planets`.
 
+.. note::
+    Multiplanetary systems can simply be modeled by adding multiple planets to the `planets` list, i.e.
+
+    ..  code-block:: yaml
+
+        planets:
+          - name: Earth
+            mass: 1 Mearth
+            radius: 1 Rearth
+            temperature: 300 K
+            semi_major_axis: 1 au
+            eccentricity: 0.0
+            inclination: 180 deg
+            raan: 0 deg
+            argument_of_periapsis: 0 deg
+            true_anomaly: 0 deg
+          - name: Mars
+            mass: 0.1 Mearth
+            radius: 0.5 Rearth
+            temperature: 200 K
+            semi_major_axis: 1.5 au
+            eccentricity: 0.1
+            inclination: 180 deg
+            raan: 0 deg
+            argument_of_periapsis: 0 deg
+            true_anomaly: 0 deg
+
 Keys
 ----
 
