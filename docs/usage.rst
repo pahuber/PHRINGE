@@ -3,12 +3,15 @@
 Usage
 =====
 
-Prerequisites
+Input Files
 -----------
 
-SYGN requires a *configuration file* and a *spectrum context file* to run. Optionally, a *spectrum file* containing a planet
-spectrum can be provided in addition to the two required files. If no spectrum file is provided, a blackbody spectrum
-will be created from the spectrum context file.
+SYGN requires the following files to run:
+    * Configuration file
+    * Spectrum context file
+    * Spectrum file (optional)
+
+If no spectrum file is provided, a blackbody spectrum will be created from the spectrum context file.
 
 Configuration File
 ~~~~~~~~~~~~~~~~~~
@@ -38,7 +41,7 @@ containing the wavelength in microns and the second column containing the flux i
 Running SYGN
 ------------
 
-SYGN can be used from the terminal as follows:
+SYGN can be run from the terminal as follows:
 
 .. code-block:: console
 

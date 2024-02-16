@@ -34,3 +34,11 @@ Key Features
    installation
    usage
    first_example
+
+.. toctree::
+   :maxdepth: 2
+   :caption: User Documentation:
+   :hidden:
+
+   configuration
+   spectrum_context
