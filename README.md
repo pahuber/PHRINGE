@@ -21,7 +21,7 @@
 [pre-commit]: https://github.com/pre-commit/pre-commit
 [black]: https://github.com/psf/black
 
-`SYGN` is a **SY**nthetic **N**ulling interferometer photometry data **G**enerator that can be used to generate synthetic data for space-based nulling interferometers. It is very flexible and can model a variety of different interferometer architectures and noise sources.
+`SYGN` is a **SY**nthetic photometry data **G**enerator for **N**ulling interferometers that can be used to generate synthetic data for space-based nulling interferometers. It is very flexible and can model a variety of different interferometer architectures and noise sources.
 
 ## Features
 
