@@ -1,24 +1,21 @@
 #############################################
 # SYGN Configuration File
-# -------------------------------------------
-# For documentation see:
-# https://github.com/pahuber/SYGN
 ############################################
 ---
 # -------------------------------------------
-# Simulation Settings Configuration
+# Simulation Settings
 # -------------------------------------------
 settings:
   grid_size: 30
   has_planet_orbital_motion: false
-  has_stellar_leakage: true
-  has_local_zodi_leakage: true
-  has_exozodi_leakage: true
-  has_amplitude_perturbations: true
-  has_phase_perturbations: true
-  has_polarization_perturbations: true
+  has_stellar_leakage: false
+  has_local_zodi_leakage: false
+  has_exozodi_leakage: false
+  has_amplitude_perturbations: false
+  has_phase_perturbations: false
+  has_polarization_perturbations: false
 # -------------------------------------------
-# Observation (Strategy) Configuration
+# Observation (Strategy)
 # -------------------------------------------
 observation:
   total_integration_time: 1 d
@@ -31,7 +28,7 @@ observation:
   optimized_star_separation: habitable-zone
   optimized_wavelength: 10 um
 # -------------------------------------------
-# Observatory (Hardware) Configuration
+# Observatory (Hardware)
 # -------------------------------------------
 observatory:
   array_configuration: emma-x-circular-rotation
