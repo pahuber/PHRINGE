@@ -6,7 +6,7 @@ Usage
 Prerequisites
 -----------
 
-SYGN requires a configuration file and a spectrum context file to run. Optionally, a spectrum file containing a planet
+SYGN requires a *configuration file* and a *spectrum context file* to run. Optionally, a *spectrum file* containing a planet
 spectrum can be provided in addition to the two required files. If no spectrum file is provided, a blackbody spectrum
 will be created from the spectrum context file.
 
@@ -28,11 +28,17 @@ A typical spectrum context file looks like this:
 .. include:: _static/spectrum_context.yaml
    :literal:
 
+Spectrum File
+~~~~~~~~~~~~
+
+The spectrum file is a TXT file and contains the planet spectrum. It should contain two columns, the first column
+containing the wavelength in microns and the second column containing the flux in W/m^2/micron.
+
 
 Running SYGN
 ------------
 
-Once installed SYGN can be used from the terminal as follows:
+SYGN can be used from the terminal as follows:
 
 .. code-block:: console
 
