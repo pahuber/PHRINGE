@@ -21,7 +21,7 @@
 [pre-commit]: https://github.com/pre-commit/pre-commit
 [black]: https://github.com/psf/black
 
-`SYGN` is a **SY**nthetic photometry data **G**enerator for **N**ulling interferometers. It can model a variety of different interferometer architectures and account for astrophysical and instrumental noise sources.
+`SYGN` is a **SY**nthetic photometry data **G**enerator for **N**ulling interferometers. It can simulate the observation of an exoplanetary system with a space-based nulling interferometer and generate realistic photometry data as a function of wavelength/spectral channel and time, considering both astrophysical and instrumental noise sources.
 
 ## Documentation
 The documentation including installation and usage instructions, examples and a general user documentaion can be found on [sygn.readthedocs.io](https://sygn.readthedocs.io/en/latest/).
