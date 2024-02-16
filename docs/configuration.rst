@@ -132,8 +132,8 @@ accepted values and meanings are given in the table below:
 
    * - Name
      - Type
-     - Description
      - Accepted Values
+     - Description
    * - array_configuration
      - str
      - emma-x-circular-rotation, equilateral-triangle-circular-rotation, regular-pentagon-circular-rotation

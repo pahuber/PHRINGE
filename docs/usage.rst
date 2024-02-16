@@ -18,6 +18,7 @@ Configuration File
 
 The configuration file is a YAML file that is used to configure the simulation settings, the observation strategy and
 the observatory hardware. See :ref:`user documentation <configuration>` for more information.
+
 A typical configuration file looks like this:
 
 .. include:: _static/config.yaml
@@ -26,7 +27,9 @@ A typical configuration file looks like this:
 Spectrum Context File
 ~~~~~~~~~~~~~~~~~~~~~
 
-The spectrum context file is a YAML file that contains important context information about the input planet spectrum.
+The spectrum context file is a YAML file that contains important context information about the input planet spectrum. See :ref:`user documentation <spectrum_context>` for more information.
+
+
 A typical spectrum context file looks like this:
 
 .. include:: _static/spectrum_context.yaml
