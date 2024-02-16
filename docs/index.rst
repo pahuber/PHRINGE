@@ -16,3 +16,11 @@ different interferometer architectures and account for astrophysical and instrum
    :width: 54%
 
 
+.. toctree::
+   :maxdepth: 2
+   :caption: Getting Started:
+   :hidden:
+
+   installation
+   usage
+   first_example
