@@ -16,14 +16,14 @@ Open a terminal and enter the following command to download the configuration fi
     wget -O config.yaml https://raw.githubusercontent.com/pahuber/SYGN/main/docs/_static/config.yaml
 
 
-Download the Spectrum Context File
+Download the Exoplanetary System File
 ----------------------------------
 
-In the terminal, enter the following command to download the spectrum context file:
+In the terminal, enter the following command to download the exoplanetary system file:
 
 .. code-block:: console
 
-    wget -O spectrum_context.yaml https://raw.githubusercontent.com/pahuber/SYGN/main/docs/_static/spectrum_context.yaml
+    wget -O exoplanetary_system.yaml https://raw.githubusercontent.com/pahuber/SYGN/main/docs/_static/exoplanetary_system.yaml
 
 Run SYGN
 --------
@@ -32,7 +32,7 @@ To run SYGN enter the following command in the terminal:
 
 .. code-block:: console
 
-    sygn config.yaml spectrum_context.yaml
+    sygn config.yaml exoplanetary_system.yaml
 
 
 Output
@@ -44,3 +44,6 @@ in a FITS viewer will reveal the following image:
 .. image:: _static/first_example.jpg
     :alt: First Example
     :width: 100%
+
+Here, the brightness corresponds to the photon counts, while the x-axis corresponds to time and the y-axis to wavelength
+/spectral channel.

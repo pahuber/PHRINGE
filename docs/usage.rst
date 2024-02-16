@@ -8,10 +8,10 @@ Input Files
 
 SYGN requires the following files to run:
     * Configuration file
-    * Spectrum context file
+    * Exoplanetary system file
     * Spectrum file (optional)
 
-If no spectrum file is provided, a blackbody spectrum will be created from the spectrum context file.
+If no spectrum file is provided, a blackbody spectrum will be created from the exoplanetary system file.
 
 Configuration File
 ~~~~~~~~~~~~~~~~~~
@@ -24,15 +24,15 @@ A typical configuration file looks like this:
 .. include:: _static/config.yaml
    :literal:
 
-Spectrum Context File
+Exoplanetary System File
 ~~~~~~~~~~~~~~~~~~~~~
 
-The spectrum context file is a YAML file that contains important context information about the input planet spectrum. See :ref:`user documentation <spectrum_context>` for more information.
+The exoplanetary system file is a YAML file that contains information about the observed exoplanetary system. See :ref:`user documentation <exoplanetary_system>` for more information.
 
 
-A typical spectrum context file looks like this:
+A typical exoplanetary system file looks like this:
 
-.. include:: _static/spectrum_context.yaml
+.. include:: _static/exoplanetary_system.yaml
    :literal:
 
 Spectrum File
@@ -49,4 +49,4 @@ SYGN can be run from the terminal as follows:
 
 .. code-block:: console
 
-    sygn [-s PATH_TO_SPECTRUM_FILE -o PATH_TO_OUTPUT_DIRECTORY] PATH_TO_CONFIG_FILE PATH_TO_SPECTRUM_CONTEXT_FILE
+    sygn [-s PATH_TO_SPECTRUM_FILE -o PATH_TO_OUTPUT_DIRECTORY] PATH_TO_CONFIG_FILE PATH_TO_EXOPLANETARY_SYSTEM_FILE

@@ -27,4 +27,4 @@ as a function of wavelength/spectral channel and time, considering both astrophy
    :hidden:
 
    configuration
-   spectrum_context
+   exoplanetary_system

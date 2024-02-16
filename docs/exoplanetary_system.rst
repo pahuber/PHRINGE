@@ -1,17 +1,16 @@
-.. _spectrum_context:
+.. _exoplanetary_system:
 
-Spectrum Context File
+Exoplanetary System File
 =====================
 
 Overview
 --------
 
-The spectrum context file is a YAML file that contains important context information about the input planet spectrum.
-This context information is needed to properly interpret the input spectrum. A typical spectrum context file looks like
-this:
+The exoplanetary system file is a YAML file that contains information about the observed exoplanetary system.
+This information is also important for properly interpreting the planetary input spectra, if they are provided. A
+typical exoplanetary system file looks like this:
 
-
-.. include:: _static/spectrum_context.yaml
+.. include:: _static/exoplanetary_system.yaml
    :literal:
 
 Note that the file has three main keys: `star`, `exozodi` and `planets`.
