@@ -25,14 +25,4 @@ planets:
     raan: 0 deg
     argument_of_periapsis: 0 deg
     true_anomaly: 0 deg
-#  - name: Mars
-#    mass: 0.1 Mearth
-#    radius: 0.5 Rearth
-#    temperature: 210 K
-#    semi_major_axis: 0.1 au
-#    eccentricity: 0
-#    inclination: 0 deg
-#    raan: 0 deg
-#    argument_of_periapsis: 0 deg
-#    true_anomaly: 0 deg
 ...
