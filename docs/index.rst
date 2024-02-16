@@ -16,16 +16,6 @@ Key Features
     * **Instrumental Sources**: Amplitude, phase (OPD) and polarization rotation perturbations
 * **Exoplanetary Systems**: Model exoplanetary systems with single or multiple planets using blackbody or user-defined planetary spectra
 
-.. image:: _static/planet_only.jpg
-   :width: 54%
-
-.. image:: _static/planet_astro.jpg
-   :width: 54%
-
-.. image:: _static/planet_astro_instru.jpg
-   :width: 54%
-
-
 .. toctree::
    :maxdepth: 2
    :caption: Getting Started:
