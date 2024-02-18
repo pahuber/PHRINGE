@@ -4,7 +4,6 @@ Input Files
 ===========
 
 .. toctree::
-   :maxdepth: 2
    :hidden:
 
     input_files/configuration
