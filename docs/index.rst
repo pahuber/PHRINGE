@@ -26,5 +26,12 @@ as a function of wavelength/spectral channel and time, considering both astrophy
    :caption: User Documentation:
    :hidden:
 
-   configuration
-   exoplanetary_system
+   overview
+   input_files
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Developer Documentation:
+   :hidden:
+
+   architecture

@@ -11,13 +11,14 @@ SYGN requires the following files to run:
     * Exoplanetary system file
     * Spectrum file (optional)
 
-If no spectrum file is provided, a blackbody spectrum will be created from the exoplanetary system file.
+.. note::
+    If no spectrum file is provided, a blackbody spectrum will be created from the exoplanetary system file.
 
 Configuration File
 ~~~~~~~~~~~~~~~~~~
 
 The configuration file is a YAML file that is used to configure the simulation settings, the observation strategy and
-the observatory hardware. See :ref:`user documentation <configuration>` for more information.
+the observatory hardware. See the :ref:`user documentation <configuration>` for more information.
 
 A typical configuration file looks like this:
 
@@ -27,7 +28,8 @@ A typical configuration file looks like this:
 Exoplanetary System File
 ~~~~~~~~~~~~~~~~~~~~~
 
-The exoplanetary system file is a YAML file that contains information about the observed exoplanetary system. See :ref:`user documentation <exoplanetary_system>` for more information.
+The exoplanetary system file is a YAML file that contains information about the observed exoplanetary system. See the
+:ref:`user documentation <exoplanetary_system>` for more information.
 
 
 A typical exoplanetary system file looks like this:
