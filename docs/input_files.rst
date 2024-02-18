@@ -8,4 +8,4 @@ Input Files
    :hidden:
 
     input_files/configuration
-    input_files/exoplanetary_systems
+    input_files/exoplanetary_system
