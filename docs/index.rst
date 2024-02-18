@@ -27,7 +27,7 @@ as a function of wavelength/spectral channel and time, considering both astrophy
    :hidden:
 
    overview
-   input_files
+   input_files/input_files
 
 .. toctree::
    :maxdepth: 2
