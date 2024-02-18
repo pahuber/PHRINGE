@@ -13,7 +13,7 @@ as a function of wavelength/spectral channel and time, considering both astrophy
 
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
    :caption: Getting Started:
    :hidden:
 
