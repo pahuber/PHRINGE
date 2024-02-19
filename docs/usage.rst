@@ -8,7 +8,7 @@ Input Files
 
 SYGN requires the following files to run:
     * A :ref:`configuration file <input_files/configuration>` to configure the simulation settings, observation strategy and observatory hardware
-    * A :ref:`Exoplanetary system file <input_files/exoplanetary_system>` to specify the observed exoplanetary system including the stellar, planetary and exozodi properties
+    * An :ref:`exoplanetary system file <input_files/exoplanetary_system>` to specify the observed exoplanetary system including the stellar, planetary and exozodi properties
     * Optional: A spectrum file that represents the flux of the planet
 
 .. note::
