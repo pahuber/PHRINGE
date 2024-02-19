@@ -6,5 +6,5 @@ Input Files
 .. toctree::
    :maxdepth: 4
 
-    configuration
-    exoplanetary_system
+    input_files/configuration
+    input_files/exoplanetary_system
