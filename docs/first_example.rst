@@ -39,7 +39,7 @@ Output
 ------
 
 This will generate a FITS file called `data_{timestamp}.fits` containing the synthetic photometry data. Opening the file
-in a FITS viewer will reveal the following image:
+in a FITS viewer will reveal (due to the randomness involved) something similar to the following image:
 
 .. image:: _static/first_example.jpg
     :alt: First Example
