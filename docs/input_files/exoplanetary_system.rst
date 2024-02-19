@@ -10,7 +10,7 @@ The exoplanetary system file is a YAML file that contains information about the 
 This information is also important for properly interpreting the planetary input spectra, if they are provided. A
 typical exoplanetary system file looks like this:
 
-.. include:: _static/exoplanetary_system.yaml
+.. include:: ../_static/exoplanetary_system.yaml
    :literal:
 
 Note that the file has three main keys: `star`, `exozodi` and `planets`.

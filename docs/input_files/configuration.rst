@@ -9,7 +9,7 @@ Overview
 The configuration file is a YAML file that is used to configure the simulation settings, the observation strategy and
 the observatory hardware. A typical configuration file looks like this:
 
-.. include:: _static/config.yaml
+.. include:: ../_static/config.yaml
    :literal:
 
 Note that the file has three main keys: `settings`, `observation` and `observatory`.

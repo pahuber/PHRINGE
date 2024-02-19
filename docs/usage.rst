@@ -44,10 +44,10 @@ The spectrum file is a TXT file and contains the planet spectrum. It should cont
 containing the wavelength in microns and the second column containing the flux in W/m^2/micron.
 
 
-Running SYGN
+Running SYGN From the Command Line
 ------------
 
-SYGN can be run from the terminal as follows:
+SYGN can be run from the command line as follows:
 
 .. code-block:: console
 
