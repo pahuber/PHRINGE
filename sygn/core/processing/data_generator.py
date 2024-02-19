@@ -117,7 +117,11 @@ class DataGenerator():
         self.optimized_wavelength = observation.optimized_wavelength.to(u.m).value
         self.phase_perturbation_time_series = observatory.phase_perturbation_time_series.to(u.m).value
         self.polarization_perturbation_time_series = observatory.polarization_perturbation_time_series.to(u.rad).value
-        self.sources = scene.get_all_sources()
+        self.sources = scene.get_all_sources(
+            settings.has_stellar_leakage,
+            settings.has_local_zodi_leakage,
+            settings.has_exozodi_leakage
+        )
         self.star = scene.star
         self.time_step_duration = settings.time_step_duration.to(u.s).value
         self.time_steps = settings.time_steps.to(u.s).value

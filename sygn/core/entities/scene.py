@@ -26,15 +26,20 @@ class Scene(BaseComponent, BaseModel):
         super().__init__(**data)
         self.local_zodi = LocalZodi()
 
-    def get_all_sources(self):
+    def get_all_sources(self, has_stellar_leakage: bool, has_local_zodi_leakage: bool, has_exozodi_leakage: bool):
         """Return all sources in the scene that should be accounted for, i.e. only the ones for which a spectrum has
-        been generated/provided."""
+        been generated/provided.
+
+        :param has_stellar_leakage: Whether the star should be accounted for
+        :param has_local_zodi_leakage: Whether the local zodi should be accounted for
+        :param has_exozodi_leakage: Whether the exozodi should be accounted for
+        """
         sources = [*self.planets]
-        if self.star.mean_spectral_flux_density is not None:
+        if has_stellar_leakage:
             sources.append(self.star)
-        if self.local_zodi.mean_spectral_flux_density is not None:
+        if has_local_zodi_leakage:
             sources.append(self.local_zodi)
-        if self.exozodi.mean_spectral_flux_density is not None:
+        if has_exozodi_leakage:
             sources.append(self.exozodi)
         return sources
 
