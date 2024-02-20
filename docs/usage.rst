@@ -14,11 +14,68 @@ SYGN requires the following files to run:
 .. note::
     If no spectrum file is provided, a blackbody spectrum will be created from the exoplanetary system file.
 
-Running SYGN From the Command Line
+Usage From Command Line
 ------------
 
 SYGN can be run from the command line as follows:
 
 .. code-block:: console
 
-    sygn [-s SPECTRUM_PATH -o OUTPUT_DIRECTORY_PATH] CONFIG_FILE_PATH EXOPLANETARY_SYSTEM_FILE_PATH
+    sygn [OPTIONS] CONFIG_FILE_PATH EXOPLANETARY_SYSTEM_FILE_PATH [FLAGS]
+
+Arguments
+~~~~~~~~~
+    * ``CONFIG_FILE_PATH``: The path to the configuration file
+    * ``EXOPLANETARY_SYSTEM_FILE_PATH``: The path to the exoplanetary system file
+
+Options
+~~~~~~~
+    * ``-s``, ``--spectrum-file``:   The path to the spectrum file
+    * ``-o``, ``--output-file``:     The path to the output file
+    * ``-h``, ``--help``:            Show the help message and exit
+    * ``-v``, ``--version``:         Show the version number and exit
+
+Flags
+~~~~~
+    * ``-fits``/``--no-fits``:      Save the generated data to a FITS file; default is true
+    * ``-copy``/``--no-copy``       Create a copy of the configuration and exoplanetary system files in the output directory; default is true
+
+
+Usage From Python Module
+------------------------
+SYGN can also be used from within another Python module by making use of its API in the following way:
+
+.. code-block:: python
+
+    from sygn import API
+    from pathlib import Path
+
+    data = API.generate_data(
+            Path('path_to_config_file'),
+            Path('path_to_exoplanetary_system_file'),
+            spectrum_file_path=Path('path_to_spectrum_file'),
+            output_dir=Path('path_to_output_directory'),
+            fits=True,
+            copy=True
+    )
+
+Alternatively, instead of passing the configuration and exoplanetary system file paths, the configuration and
+exoplanetary system information can also be passed directly as dictionaries:
+
+.. code-block:: python
+
+    from sygn import API
+    from pathlib import Path
+
+    data = API.generate_data(
+            config_dict,
+            exoplanetary_system_dict,
+            spectrum_file_path=Path('path_to_spectrum_file'),
+            output_dir=Path('path_to_output_directory'),
+            fits=True,
+            copy=True
+    )
+
+.. note::
+    The latter option might be especially useful when generating data within loops, such that in each iteration a different
+    dictionary can be used rather than having to use different files each time.
