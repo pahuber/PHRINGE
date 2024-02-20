@@ -87,18 +87,18 @@ value types, accepted values and meanings are given in the table below:
      - Effective temperature of the star
    * - luminosity
      - str*
-     - Watts
      - e.g. 1 Lsun
+     - Watts
      - Luminosity of the star
    * - right_ascension
      - str*
-     - Time (~Angle)
      - e.g. 0 h
+     - Time (~Angle)
      - Right ascension of the star
    * - declination
      - str*
-     - Angle
      - e.g. -75 deg
+     - Angle
      - Declination of the star
 
 \* String consisting of a number and a unit that can be parsed by astropy.units
