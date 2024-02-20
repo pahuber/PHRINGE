@@ -3,8 +3,8 @@ from pathlib import Path
 import yaml
 
 
-class YAMLReader:
-    """Class representation of the YAML reader.
+class YAMLHandler:
+    """Class representation of the YAML handler.
     """
 
     def read(self, file_path: Path) -> dict:
@@ -16,3 +16,12 @@ class YAMLReader:
         with open(file_path, 'r') as file:
             dict = yaml.load(file, Loader=yaml.SafeLoader)
         return dict
+
+    def write(self, dict: dict, file_path: Path):
+        """Write a dictionary to a YAML file.
+
+        :param dict: The dictionary to be written to a YAML file
+        :param file_path: The path to the YAML file
+        """
+        with open(file_path, 'w') as file:
+            yaml.dump(dict, file)

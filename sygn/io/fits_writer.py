@@ -1,4 +1,3 @@
-from datetime import datetime
 from pathlib import Path
 
 from astropy.io import fits
@@ -8,7 +7,7 @@ class FITSWriter():
     """Class representation of the FITS writer.
     """
 
-    def write(self, data, output_dir: Path = None):
+    def write(self, data, output_dir: Path):
         """Write the data to a FITS file.
 
         :param data: The data to be written to FITS
@@ -22,5 +21,4 @@ class FITSWriter():
             hdu = fits.ImageHDU(data_per_output)
             hdu_list.append(hdu)
         hdul = fits.HDUList(hdu_list)
-        output_dir = Path(output_dir) if output_dir else Path('')
-        hdul.writeto(output_dir.joinpath(f'data_{datetime.now().strftime("%Y%m%d_%H%M%S.%f")}.fits'))
+        hdul.writeto(output_dir.joinpath(f'data.fits'))
