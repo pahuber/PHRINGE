@@ -52,43 +52,52 @@ The *star* key contains several other keys that are used to define the star of t
 value types, accepted values and meanings are given in the table below:
 
 .. list-table:: Star Keys
-   :widths: 30 10 20 40
+   :widths: 26 7 20 7 40
    :header-rows: 1
 
    * - Name
      - Type
      - Accepted Values
+     - Dimension
      - Description
    * - name
      - str
      - e.g. Sun
+     - \-
      - Name of the star
    * - distance
      - str*
      - e.g. 10 pc
+     - Length
      - Distance to the star from the observatory
    * - mass
      - str*
      - e.g. 1 Msun
+     - Mass
      - Mass of the star
    * - radius
      - str*
      - e.g. 1 Rsun
+     - Length
      - Radius of the star
    * - temperature
      - str*
      - e.g. 5700 K
+     - Temperature
      - Effective temperature of the star
    * - luminosity
      - str*
+     - Watts
      - e.g. 1 Lsun
      - Luminosity of the star
    * - right_ascension
      - str*
+     - Time (~Angle)
      - e.g. 0 h
      - Right ascension of the star
    * - declination
      - str*
+     - Angle
      - e.g. -75 deg
      - Declination of the star
 
@@ -105,20 +114,23 @@ The *exozodi* key contains several other keys that are used to define the zodi o
 The key names, value types, accepted values and meanings are given in the table below:
 
 .. list-table:: Exozodi Keys
-   :widths: 30 10 20 40
+   :widths: 26 7 20 7 40
    :header-rows: 1
 
    * - Name
      - Type
      - Accepted Values
+     - Dimension
      - Description
    * - level
      - float
      - e.g. 3.0
+     - 1
      - Amount of zodiacal dust in units of solar system zodi levels
    * - inclination
      - str*
      - e.g. 0 deg
+     - Angle
      - Inclination of the exozodi
 
 \* String consisting of a number and a unit that can be parsed by astropy.units
@@ -134,52 +146,63 @@ The *planets* key contains a list of several other keys that are used to define 
 The key names, value types, accepted values and meanings are given in the table below:
 
 .. list-table:: Planets Keys
-   :widths: 30 10 20 40
+   :widths: 26 7 20 7 40
    :header-rows: 1
 
    * - Name
      - Type
      - Accepted Values
+     - Dimension
      - Description
    * - name
      - str
      - e.g. Earth
+     - \-
      - Name of the planet
    * - mass
      - str*
      - e.g. 1 Mearth
+     - Mass
      - Mass of the planet
    * - radius
      - str*
      - e.g. 1 Rearth
+     - Length
      - Radius of the planet
    * - temperature
      - str*
      - e.g. 300 K
+     - Temperature
      - Effective temperature of the planet
    * - semi_major_axis
      - str*
      - e.g. 1 au
+     - Length
      - Semi-major axis of the planet
    * - eccentricity
      - float
      - e.g. 0.0
+     - 1
      - Eccentricity of the planet
    * - inclination
      - str*
      - e.g. 180 deg
+     - Angle
      - Inclination of the planet
    * - raan
      - str*
      - e.g. 0 deg
+     - Angle
      - Right ascension of the ascending node of the planet
    * - argument_of_periapsis
      - str*
      - e.g. 0 deg
+     - Angle
      - Argument of periapsis of the planet
    * - true_anomaly
      - str*
      - e.g. 0 deg
+     - Angle
      - True anomaly of the planet
 
 \* String consisting of a number and a unit that can be parsed by astropy.units
