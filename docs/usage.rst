@@ -31,14 +31,14 @@ Arguments
 Options
 ~~~~~~~
 * ``-s``, ``--spectrum-file``:   The path to the spectrum file
-* ``-o``, ``--output-file``:     The path to the output file
+* ``-o``, ``--output-dir``:     The path to the output directory
 * ``-h``, ``--help``:            Show the help message and exit
 * ``-v``, ``--version``:         Show the version number and exit
 
 Flags
 ~~~~~
-* ``-fits``/``--no-fits``:      Save the generated data to a FITS file; default is true
-* ``-copy``/``--no-copy``       Create a copy of the configuration and exoplanetary system files in the output directory; default is true
+* ``--fits``/``--no-fits``:      Save the generated data to a FITS file; default is true
+* ``--copy``/``--no-copy``       Create a copy of the configuration and exoplanetary system files in the output directory; default is true
 
 
 Usage From Python Module
