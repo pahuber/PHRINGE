@@ -311,43 +311,13 @@ class Observatory(BaseComponent, BaseModel):
             case BeamCombinationSchemeEnum.KERNEL_5.value:
                 return Kernel5()
 
-    def prepare(self, settings, observation, scene):
-        """Prepare the observatory for the simulation.
-
-        :param settings: The settings object
-        :param observation: The observation object
-        """
-        self.field_of_view = settings.wavelength_steps.to(u.m) / self.aperture_diameter * u.rad
-
-        self.amplitude_perturbation_time_series = self._calculate_amplitude_perturbation_time_series(settings)
-
-        self.phase_perturbation_time_series = self._calculate_phase_perturbation_time_series(settings, observation)
-
-        self.polarization_perturbation_time_series = self._calculate_polarization_perturbation_time_series(settings,
-                                                                                                           observation)
-
-        self.set_optimal_baseline(
-            scene.star,
-            observation.optimized_differential_output,
-            observation.optimized_wavelength,
-            observation.optimized_star_separation,
-            observation.baseline_minimum,
-            observation.baseline_maximum
-        )
-
-        self.array_configuration.collector_coordinates = self.array_configuration.get_collector_coordinates(
-            settings.time_steps,
-            observation.modulation_period,
-            observation.baseline_ratio
-        )
-
-    def set_optimal_baseline(self,
-                             star: Star,
-                             optimized_differential_output: int,
-                             optimized_wavelength: astropy.units.Quantity,
-                             optimized_star_separation: Union[str, astropy.units.Quantity],
-                             baseline_minimum: astropy.units.Quantity,
-                             baseline_maximum: astropy.units.Quantity):
+    def _set_optimal_baseline(self,
+                              star: Star,
+                              optimized_differential_output: int,
+                              optimized_wavelength: astropy.units.Quantity,
+                              optimized_star_separation: Union[str, astropy.units.Quantity],
+                              baseline_minimum: astropy.units.Quantity,
+                              baseline_maximum: astropy.units.Quantity):
         """Set the baseline to optimize for the habitable zone, if it is between the minimum and maximum allowed
         baselines.
 
@@ -382,3 +352,33 @@ class Observatory(BaseComponent, BaseModel):
             raise ValueError(
                 f"Optimal baseline of {optimal_baseline} is not within allowed ranges of baselines {self.array_configuration.baseline_minimum}-{self.array_configuration.baseline_maximum}"
             )
+
+    def prepare(self, settings, observation, scene):
+        """Prepare the observatory for the simulation.
+
+        :param settings: The settings object
+        :param observation: The observation object
+        """
+        self.field_of_view = settings.wavelength_steps.to(u.m) / self.aperture_diameter * u.rad
+
+        self.amplitude_perturbation_time_series = self._calculate_amplitude_perturbation_time_series(settings)
+
+        self.phase_perturbation_time_series = self._calculate_phase_perturbation_time_series(settings, observation)
+
+        self.polarization_perturbation_time_series = self._calculate_polarization_perturbation_time_series(settings,
+                                                                                                           observation)
+
+        self._set_optimal_baseline(
+            scene.star,
+            observation.optimized_differential_output,
+            observation.optimized_wavelength,
+            observation.optimized_star_separation,
+            observation.baseline_minimum,
+            observation.baseline_maximum
+        )
+
+        self.array_configuration.collector_coordinates = self.array_configuration.get_collector_coordinates(
+            settings.time_steps,
+            observation.modulation_period,
+            observation.baseline_ratio
+        )
