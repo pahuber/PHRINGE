@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "sygn"
-version = "0.0.4"
+version = "0.0.5"
 description = "SYGN"
 authors = ["Philipp A. Huber <huberph@phys.ethz.ch>"]
 license = "MIT"

@@ -9,7 +9,7 @@ from sygn.core.entities.settings import Settings
 from sygn.core.processing.data_generator import DataGenerator
 from sygn.io.fits_writer import FITSWriter
 from sygn.io.txt_reader import TXTReader
-from sygn.io.yaml_reader import YAMLHandler
+from sygn.io.yaml_handler import YAMLHandler
 
 
 class API:
