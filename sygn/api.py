@@ -2,6 +2,8 @@ import shutil
 from datetime import datetime
 from pathlib import Path
 
+import numpy as np
+
 from sygn.core.entities.observation import Observation
 from sygn.core.entities.observatory.observatory import Observatory
 from sygn.core.entities.scene import Scene
@@ -13,6 +15,8 @@ from sygn.io.yaml_handler import YAMLHandler
 
 
 class API:
+    """Class representation of the API."""
+
     @staticmethod
     def generate_data(
             config_file_path_or_dict,
@@ -21,7 +25,18 @@ class API:
             output_dir=Path('.'),
             fits=True,
             copy=True
-    ):
+    ) -> np.ndarray:
+        """Generate synthetic photometry data.
+
+        :param config_file_path_or_dict: The path to the configuration file or the configuration dictionary
+        :param exoplanetary_system_file_path_or_dict: The path to the exoplanetary system file or the exoplanetary system dictionary
+        :param spectrum_file_path: The path to the spectrum file
+        :param output_dir: The output directory
+        :param fits: Whether to write the data to a FITS file
+        :param copy: Whether to copy the input files to the output directory
+        :return: The data
+        """
+
         try:
             config_file_path_or_dict = Path(config_file_path_or_dict)
             config_dict = YAMLHandler().read(config_file_path_or_dict)
