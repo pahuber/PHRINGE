@@ -15,11 +15,21 @@ on how to create and activate a virtual environment, see the `virtualenv user gu
 
 .. _pip_install:
 
-Installation from PyPI
-----------------------
+Installation From PyPI (Recommended)
+------------------------------------
 
 To install PHRINGE from PyPI, run the following command in your terminal:
 
 .. code-block:: console
 
     pip install phringe
+
+Installation From GitHub
+------------------------
+To install PHRINGE from GitHub, run the following command in your terminal:
+
+.. code-block:: console
+
+    pip install git+https://github.com/pahuber/PHRINGE
+
+
