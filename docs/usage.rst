@@ -7,12 +7,13 @@ Input Files
 -----------
 
 PHRINGE requires the following files to run:
-    * A :ref:`configuration file <configuration>` to configure the simulation settings, observation strategy and observatory hardware
-    * An :ref:`exoplanetary system file <exoplanetary_system>` to specify the observed exoplanetary system including the stellar, planetary and exozodi properties
-    * Optional: A spectrum file that represents the flux of the planet
+
+* A :ref:`configuration file <configuration>` to configure the simulation settings, observation strategy and observatory hardware
+* An :ref:`exoplanetary system file <exoplanetary_system>` to specify the observed exoplanetary system including the stellar, planetary and exozodi properties
+* Optional: A spectrum file that represents the flux of the planet
 
 .. note::
-    If no spectrum file is provided, a blackbody spectrum will be created from the exoplanetary system file.
+    If no spectrum file is provided for a planet, a blackbody spectrum will be created from the exoplanetary system file.
 
 Usage From Command Line
 ------------
@@ -21,25 +22,62 @@ PHRINGE can be run from the command line as follows:
 
 .. code-block:: console
 
-    phringe [OPTIONS] CONFIG_FILE_PATH EXOPLANETARY_SYSTEM_FILE_PATH [FLAGS]
+    phringe [OPTIONS] CONFIG_FILE EXOPLANETARY_SYSTEM_FILE [FLAGS]
 
 Arguments
 ~~~~~~~~~
-* ``CONFIG_FILE_PATH``: The path to the configuration file
-* ``EXOPLANETARY_SYSTEM_FILE_PATH``: The path to the exoplanetary system file
+.. list-table::
+   :widths: 20 10 50
+   :header-rows: 1
+
+   * - Argument
+     - Type
+     - Description
+   * - ``CONFIG_FILE``
+     - PATH
+     - Path to the configuration file
+   * - ``EXOPLANETARY_SYSTEM_FILE``
+     - PATH
+     - Path to the exoplanetary system file
 
 Options
 ~~~~~~~
-* ``-s``, ``--spectrum-file``:   The path to the spectrum file
-* ``-o``, ``--output-dir``:     The path to the output directory
-* ``-h``, ``--help``:            Show the help message and exit
-* ``-v``, ``--version``:         Show the version number and exit
+.. list-table::
+   :widths: 20 10 50
+   :header-rows: 1
+
+   * - Option
+     - Type
+     - Description
+   * - ``-s``, ``--spectrum-file``
+     - <TEXT PATH>
+     - Tuple of the planet name as specified in the exoplanetary system file and the path to the corresponding spectrum file; option can be used multiple times for multiplanetary systems
+   * - ``-o``, ``--output-dir``
+     - PATH
+     - Path to the output directory
+   * - ``-h``, ``--help``
+     - \-
+     - Show the help message and exit
+   * - ``-v``, ``--version``
+     - \-
+     - Show the version number and exit
+
+
+
+
 
 Flags
 ~~~~~
-* ``--fits``/``--no-fits``:      Save the generated data to a FITS file; default is true
-* ``--copy``/``--no-copy``       Create a copy of the configuration and exoplanetary system files in the output directory; default is true
+.. list-table::
+   :widths: 30 70
+   :header-rows: 1
 
+   * - Flag
+     - Description
+   * - ``--fits``/``--no-fits``
+     - Save the generated data to a FITS file; default is true
+   * - ``--copy``/``--no-copy``
+     - Create a copy of the configuration and exoplanetary system files in the output directory; default is true
 
 Usage From Python Module
 ------------------------
