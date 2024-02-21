@@ -43,6 +43,11 @@ Flags
 
 Usage From Python Module
 ------------------------
+
+
+
+Using Input Files
+~~~~~~~~~~~~~~~~~
 PHRINGE can also be used from within another Python module by making use of its API in the following way:
 
 .. code-block:: python
