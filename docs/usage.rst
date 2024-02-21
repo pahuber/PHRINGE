@@ -22,7 +22,7 @@ PHRINGE can be run from the command line as follows:
 
 .. code-block:: console
 
-    phringe [OPTIONS] CONFIG_FILE EXOPLANETARY_SYSTEM_FILE [FLAGS]
+    phringe [OPTIONS] CONFIG EXOPLANETARY_SYSTEM [FLAGS]
 
 Arguments
 ~~~~~~~~~
@@ -33,23 +33,23 @@ Arguments
    * - Argument
      - Type
      - Description
-   * - ``CONFIG_FILE``
+   * - ``CONFIG``
      - PATH
      - Path to the configuration file
-   * - ``EXOPLANETARY_SYSTEM_FILE``
+   * - ``EXOPLANETARY_SYSTEM``
      - PATH
      - Path to the exoplanetary system file
 
 Options
 ~~~~~~~
 .. list-table::
-   :widths: 20 10 50
+   :widths: 20 15 45
    :header-rows: 1
 
    * - Option
      - Type
      - Description
-   * - ``-s``, ``--spectrum-file``
+   * - ``-s``, ``--spectrum``
      - <TEXT PATH>
      - Tuple of the planet name as specified in the exoplanetary system file and the path to the corresponding spectrum file; option can be used multiple times for multiplanetary systems
    * - ``-o``, ``--output-dir``
