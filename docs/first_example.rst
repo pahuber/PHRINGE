@@ -3,8 +3,9 @@
 First Example
 =============
 
-This example demonstrates how to use PHRINGE to generate synthetic photometry data for an Earth twin orbiting a Sun twin
-at 10 pc.
+This first example demonstrates how to use PHRINGE from the command line to generate synthetic photometry data for an
+Earth twin orbiting a Sun twin at 10 pc. Note that no spectrum file is provided for the planet and, thus, a blackbody
+spectrum will be generated for it.
 
 Download the Configuration File
 --------------------------------
@@ -38,8 +39,9 @@ To generate the synthetic data run the following command in the terminal:
 Output
 ------
 
-This will generate a FITS file called `data_{timestamp}.fits` containing the synthetic photometry data. Opening the file
-in a FITS viewer will reveal (due to the randomness involved) something similar to the following image:
+This will create a directory called `out_{timestamp}` containing a FITS file with the synthetic photometry data and a
+copy of the two input files. Opening the FITS file in a FITS viewer will reveal (due to the randomness involved)
+something similar to the following image:
 
 .. image:: _static/first_example.jpg
     :alt: First Example
