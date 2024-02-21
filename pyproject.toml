@@ -25,6 +25,7 @@ spectres = "^2.2.0"
 poliastro = "^0.17.0"
 tqdm = "^4.66.1"
 numba = "^0.59.0"
+sphinx-copybutton = "^0.5.2"
 
 [tool.poetry.dev-dependencies]
 Pygments = ">=2.10.0"
