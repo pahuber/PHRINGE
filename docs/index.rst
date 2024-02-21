@@ -8,7 +8,7 @@ simulate the observation of an exoplanetary system with a space-based nulling in
 photometry data as a function of wavelength/spectral channel and time, considering both astrophysical and instrumental
 noise sources.
 
-.. image:: _static/first_example.jpg
+.. image:: _static/data.jpg
     :alt: First Example
     :width: 100%
 
