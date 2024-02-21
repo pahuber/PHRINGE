@@ -1,1 +1,1 @@
-"""Test suite for the SYGN package."""
+"""Test suite for the PHRINGE package."""

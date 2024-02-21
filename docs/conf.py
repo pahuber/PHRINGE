@@ -1,4 +1,4 @@
-project = 'SYGN'
+project = 'PHRINGE'
 author = 'Philipp A. Huber'
 copyright = f'2024, Philipp A. Huber'
 

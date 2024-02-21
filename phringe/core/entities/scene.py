@@ -1,10 +1,10 @@
 from pydantic import BaseModel
 
-from sygn.core.entities.base_component import BaseComponent
-from sygn.core.entities.photon_sources.exozodi import Exozodi
-from sygn.core.entities.photon_sources.local_zodi import LocalZodi
-from sygn.core.entities.photon_sources.planet import Planet
-from sygn.core.entities.photon_sources.star import Star
+from phringe.core.entities.base_component import BaseComponent
+from phringe.core.entities.photon_sources.exozodi import Exozodi
+from phringe.core.entities.photon_sources.local_zodi import LocalZodi
+from phringe.core.entities.photon_sources.planet import Planet
+from phringe.core.entities.photon_sources.star import Star
 
 
 class Scene(BaseComponent, BaseModel):

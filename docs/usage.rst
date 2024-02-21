@@ -6,7 +6,7 @@ Usage
 Input Files
 -----------
 
-SYGN requires the following files to run:
+PHRINGE requires the following files to run:
     * A :ref:`configuration file <configuration>` to configure the simulation settings, observation strategy and observatory hardware
     * An :ref:`exoplanetary system file <exoplanetary_system>` to specify the observed exoplanetary system including the stellar, planetary and exozodi properties
     * Optional: A spectrum file that represents the flux of the planet
@@ -17,11 +17,11 @@ SYGN requires the following files to run:
 Usage From Command Line
 ------------
 
-SYGN can be run from the command line as follows:
+PHRINGE can be run from the command line as follows:
 
 .. code-block:: console
 
-    sygn [OPTIONS] CONFIG_FILE_PATH EXOPLANETARY_SYSTEM_FILE_PATH [FLAGS]
+    phringe [OPTIONS] CONFIG_FILE_PATH EXOPLANETARY_SYSTEM_FILE_PATH [FLAGS]
 
 Arguments
 ~~~~~~~~~
@@ -43,11 +43,11 @@ Flags
 
 Usage From Python Module
 ------------------------
-SYGN can also be used from within another Python module by making use of its API in the following way:
+PHRINGE can also be used from within another Python module by making use of its API in the following way:
 
 .. code-block:: python
 
-    from sygn import API
+    from phringe import API
     from pathlib import Path
 
     data = API.generate_data(
@@ -64,7 +64,7 @@ exoplanetary system information can also be passed directly as dictionaries:
 
 .. code-block:: python
 
-    from sygn import API
+    from phringe import API
     from pathlib import Path
 
     config_dict = {

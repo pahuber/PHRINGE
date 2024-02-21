@@ -1,8 +1,7 @@
 """Test cases for the __main__ module."""
 import pytest
+from PHRINGE import __main__
 from click.testing import CliRunner
-
-from SYGN import __main__
 
 
 @pytest.fixture

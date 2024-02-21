@@ -4,14 +4,14 @@ from pathlib import Path
 
 import numpy as np
 
-from sygn.core.entities.observation import Observation
-from sygn.core.entities.observatory.observatory import Observatory
-from sygn.core.entities.scene import Scene
-from sygn.core.entities.settings import Settings
-from sygn.core.processing.data_generator import DataGenerator
-from sygn.io.fits_writer import FITSWriter
-from sygn.io.txt_reader import TXTReader
-from sygn.io.yaml_handler import YAMLHandler
+from phringe.core.entities.observation import Observation
+from phringe.core.entities.observatory.observatory import Observatory
+from phringe.core.entities.scene import Scene
+from phringe.core.entities.settings import Settings
+from phringe.core.processing.data_generator import DataGenerator
+from phringe.io.fits_writer import FITSWriter
+from phringe.io.txt_reader import TXTReader
+from phringe.io.yaml_handler import YAMLHandler
 
 
 class API:

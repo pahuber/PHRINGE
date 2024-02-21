@@ -3,7 +3,7 @@
 First Example
 =============
 
-This example demonstrates how to use SYGN to generate synthetic photometry data for an Earth twin orbiting a Sun twin
+This example demonstrates how to use PHRINGE to generate synthetic photometry data for an Earth twin orbiting a Sun twin
 at 10 pc.
 
 Download the Configuration File
@@ -13,7 +13,7 @@ Open a terminal and enter the following command to download the configuration fi
 
 .. code-block:: console
 
-    wget -O config.yaml https://raw.githubusercontent.com/pahuber/SYGN/main/docs/_static/config.yaml
+    wget -O config.yaml https://raw.githubusercontent.com/pahuber/PHRINGE/main/docs/_static/config.yaml
 
 
 Download the Exoplanetary System File
@@ -23,16 +23,16 @@ In the terminal, enter the following command to download the exoplanetary system
 
 .. code-block:: console
 
-    wget -O exoplanetary_system.yaml https://raw.githubusercontent.com/pahuber/SYGN/main/docs/_static/exoplanetary_system.yaml
+    wget -O exoplanetary_system.yaml https://raw.githubusercontent.com/pahuber/PHRINGE/main/docs/_static/exoplanetary_system.yaml
 
-Run SYGN
+Run PHRINGE
 --------
 
-To run SYGN enter the following command in the terminal:
+To generate the synthetic data run the following command in the terminal:
 
 .. code-block:: console
 
-    sygn config.yaml exoplanetary_system.yaml
+    phringe config.yaml exoplanetary_system.yaml
 
 
 Output

@@ -2,7 +2,7 @@ from pathlib import Path
 
 import click
 
-from sygn.api import API
+from phringe.api import API
 
 
 @click.command()
@@ -44,7 +44,7 @@ def main(
         fits=True,
         copy=True
 ):
-    """SYGN. SYnthetic photometry data Generator for Nulling interferometers.
+    """PHRINGE. synthetic PHotometRy data generator for nullING intErferometers.
 
     CONFIG_FILE_PATH: Path to the configuration file.
     EXOPLANETARY_SYSTEM_FILE_PATH: Path to the exoplanetary system file.
@@ -60,4 +60,4 @@ def main(
 
 
 if __name__ == "__main__":
-    main(prog_name="SYGN")
+    main(prog_name="PHRINGE")

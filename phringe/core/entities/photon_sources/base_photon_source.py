@@ -4,7 +4,7 @@ from typing import Any
 import numpy as np
 from pydantic import BaseModel
 
-from sygn.util.helpers import Coordinates
+from phringe.util.helpers import Coordinates
 
 
 class BasePhotonSource(ABC, BaseModel):

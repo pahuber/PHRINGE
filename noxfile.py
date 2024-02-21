@@ -8,7 +8,6 @@ from textwrap import dedent
 
 import nox
 
-
 try:
     from nox_poetry import Session
     from nox_poetry import session
@@ -21,8 +20,7 @@ except ImportError:
     {sys.executable} -m pip install nox-poetry"""
     raise SystemExit(dedent(message)) from None
 
-
-package = "SYGN"
+package = "PHRINGE"
 python_versions = ["3.10", "3.9", "3.8", "3.7"]
 nox.needs_version = ">= 2021.6.6"
 nox.options.sessions = (
@@ -96,8 +94,8 @@ def activate_virtualenv_in_precommit_hooks(session: Session) -> None:
         text = hook.read_text()
 
         if not any(
-            Path("A") == Path("a") and bindir.lower() in text.lower() or bindir in text
-            for bindir in bindirs
+                Path("A") == Path("a") and bindir.lower() in text.lower() or bindir in text
+                for bindir in bindirs
         ):
             continue
 

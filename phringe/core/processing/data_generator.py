@@ -4,15 +4,15 @@ from numba import jit, complex128, float64, uint64
 from numpy.random import normal, poisson
 from tqdm.contrib.itertools import product
 
-from sygn.core.entities.observation import Observation
-from sygn.core.entities.observatory.observatory import Observatory
-from sygn.core.entities.photon_sources.exozodi import Exozodi
-from sygn.core.entities.photon_sources.local_zodi import LocalZodi
-from sygn.core.entities.photon_sources.planet import Planet
-from sygn.core.entities.scene import Scene
-from sygn.core.entities.settings import Settings
-from sygn.util.grid import get_index_of_closest_value
-from sygn.util.helpers import Coordinates
+from phringe.core.entities.observation import Observation
+from phringe.core.entities.observatory.observatory import Observatory
+from phringe.core.entities.photon_sources.exozodi import Exozodi
+from phringe.core.entities.photon_sources.local_zodi import LocalZodi
+from phringe.core.entities.photon_sources.planet import Planet
+from phringe.core.entities.scene import Scene
+from phringe.core.entities.settings import Settings
+from phringe.util.grid import get_index_of_closest_value
+from phringe.util.helpers import Coordinates
 
 
 @jit(complex128[:, :](float64, uint64, uint64, float64, float64[:, :], float64[:, :], float64[:], float64[:],

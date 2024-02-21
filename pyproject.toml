@@ -1,19 +1,19 @@
 [tool.poetry]
-name = "sygn"
+name = "phringe"
 version = "0.0.5"
-description = "SYGN"
+description = "PHRINGE"
 authors = ["Philipp A. Huber <huberph@phys.ethz.ch>"]
 license = "MIT"
 readme = "README.md"
-homepage = "https://github.com/pahuber/sygn"
-repository = "https://github.com/pahuber/sygn"
-documentation = "https://sygn.readthedocs.io"
+homepage = "https://github.com/pahuber/phringe"
+repository = "https://github.com/pahuber/phringe"
+documentation = "https://phringe.readthedocs.io"
 classifiers = [
     "Development Status :: 4 - Beta",
 ]
 
 [tool.poetry.urls]
-Changelog = "https://github.com/pahuber/sygn/releases"
+Changelog = "https://github.com/pahuber/phringe/releases"
 
 [tool.poetry.dependencies]
 python = ">=3.9,<3.11"
@@ -53,7 +53,7 @@ xdoctest = { extras = ["colors"], version = ">=0.15.10" }
 #myst-parser = { version = ">=0.16.1" }
 
 [tool.poetry.scripts]
-sygn = "sygn.__main__:main"
+phringe = "phringe.__main__:main"
 
 [tool.coverage.paths]
 source = ["src", "*/site-packages"]
@@ -61,7 +61,7 @@ tests = ["tests", "*/tests"]
 
 [tool.coverage.run]
 branch = true
-source = ["sygn", "tests"]
+source = ["phringe", "tests"]
 
 [tool.coverage.report]
 show_missing = true

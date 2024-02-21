@@ -3,14 +3,14 @@
 Installation
 ============
 
-SYGN requires Python 3.9 or 3.10 to run.
+PHRINGE requires Python 3.9 or 3.10 to run.
 
 .. _virtual_environment:
 
-Virtual Environment
+Using a Virtual Environment (Recommended)
 -------------------
 
-We recommended to install SYGN in a virtual environment to avoid conflicts with other Python packages. For instructions
+We recommended to install PHRINGE in a virtual environment to avoid conflicts with other Python packages. For instructions
 on how to create and activate a virtual environment, see the `virtualenv user guide <https://virtualenv.pypa.io/en/latest/user_guide.html>`_.
 
 .. _pip_install:
@@ -18,8 +18,8 @@ on how to create and activate a virtual environment, see the `virtualenv user gu
 Installation from PyPI
 ----------------------
 
-To install SYGN from PyPI, run the following command in your terminal:
+To install PHRINGE from PyPI, run the following command in your terminal:
 
 .. code-block:: console
 
-    pip install sygn
+    pip install phringe
