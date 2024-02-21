@@ -27,7 +27,7 @@ PHRINGE can be run from the command line as follows:
 Arguments
 ~~~~~~~~~
 .. list-table::
-   :widths: 20 10 50
+   :widths: 30 10 60
    :header-rows: 1
 
    * - Argument
@@ -43,7 +43,7 @@ Arguments
 Options
 ~~~~~~~
 .. list-table::
-   :widths: 20 15 45
+   :widths: 20 20 60
    :header-rows: 1
 
    * - Option
