@@ -3,8 +3,8 @@
 Exoplanetary System File
 =====================
 
-Overview
---------
+File Structure
+---------------
 
 The exoplanetary system file is a YAML file that contains information about the observed exoplanetary system.
 This information is also important for properly interpreting the planetary input spectra, if they are provided. A
@@ -42,8 +42,8 @@ Note that the file has three main keys: `star`, `exozodi` and `planets`.
             argument_of_periapsis: 0 deg
             true_anomaly: 0 deg
 
-Keys
-----
+YAML Keys
+---------------
 
 Star
 ~~~~~~~~~~~~~~~~~~~

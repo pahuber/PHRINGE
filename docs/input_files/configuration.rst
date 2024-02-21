@@ -3,8 +3,8 @@
 Configuration File
 ==================
 
-Overview
---------
+File Structure
+--------------
 
 The configuration file is a YAML file that is used to configure the simulation settings, the observation strategy and
 the observatory hardware. A typical configuration file looks like this:
@@ -15,8 +15,8 @@ the observatory hardware. A typical configuration file looks like this:
 Note that the file has three main keys: `settings`, `observation` and `observatory`.
 
 
-Keys
-----
+YAML Keys
+---------
 
 Settings
 ~~~~~~~~~~~~~~~~~~~
