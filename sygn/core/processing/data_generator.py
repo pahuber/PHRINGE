@@ -261,16 +261,20 @@ class DataGenerator():
         :return: The binning indices
         """
         index_closest_wavelength_edge = get_index_of_closest_value(self.measured_wavelength_bin_edges, wavelength)
-        if wavelength <= self.measured_wavelength_bin_edges[index_closest_wavelength_edge]:
-            index_wavelength = index_closest_wavelength_edge - 1
+        if index_closest_wavelength_edge == 0:
+            index_wavelength_bin = 0
+        elif wavelength <= self.measured_wavelength_bin_edges[index_closest_wavelength_edge]:
+            index_wavelength_bin = index_closest_wavelength_edge - 1
         else:
-            index_wavelength = index_closest_wavelength_edge
+            index_wavelength_bin = index_closest_wavelength_edge
         index_closest_time_edge = get_index_of_closest_value(self.measured_time_steps, time)
-        if time <= self.measured_time_steps[index_closest_time_edge]:
+        if index_closest_time_edge == 0:
+            index_time = 0
+        elif time <= self.measured_time_steps[index_closest_time_edge]:
             index_time = index_closest_time_edge - 1
         else:
             index_time = index_closest_time_edge
-        return index_wavelength, index_time
+        return index_wavelength_bin, index_time
 
     def _remove_units_from_source_sky_coordinates(self):
         for index_source, source in enumerate(self.sources):
