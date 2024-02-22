@@ -176,7 +176,7 @@ class Observatory(BaseComponent, BaseModel):
         """
         return get_perturbation_time_series(
             self.beam_combination_scheme.number_of_inputs,
-            observation.exposure_time,
+            observation.detector_integration_time,
             len(settings.simulation_time_steps),
             self.phase_perturbation_rms,
             self.phase_falloff_exponent
@@ -193,7 +193,7 @@ class Observatory(BaseComponent, BaseModel):
         """
         return get_perturbation_time_series(
             self.beam_combination_scheme.number_of_inputs,
-            observation.exposure_time,
+            observation.detector_integration_time,
             len(settings.simulation_time_steps),
             self.polarization_perturbation_rms,
             self.polarization_falloff_exponent

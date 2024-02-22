@@ -93,11 +93,11 @@ accepted values and meanings are given in the table below:
      - e.g. 1 d
      - Time
      - Total integration time of the observation
-   * - exposure_time
+   * - detector_integration_time
      - str*
      - e.g. 0.01 d
      - Time
-     - Exposure/detector integration time
+     - Detector integration time; can not be smaller than 1 minute
    * - modulation_period
      - str*
      - e.g. 1 d

@@ -106,7 +106,7 @@ class DataGenerator():
         self.instrument_time_steps = np.linspace(
             0,
             observation.total_integration_time,
-            int(observation.total_integration_time / observation.exposure_time)
+            int(observation.total_integration_time / observation.detector_integration_time)
         ).to(u.s).value
         self.grid_size = settings.grid_size
         self.has_planet_orbital_motion = settings.has_planet_orbital_motion

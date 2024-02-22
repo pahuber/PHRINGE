@@ -19,7 +19,7 @@ settings:
 # -------------------------------------------
 observation:
   total_integration_time: 1 d
-  exposure_time: 0.01 d
+  detector_integration_time: 0.01 d
   modulation_period: 1 d
   baseline_ratio: 6
   baseline_maximum: 600 m

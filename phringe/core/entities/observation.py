@@ -14,7 +14,7 @@ class Observation(BaseComponent, BaseModel):
     """Class representing the observation.
 
     :param total_integration_time: The total integration time
-    :param exposure_time: The exposure time
+    :param detector_integration_time: The detector integration time
     :param modulation_period: The modulation period
     :param baseline_ratio: The baseline ratio
     :param baseline_maximum: The maximum baseline
@@ -24,7 +24,7 @@ class Observation(BaseComponent, BaseModel):
     :param optimized_wavelength: The optimized wavelength
     """
     total_integration_time: str
-    exposure_time: str
+    detector_integration_time: str
     modulation_period: str
     baseline_ratio: int
     baseline_maximum: str
@@ -53,15 +53,18 @@ class Observation(BaseComponent, BaseModel):
         """
         return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,))
 
-    @field_validator('exposure_time')
-    def _validate_exposure_time(cls, value: Any, info: ValidationInfo) -> astropy.units.Quantity:
-        """Validate the exposure time input.
+    @field_validator('detector_integration_time')
+    def _validate_detector_integration_time(cls, value: Any, info: ValidationInfo) -> astropy.units.Quantity:
+        """Validate the detector integration time input.
 
         :param value: Value given as input
         :param info: ValidationInfo object
-        :return: The exposure time in units of time
+        :return: The detector integration time in units of time
         """
-        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.s,))
+        dit = validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.s,))
+        if dit >= 1 * u.min:
+            return dit
+        raise ValueError(f'{info.field_name} can not be smaller than 1 minute')
 
     @field_validator('modulation_period')
     def _validate_modulation_period(cls, value: Any, info: ValidationInfo) -> astropy.units.Quantity:

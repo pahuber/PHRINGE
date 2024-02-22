@@ -218,7 +218,6 @@ def get_perturbation_time_series(number_of_input_beams: int,
 
     # TODO: make perturbation distributions chromatic
     # TODO: use correct cutoff frequency
-    # TODO: check that sample time works with exposure time and time steps
     for i in range(number_of_input_beams):
         match color_exponent:
             case 0:
