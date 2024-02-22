@@ -18,6 +18,7 @@ settings:
 # Observation (Strategy)
 # -------------------------------------------
 observation:
+  solar_ecliptic_latitude: 0 deg
   total_integration_time: 1 d
   detector_integration_time: 0.01 d
   modulation_period: 1 d

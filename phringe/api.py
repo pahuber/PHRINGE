@@ -74,9 +74,9 @@ class API:
         settings.prepare(observation, observatory, scene)
         observation.prepare()
         observatory.prepare(settings, observation, scene)
-        scene.prepare(settings, observatory)
+        scene.prepare(settings, observation, observatory)
 
-        data_generator = DataGenerator(settings=settings, observation=observation, observatory=observatory, scene=scene)
+        data_generator = DataGenerator(settings, observation, observatory, scene)
         data = data_generator.run()
 
         # If any output files should be written, create the data directory in the output directory

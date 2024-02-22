@@ -91,7 +91,7 @@ class Scene(BaseComponent, BaseModel):
             sources.append(self.exozodi)
         return sources
 
-    def prepare(self, settings, observatory):
+    def prepare(self, settings, observation, observatory):
         """Prepare the system for the simulation.
 
         :param settings: The settings object
@@ -121,7 +121,8 @@ class Scene(BaseComponent, BaseModel):
                 field_of_view=observatory.field_of_view,
                 star_right_ascension=self.star.right_ascension,
                 star_declination=self.star.declination,
-                number_of_wavelength_steps=len(settings.simulation_wavelength_steps)
+                number_of_wavelength_steps=len(settings.simulation_wavelength_steps),
+                solar_ecliptic_latitude=observation.solar_ecliptic_latitude
             )
         if settings.has_exozodi_leakage:
             self.exozodi.prepare(settings.simulation_wavelength_steps,

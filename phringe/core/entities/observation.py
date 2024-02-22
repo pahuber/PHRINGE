@@ -13,6 +13,7 @@ from phringe.io.validators import validate_quantity_units
 class Observation(BaseComponent, BaseModel):
     """Class representing the observation.
 
+    :param solar_ecliptic_latitude: The solar ecliptic latitude
     :param total_integration_time: The total integration time
     :param detector_integration_time: The detector integration time
     :param modulation_period: The modulation period
@@ -23,6 +24,7 @@ class Observation(BaseComponent, BaseModel):
     :param optimized_star_separation: The optimized star separation
     :param optimized_wavelength: The optimized wavelength
     """
+    solar_ecliptic_latitude: Any
     total_integration_time: str
     detector_integration_time: str
     modulation_period: str
@@ -98,8 +100,15 @@ class Observation(BaseComponent, BaseModel):
         """
         return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,))
 
-        """Prepare the observation for the simulation."""
-        pass
+    @field_validator('solar_ecliptic_latitude')
+    def _validate_solar_ecliptic_latitude(cls, value: Any, info: ValidationInfo) -> astropy.units.Quantity:
+        """Validate the solar ecliptic latitude input.
+
+        :param value: Value given as input
+        :param info: ValidationInfo object
+        :return: The solar ecliptic latitude in units of degrees
+        """
+        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.deg,))
 
     @field_validator('total_integration_time')
     def _validate_total_integration_time(cls, value: Any, info: ValidationInfo) -> astropy.units.Quantity:

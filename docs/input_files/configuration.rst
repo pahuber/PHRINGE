@@ -88,6 +88,11 @@ accepted values and meanings are given in the table below:
      - Accepted Values
      - Dimension
      - Description
+   * - solar_ecliptic_latitude
+     - str*
+     - e.g. 0 deg
+     - Angle
+     - Solar ecliptic latitude used to calculate the contribution of the local zodiacal light
    * - total_integration_time
      - str*
      - e.g. 1 d
