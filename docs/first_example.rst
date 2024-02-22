@@ -43,7 +43,7 @@ This will create a directory called `out_{timestamp}` containing a FITS file wit
 copy of the two input files. Opening the FITS file in a FITS viewer will reveal (due to the randomness involved)
 something similar to the following image:
 
-.. image:: _static/first_example.jpg
+.. image:: _static/thumbnail.jpg
     :alt: First Example
     :width: 100%
 

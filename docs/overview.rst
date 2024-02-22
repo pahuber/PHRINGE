@@ -3,7 +3,11 @@
 Overview
 ========
 
-Key Features
-------------
+Data Generation Flowchart
+--------------------------
 
-TBD
+The following flowchart gives an overview of how the photometry data are calculated.
+
+.. image:: _static/flowchart.jpg
+    :alt: Flowchart
+    :width: 100%
