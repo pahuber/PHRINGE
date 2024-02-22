@@ -9,9 +9,9 @@ from pydantic_core.core_schema import ValidationInfo
 
 from phringe.core.entities.photon_sources.base_photon_source import BasePhotonSource
 from phringe.io.validators import validate_quantity_units
-from phringe.util.blackbody import create_blackbody_spectrum
 from phringe.util.grid import get_meshgrid
 from phringe.util.helpers import Coordinates
+from phringe.util.spectrum import create_blackbody_spectrum
 
 
 class Star(BasePhotonSource, BaseModel):
@@ -135,7 +135,6 @@ class Star(BasePhotonSource, BaseModel):
     def _calculate_mean_spectral_flux_density(
             self,
             wavelength_steps: np.ndarray,
-            grid_size: int,
             **kwargs
     ) -> np.ndarray:
         return create_blackbody_spectrum(self.temperature, wavelength_steps, self.solid_angle)

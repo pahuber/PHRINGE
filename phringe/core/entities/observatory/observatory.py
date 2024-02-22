@@ -162,9 +162,10 @@ class Observatory(BaseComponent, BaseModel):
         :param settings: The settings object
         :return: The amplitude perturbation time series
         """
-        return np.random.uniform(0.8, 0.9, (self.beam_combination_scheme.number_of_inputs, len(settings.time_steps))) \
+        return np.random.uniform(0.8, 0.9,
+                                 (self.beam_combination_scheme.number_of_inputs, len(settings.simulation_time_steps))) \
             if settings.has_amplitude_perturbations else np.ones(
-            (self.beam_combination_scheme.number_of_inputs, len(settings.time_steps)))
+            (self.beam_combination_scheme.number_of_inputs, len(settings.simulation_time_steps)))
 
     def _calculate_phase_perturbation_time_series(self, settings, observation) -> np.ndarray:
         """Return the phase perturbation time series.
@@ -176,12 +177,12 @@ class Observatory(BaseComponent, BaseModel):
         return get_perturbation_time_series(
             self.beam_combination_scheme.number_of_inputs,
             observation.exposure_time,
-            len(settings.time_steps),
+            len(settings.simulation_time_steps),
             self.phase_perturbation_rms,
             self.phase_falloff_exponent
         ) \
             if settings.has_phase_perturbations else np.zeros(
-            (self.beam_combination_scheme.number_of_inputs, len(settings.time_steps))) * u.um
+            (self.beam_combination_scheme.number_of_inputs, len(settings.simulation_time_steps))) * u.um
 
     def _calculate_polarization_perturbation_time_series(self, settings, observation) -> np.ndarray:
         """Return the polarization perturbation time series.
@@ -193,12 +194,12 @@ class Observatory(BaseComponent, BaseModel):
         return get_perturbation_time_series(
             self.beam_combination_scheme.number_of_inputs,
             observation.exposure_time,
-            len(settings.time_steps),
+            len(settings.simulation_time_steps),
             self.polarization_perturbation_rms,
             self.polarization_falloff_exponent
         ) \
             if settings.has_polarization_perturbations else np.zeros(
-            (self.beam_combination_scheme.number_of_inputs, len(settings.time_steps))) * u.rad
+            (self.beam_combination_scheme.number_of_inputs, len(settings.simulation_time_steps))) * u.rad
 
     def _calculate_wavelength_bins(self) -> Tuple[np.ndarray, np.ndarray]:
         """Return the wavelength bin centers and widths. The wavelength bin widths are calculated starting from the
@@ -359,7 +360,7 @@ class Observatory(BaseComponent, BaseModel):
         :param settings: The settings object
         :param observation: The observation object
         """
-        self.field_of_view = settings.wavelength_steps.to(u.m) / self.aperture_diameter * u.rad
+        self.field_of_view = settings.simulation_wavelength_steps.to(u.m) / self.aperture_diameter * u.rad
 
         self.amplitude_perturbation_time_series = self._calculate_amplitude_perturbation_time_series(settings)
 
@@ -378,7 +379,7 @@ class Observatory(BaseComponent, BaseModel):
         )
 
         self.array_configuration.collector_coordinates = self.array_configuration.get_collector_coordinates(
-            settings.time_steps,
+            settings.simulation_time_steps,
             observation.modulation_period,
             observation.baseline_ratio
         )

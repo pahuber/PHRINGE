@@ -6,6 +6,25 @@ from astropy.modeling.models import BlackBody
 from astropy.units import Quantity
 
 
+def crop_spectral_flux_density_to_wavelength_range(
+        spectral_flux_density: np.ndarray,
+        input_wavelength_range: np.ndarray,
+        wavelength_range_lower_limit: Quantity,
+        wavelength_range_upper_limit: Quantity
+) -> tuple[np.ndarray, np.ndarray]:
+    """Crop the spectral flux density to the wavelength range of the observatory.
+
+    :param spectral_flux_density: The spectral flux density
+    :param wavelength_range_lower_limit: The lower limit of the wavelength range
+    :param wavelength_range_upper_limit: The upper limit of the wavelength range
+    :return: The cropped spectral flux density and the cropped wavelength range
+    """
+    indices = np.where((input_wavelength_range >= wavelength_range_lower_limit) & (
+            input_wavelength_range <= wavelength_range_upper_limit))
+
+    return spectral_flux_density[indices], input_wavelength_range[indices]
+
+
 def create_blackbody_spectrum(
         temperature: Quantity,
         wavelength_steps: np.ndarray,

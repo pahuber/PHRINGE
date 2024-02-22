@@ -66,7 +66,6 @@ class BasePhotonSource(ABC, BaseModel):
         """
         self.mean_spectral_flux_density = self._calculate_mean_spectral_flux_density(
             wavelength_steps,
-            grid_size,
             **kwargs
         )
         self.sky_coordinates = self._calculate_sky_coordinates(grid_size, **kwargs)

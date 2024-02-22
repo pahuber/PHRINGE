@@ -2,6 +2,7 @@ from functools import cached_property
 from typing import Any
 
 import numpy as np
+from astropy import units as u
 from astropy.units import Quantity
 from pydantic import BaseModel
 
@@ -19,8 +20,8 @@ class Settings(BaseComponent, BaseModel):
     :param has_amplitude_perturbations: Whether amplitude perturbations are present
     :param has_phase_perturbations: Whether phase perturbations are present
     :param has_polarization_perturbations: Whether polarization perturbations are present
-    :param time_steps: The time steps
-    :param wavelength_steps: The wavelength steps
+    :param simulation_time_steps: The time steps
+    :param simulation_wavelength_steps: The wavelength steps
     """
     grid_size: int
     has_planet_orbital_motion: bool
@@ -30,42 +31,83 @@ class Settings(BaseComponent, BaseModel):
     has_amplitude_perturbations: bool
     has_phase_perturbations: bool
     has_polarization_perturbations: bool
-    time_steps: Any = None
-    wavelength_steps: Any = None
+    simulation_time_steps: Any = None
+    simulation_wavelength_steps: Any = None
+    simulation_wavelength_bin_widths: Any = None
 
     @cached_property
-    def time_step_duration(self) -> Quantity:
-        """Return the time step duration.
+    def simulation_time_step_duration(self) -> Quantity:
+        """Return the simulation time step duration.
 
-        :return: The time step duration
+        :return: The simulation time step duration
         """
-        return self.time_steps[1] - self.time_steps[0]
+        return (1 * u.min).to(u.s)
 
-    def _calculate_time_steps(self, observation) -> np.ndarray:
-        """Calculate the time steps.
+    def _calculate_simulation_time_steps(self, observation) -> np.ndarray:
+        """Calculate the simulation time steps.
 
         :param observation: The observation
-        :return: The time steps
+        :return: The simulation time steps
         """
-        # TODO: Implement sensible calculation of the time steps
-        # number_of_steps = int(observation.total_integration_time / observation.exposure_time)
-        return np.linspace(0, observation.total_integration_time, 200)
+        number_of_steps = int(observation.total_integration_time.to(u.s) / self.simulation_time_step_duration)
+        return np.linspace(0, observation.total_integration_time, number_of_steps)
 
-    def _calculate_wavelength_steps(self, observatory) -> np.ndarray:
-        """Calculate the wavelength steps.
+    def _calculate_simulation_wavelength_bin_widths(self, observatory) -> np.ndarray:
+        """Calculate the simulation wavelength bin widths.
 
         :param observatory: The observatory
+        :return: The simulation wavelength bin widths
+        """
+        current_edge = observatory.wavelength_range_lower_limit
+        bin_widths = []
+        for index, wavelength in enumerate(self.simulation_wavelength_steps):
+            upper_wavelength = self.simulation_wavelength_steps[index + 1] if index < len(
+                self.simulation_wavelength_steps) - 1 else observatory.wavelength_range_upper_limit
+            bin_widths.append(
+                ((wavelength - current_edge) + (upper_wavelength - wavelength) / 2).to(
+                    u.um).value)
+            current_edge += bin_widths[index] * u.um
+        return np.array(bin_widths) * u.um
+
+    def _calculate_simulation_wavelength_steps(self, observatory, scene) -> np.ndarray:
+        """Calculate the optimized wavelength sampling for the simulation. This is done by taking the gradient of the
+        normalized planet spectra and adding extra wavelength steps (to the instrument wavelength bins) where the
+        gradient is larger than 1. This assures a good sampling of the planet spectra if the instrument spectral
+        resolving power is low compared to the variation of the spectra.
+
+        :param observatory: The observatory
+        :param scene: The scene
         :return: The wavelength steps
         """
-        # TODO: Implement sensible calculation of the wavelength steps
-        return np.linspace(observatory.wavelength_range_lower_limit, observatory.wavelength_range_upper_limit,
-                           100)
+        optimized_wavelength_steps = []
+        instrument_wavelength_bin_centers = observatory.wavelength_bin_centers
+        for planet in scene.planets:
+            spectrum_gradient = np.gradient(
+                planet.mean_spectral_flux_density.value / np.max(planet.mean_spectral_flux_density.value),
+                scene.maximum_simulation_wavelength_steps
+            )
 
-    def prepare(self, observation, observatory):
+            indices = np.where(np.abs(spectrum_gradient) > 0.17)
+            mask = np.zeros(len(scene.maximum_simulation_wavelength_steps))
+            mask[indices] = 1
+
+            for index, value in enumerate(mask):
+                if value == 1:
+                    optimized_wavelength_steps.append(scene.maximum_simulation_wavelength_steps[index])
+
+            optimized_wavelength_steps = optimized_wavelength_steps + list(
+                instrument_wavelength_bin_centers.to(u.um).value)
+            optimized_wavelength_steps = sorted(optimized_wavelength_steps)
+
+        return np.unique(np.array(optimized_wavelength_steps)) * u.um
+
+    def prepare(self, observation, observatory, scene):
         """Prepare the settings for the simulation.
 
         :param observation: The observation
         :param observatory: The observatory
+        :param scene: The scene
         """
-        self.time_steps = self._calculate_time_steps(observation)
-        self.wavelength_steps = self._calculate_wavelength_steps(observatory)
+        self.simulation_time_steps = self._calculate_simulation_time_steps(observation)
+        self.simulation_wavelength_steps = self._calculate_simulation_wavelength_steps(observatory, scene)
+        self.simulation_wavelength_bin_widths = self._calculate_simulation_wavelength_bin_widths(observatory)

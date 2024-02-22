@@ -2,6 +2,7 @@ from typing import Any, Tuple
 
 import astropy
 import numpy as np
+import spectres
 from astropy import units as u
 from astropy.constants.codata2018 import G
 from astropy.units import Quantity
@@ -12,9 +13,9 @@ from pydantic_core.core_schema import ValidationInfo
 
 from phringe.core.entities.photon_sources.base_photon_source import BasePhotonSource
 from phringe.io.validators import validate_quantity_units
-from phringe.util.blackbody import create_blackbody_spectrum
 from phringe.util.grid import get_index_of_closest_value, get_meshgrid
 from phringe.util.helpers import Coordinates
+from phringe.util.spectrum import create_blackbody_spectrum
 
 
 class Planet(BasePhotonSource, BaseModel):
@@ -126,16 +127,22 @@ class Planet(BasePhotonSource, BaseModel):
         """
         return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.deg,))
 
-    def _calculate_mean_spectral_flux_density(
-            self,
-            wavelength_steps: np.ndarray,
-            grid_size: int,
-            **kwargs
-    ) -> np.ndarray:
-        star_distance = kwargs.get('star_distance')
-        solid_angle = np.pi * (self.radius.to(u.m) / (star_distance.to(u.m)) * u.rad) ** 2
+    def _calculate_mean_spectral_flux_density(self, wavelength_steps: np.ndarray, **kwargs) -> np.ndarray:
+        """Bin the already generated blackbody spectra / loaded input spectra of the planet to the wavelength steps of
+        the simulation.
 
-        return create_blackbody_spectrum(self.temperature, wavelength_steps, solid_angle)
+        :param wavelength_steps: The wavelength steps
+        :return: The binned mean spectral flux density
+        """
+        maximum_wavelength_steps = kwargs.get('maximum_wavelength_steps')
+
+        binned_mean_spectral_flux_density = spectres.spectres(
+            wavelength_steps.to(u.um).value,
+            maximum_wavelength_steps,
+            self.mean_spectral_flux_density.value,
+            fill=0
+        ) * self.mean_spectral_flux_density.unit
+        return binned_mean_spectral_flux_density
 
     def _calculate_sky_brightness_distribution(self, grid_size: int, **kwargs) -> np.ndarray:
         """Calculate and return the sky brightness distribution.
@@ -278,3 +285,13 @@ class Planet(BasePhotonSource, BaseModel):
         angular_separation_from_star_y = ((separation_from_star_y.to(u.m) / star_distance.to(u.m)) * u.rad).to(
             u.arcsec)
         return (angular_separation_from_star_x, angular_separation_from_star_y)
+
+    def calculate_blackbody_spectrum(
+            self,
+            wavelength_steps: np.ndarray,
+            **kwargs
+    ) -> np.ndarray:
+        star_distance = kwargs.get('star_distance')
+        solid_angle = np.pi * (self.radius.to(u.m) / (star_distance.to(u.m)) * u.rad) ** 2
+
+        return create_blackbody_spectrum(self.temperature, wavelength_steps, solid_angle)

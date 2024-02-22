@@ -100,12 +100,14 @@ class DataGenerator():
         self.baseline_ratio = observation.baseline_ratio
         self.beam_combination_matrix = observatory.beam_combination_scheme.get_beam_combination_transfer_matrix()
         self.differential_output_pairs = observatory.beam_combination_scheme.get_differential_output_pairs()
-        self.measured_wavelength_bin_centers = observatory.wavelength_bin_centers.to(u.m).value
-        self.measured_wavelength_bin_edges = observatory.wavelength_bin_edges.to(u.m).value
-        self.measured_wavelength_bin_widths = observatory.wavelength_bin_widths.to(u.m).value
-        self.measured_time_steps = np.linspace(0, observation.total_integration_time,
-                                               int(observation.total_integration_time / observation.exposure_time)).to(
-            u.s).value
+        self.instrument_wavelength_bin_centers = observatory.wavelength_bin_centers.to(u.m).value
+        self.instrument_wavelength_bin_edges = observatory.wavelength_bin_edges.to(u.m).value
+        self.instrument_wavelength_bin_widths = observatory.wavelength_bin_widths.to(u.m).value
+        self.instrument_time_steps = np.linspace(
+            0,
+            observation.total_integration_time,
+            int(observation.total_integration_time / observation.exposure_time)
+        ).to(u.s).value
         self.grid_size = settings.grid_size
         self.has_planet_orbital_motion = settings.has_planet_orbital_motion
         self.modulation_period = observation.modulation_period.to(u.s).value
@@ -123,16 +125,21 @@ class DataGenerator():
             settings.has_exozodi_leakage
         )
         self.star = scene.star
-        self.time_step_duration = settings.time_step_duration.to(u.s).value
-        self.time_steps = settings.time_steps.to(u.s).value
+        self.simulation_time_step_duration = settings.simulation_time_step_duration.to(u.s).value
+        self.simulation_time_steps = settings.simulation_time_steps.to(u.s).value
         self.unperturbed_instrument_throughput = observatory.unperturbed_instrument_throughput
-        self.wavelength_steps = settings.wavelength_steps.to(u.m).value
-        self.differential_photon_counts = np.zeros((len(self.differential_output_pairs),
-                                                    len(self.measured_wavelength_bin_centers),
-                                                    len(self.measured_time_steps)))
-        self.photon_counts_binned = np.zeros((self.number_of_outputs,
-                                              len(self.measured_wavelength_bin_centers),
-                                              len(self.measured_time_steps)))
+        self.simulation_wavelength_steps = settings.simulation_wavelength_steps.to(u.m).value
+        self.simulation_wavelength_bin_widhts = settings.simulation_wavelength_bin_widths.to(u.m).value
+        self.differential_photon_counts = np.zeros(
+            (
+                len(self.differential_output_pairs),
+                len(self.instrument_wavelength_bin_centers),
+                len(self.instrument_time_steps)
+            )
+        )
+        self.photon_counts_binned = np.zeros(
+            (self.number_of_outputs, len(self.instrument_wavelength_bin_centers), len(self.instrument_time_steps))
+        )
         self._remove_units_from_source_sky_coordinates()
         self._remove_units_from_source_sky_brightness_distribution()
         self._remove_units_from_collector_coordinates()
@@ -158,8 +165,8 @@ class DataGenerator():
         :param source: The source
         :return: The complex amplitude
         """
-        index_time = int(np.where(self.time_steps == time)[0])
-        index_wavelength = int(np.where(self.wavelength_steps == wavelength)[0])
+        index_time = int(np.where(self.simulation_time_steps == time)[0])
+        index_wavelength = int(np.where(self.simulation_wavelength_steps == wavelength)[0])
         complex_amplitude = np.zeros((self.number_of_inputs, 2, self.grid_size, self.grid_size), dtype=complex)
         observatory_coordinates = self.observatory.array_configuration.collector_coordinates[index_time]
         polarization_angle = 0  # TODO: Check that we can set this to 0 without loss of generality
@@ -231,22 +238,21 @@ class DataGenerator():
         :return: The photon counts
         """
         if self.has_planet_orbital_motion and isinstance(source, Planet):
-            index_time = int(np.where(self.time_steps == time)[0])
+            index_time = int(np.where(self.simulation_time_steps == time)[0])
             source_sky_brightness_distribution = source.sky_brightness_distribution[index_time]
         else:
             source_sky_brightness_distribution = source.sky_brightness_distribution
 
         photon_counts = np.zeros(self.number_of_outputs)
-        index_wavelength = int(np.where(self.wavelength_steps == wavelength)[0])
+        index_wavelength = int(np.where(self.simulation_wavelength_steps == wavelength)[0])
         normalization = self._calculate_normalization(source_sky_brightness_distribution, index_wavelength)
-        # TODO: Note this only holds for regular wavelength steps
-        wavelength_bin_width = self.wavelength_steps[1] - self.wavelength_steps[0]
+        wavelength_bin_width = self.simulation_wavelength_bin_widhts[index_wavelength]
 
         for index_ir, intensity_response in enumerate(intensity_response):
             mean_photon_counts = (
                     np.sum(intensity_response
                            * source_sky_brightness_distribution[index_wavelength]
-                           * self.time_step_duration
+                           * self.simulation_time_step_duration
                            * wavelength_bin_width
                            * self.unperturbed_instrument_throughput)
                     / normalization)
@@ -260,17 +266,17 @@ class DataGenerator():
         :param wavelength: The wavelength
         :return: The binning indices
         """
-        index_closest_wavelength_edge = get_index_of_closest_value(self.measured_wavelength_bin_edges, wavelength)
+        index_closest_wavelength_edge = get_index_of_closest_value(self.instrument_wavelength_bin_edges, wavelength)
         if index_closest_wavelength_edge == 0:
             index_wavelength_bin = 0
-        elif wavelength <= self.measured_wavelength_bin_edges[index_closest_wavelength_edge]:
+        elif wavelength <= self.instrument_wavelength_bin_edges[index_closest_wavelength_edge]:
             index_wavelength_bin = index_closest_wavelength_edge - 1
         else:
             index_wavelength_bin = index_closest_wavelength_edge
-        index_closest_time_edge = get_index_of_closest_value(self.measured_time_steps, time)
+        index_closest_time_edge = get_index_of_closest_value(self.instrument_time_steps, time)
         if index_closest_time_edge == 0:
             index_time = 0
-        elif time <= self.measured_time_steps[index_closest_time_edge]:
+        elif time <= self.instrument_time_steps[index_closest_time_edge]:
             index_time = index_closest_time_edge - 1
         else:
             index_time = index_closest_time_edge
@@ -279,13 +285,13 @@ class DataGenerator():
     def _remove_units_from_source_sky_coordinates(self):
         for index_source, source in enumerate(self.sources):
             if self.has_planet_orbital_motion and isinstance(source, Planet):
-                for index_time, time in enumerate(self.time_steps):
+                for index_time, time in enumerate(self.simulation_time_steps):
                     self.sources[index_source].sky_coordinates[index_time] = Coordinates(
                         source.sky_coordinates[index_time].x.to(u.rad).value,
                         source.sky_coordinates[index_time].y.to(u.rad).value
                     )
             elif isinstance(source, LocalZodi) or isinstance(source, Exozodi):
-                for index_wavelength, wavelength in enumerate(self.wavelength_steps):
+                for index_wavelength, wavelength in enumerate(self.simulation_wavelength_steps):
                     self.sources[index_source].sky_coordinates[index_wavelength] = Coordinates(
                         source.sky_coordinates[index_wavelength].x.to(u.rad).value,
                         source.sky_coordinates[index_wavelength].y.to(u.rad).value
@@ -302,7 +308,7 @@ class DataGenerator():
                 u.ph / (u.m ** 3 * u.s)).value
 
     def _remove_units_from_collector_coordinates(self):
-        for index_time, time in enumerate(self.time_steps):
+        for index_time, time in enumerate(self.simulation_time_steps):
             self.observatory.array_configuration.collector_coordinates[index_time] = Coordinates(
                 self.observatory.array_configuration.collector_coordinates[index_time].x.to(u.m).value,
                 self.observatory.array_configuration.collector_coordinates[index_time].y.to(u.m).value
@@ -315,7 +321,8 @@ class DataGenerator():
         # TODO: add animation
 
         # Start time, wavelength and source loop
-        for time, wavelength, source in product(self.time_steps, self.wavelength_steps, self.sources):
+        for time, wavelength, source in product(self.simulation_time_steps, self.simulation_wavelength_steps,
+                                                self.sources):
 
             # Calculate intensity response
             intensity_response = self._calculate_intensity_response(time, wavelength, source)
@@ -328,7 +335,7 @@ class DataGenerator():
                 intensity_response
             )
 
-            # Bin the photon counts into the measured time and wavelength intervals
+            # Bin the photon counts into the instrument time and wavelength intervals
             index_wavelength, index_time = self._get_binning_indices(time, wavelength)
             self.photon_counts_binned[:, index_wavelength, index_time] += photon_counts
 

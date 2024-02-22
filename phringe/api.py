@@ -1,6 +1,7 @@
 import shutil
 from datetime import datetime
 from pathlib import Path
+from typing import Union
 
 import numpy as np
 
@@ -12,60 +13,68 @@ from phringe.core.processing.data_generator import DataGenerator
 from phringe.io.fits_writer import FITSWriter
 from phringe.io.txt_reader import TXTReader
 from phringe.io.yaml_handler import YAMLHandler
+from phringe.util.helpers import SpectrumContext
 
 
 class API:
     """Class representation of the API."""
 
     @staticmethod
+    def _get_dict_from_path_or_dict(file_path_or_dict: Union[Path, dict]) -> dict:
+        try:
+            config_file_path_or_dict = Path(file_path_or_dict)
+            config_dict = YAMLHandler().read(file_path_or_dict)
+        except TypeError:
+            config_dict = file_path_or_dict
+        return config_dict
+
+    @staticmethod
+    def _get_spectra_from_path(spectrum_list):
+        try:
+            for index_path, (planet_name, spectrum_file_path) in enumerate(spectrum_list):
+                spectrum_list[index_path] = SpectrumContext(planet_name, *TXTReader().read(Path(spectrum_file_path)))
+        except TypeError:
+            pass
+        return spectrum_list
+
+    @staticmethod
     def generate_data(
-            config_file_path_or_dict,
-            exoplanetary_system_file_path_or_dict,
-            spectrum_file_path=None,
-            output_dir=Path('.'),
-            fits=True,
-            copy=True
+            config_file_path_or_dict: Union[Path, dict],
+            exoplanetary_system_file_path_or_dict: Union[Path, dict],
+            spectrum_list: list[tuple[str, Path]] = None,
+            output_dir: Path = Path('.'),
+            fits: bool = True,
+            copy: bool = True
     ) -> np.ndarray:
         """Generate synthetic photometry data.
 
         :param config_file_path_or_dict: The path to the configuration file or the configuration dictionary
         :param exoplanetary_system_file_path_or_dict: The path to the exoplanetary system file or the exoplanetary system dictionary
-        :param spectrum_file_path: The path to the spectrum file
+        :param spectrum_list: List of tuples containing the planet name and the path to the corresponding spectrum text file
         :param output_dir: The output directory
         :param fits: Whether to write the data to a FITS file
         :param copy: Whether to copy the input files to the output directory
         :return: The data
         """
-
-        try:
-            config_file_path_or_dict = Path(config_file_path_or_dict)
-            config_dict = YAMLHandler().read(config_file_path_or_dict)
-        except TypeError:
-            config_dict = config_file_path_or_dict
-        try:
-            exoplanetary_system_file_path_or_dict = Path(exoplanetary_system_file_path_or_dict)
-            system_dict = YAMLHandler().read(exoplanetary_system_file_path_or_dict)
-        except TypeError:
-            system_dict = exoplanetary_system_file_path_or_dict
-        try:
-            spectrum_file_path = Path(spectrum_file_path)
-        except TypeError:
-            pass
-        try:
-            output_dir = Path(output_dir)
-            planet_spectrum = TXTReader().read(spectrum_file_path) if spectrum_file_path else None
-        except TypeError:
-            pass
+        config_dict = API._get_dict_from_path_or_dict(config_file_path_or_dict)
+        system_dict = API._get_dict_from_path_or_dict(exoplanetary_system_file_path_or_dict)
+        spectrum_list = API._get_spectra_from_path(spectrum_list) if spectrum_list else None
+        output_dir = Path(output_dir)
 
         settings = Settings(**config_dict['settings'])
         observation = Observation(**config_dict['observation'])
         observatory = Observatory(**config_dict['observatory'])
-        scene = Scene(**system_dict)
+        scene = Scene(
+            **system_dict,
+            wavelength_range_lower_limit=observatory.wavelength_range_lower_limit,
+            wavelength_range_upper_limit=observatory.wavelength_range_upper_limit,
+            spectrum_list=spectrum_list
+        )
 
-        settings.prepare(observation, observatory)
+        settings.prepare(observation, observatory, scene)
         observation.prepare()
         observatory.prepare(settings, observation, scene)
-        scene.prepare(settings, observatory, planet_spectrum)
+        scene.prepare(settings, observatory)
 
         data_generator = DataGenerator(settings=settings, observation=observation, observatory=observatory, scene=scene)
         data = data_generator.run()
