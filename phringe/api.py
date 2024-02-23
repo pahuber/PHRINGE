@@ -29,10 +29,11 @@ class API:
         return config_dict
 
     @staticmethod
-    def _get_spectra_from_path(spectrum_list):
+    def _get_spectra_from_path(spectrum_tuple: tuple[tuple[str, Path]]) -> list[SpectrumContext]:
         try:
-            for index_path, (planet_name, spectrum_file_path) in enumerate(spectrum_list):
-                spectrum_list[index_path] = SpectrumContext(planet_name, *TXTReader().read(Path(spectrum_file_path)))
+            spectrum_list = []
+            for index_path, (planet_name, spectrum_file_path) in enumerate(spectrum_tuple):
+                spectrum_list.append(SpectrumContext(planet_name, *TXTReader().read(Path(spectrum_file_path))))
         except TypeError:
             pass
         return spectrum_list
@@ -41,7 +42,7 @@ class API:
     def generate_data(
             config_file_path_or_dict: Union[Path, dict],
             exoplanetary_system_file_path_or_dict: Union[Path, dict],
-            spectrum_list: list[tuple[str, Path]] = None,
+            spectrum_tuple: tuple[tuple[str, Path]] = None,
             output_dir: Path = Path('.'),
             fits: bool = True,
             copy: bool = True
@@ -50,7 +51,7 @@ class API:
 
         :param config_file_path_or_dict: The path to the configuration file or the configuration dictionary
         :param exoplanetary_system_file_path_or_dict: The path to the exoplanetary system file or the exoplanetary system dictionary
-        :param spectrum_list: List of tuples containing the planet name and the path to the corresponding spectrum text file
+        :param spectrum_tuple: List of tuples containing the planet name and the path to the corresponding spectrum text file
         :param output_dir: The output directory
         :param fits: Whether to write the data to a FITS file
         :param copy: Whether to copy the input files to the output directory
@@ -58,7 +59,7 @@ class API:
         """
         config_dict = API._get_dict_from_path_or_dict(config_file_path_or_dict)
         system_dict = API._get_dict_from_path_or_dict(exoplanetary_system_file_path_or_dict)
-        spectrum_list = API._get_spectra_from_path(spectrum_list) if spectrum_list else None
+        spectrum_tuple = API._get_spectra_from_path(spectrum_tuple) if spectrum_tuple else None
         output_dir = Path(output_dir)
 
         settings = Settings(**config_dict['settings'])
@@ -68,7 +69,7 @@ class API:
             **system_dict,
             wavelength_range_lower_limit=observatory.wavelength_range_lower_limit,
             wavelength_range_upper_limit=observatory.wavelength_range_upper_limit,
-            spectrum_list=spectrum_list
+            spectrum_list=spectrum_tuple
         )
 
         settings.prepare(observation, observatory, scene)
@@ -89,11 +90,11 @@ class API:
 
         if copy:
             if isinstance(config_file_path_or_dict, Path):
-                shutil.copy(config_file_path_or_dict, output_dir.joinpath(config_file_path_or_dict.name))
+                shutil.copyfile(config_file_path_or_dict, output_dir.joinpath(config_file_path_or_dict.name))
             else:
                 YAMLHandler().write(config_file_path_or_dict, output_dir.joinpath('config.yaml'))
             if isinstance(exoplanetary_system_file_path_or_dict, Path):
-                shutil.copy(
+                shutil.copyfile(
                     exoplanetary_system_file_path_or_dict,
                     output_dir.joinpath(exoplanetary_system_file_path_or_dict.name)
                 )

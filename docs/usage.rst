@@ -93,16 +93,22 @@ PHRINGE can also be used from within another Python module by making use of its 
     from phringe import API
     from pathlib import Path
 
-    list_of_input_spectra = [('Planet Name', Path('path_to_planet_name_spectrum_file')), ...]
+    tuple_of_spectra_tuples = (('Planet Name', Path('path_to_planet_name_spectrum_file')),)
 
     data = API.generate_data(
         Path('path_to_config_file'),
         Path('path_to_exoplanetary_system_file'),
-        list_of_input_spectra,
+        tuple_of_spectra_tuples,
         output_dir=Path('path_to_output_directory'),
         fits=True,
         copy=True
 )
+
+.. warning::
+    The ``tuple_of_spectra_tuples`` **must** be a tuple of planet name/spectrum file path tuples. If only for one planet
+    a spectrum file should be provided, then the trailing comma after that planet name/spectrum tuple is essential to
+    still make the input a tuple of tuples, i.e. ``(('Planet Name', Path('path_to_planet_name_spectrum_file')),)`` and
+    not ``('Planet Name', Path('path_to_planet_name_spectrum_file'))``.
 
 Using Dictionaries
 ~~~~~~~~~~~~~~~~~~
@@ -128,12 +134,12 @@ exoplanetary system information can also be passed directly as dictionaries:
         ...
     }
 
-    list_of_input_spectra = [('Planet Name', Path('path_to_planet_name_spectrum_file')), ...]
+    tuple_of_spectra_tuples = (('Planet Name', Path('path_to_planet_name_spectrum_file')),)
 
     data = API.generate_data(
         config_dict,
         exoplanetary_system_dict,
-        list_of_input_spectra,
+        tuple_of_spectra_tuples,
         output_dir=Path('path_to_output_directory'),
         fits=True,
         copy=True
