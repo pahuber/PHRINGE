@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "phringe"
-version = "0.0.5"
+version = "0.0.6"
 description = "PHRINGE"
 authors = ["Philipp A. Huber <huberph@phys.ethz.ch>"]
 license = "MIT"
@@ -54,7 +54,7 @@ xdoctest = { extras = ["colors"], version = ">=0.15.10" }
 myst-parser = { version = ">=0.16.1" }
 
 [tool.poetry.scripts]
-phringe = "phringe.__main__:main"
+phringe = "phringe.__main__:cli"
 
 [tool.coverage.paths]
 source = ["src", "*/site-packages"]

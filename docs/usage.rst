@@ -86,23 +86,23 @@ Usage From Python Module
 
 Using External Files
 ~~~~~~~~~~~~~~~~~~~~~
-PHRINGE can also be used from within another Python module by making use of its API in the following way:
+PHRINGE can also be used from within another Python module in the following way:
 
 .. code-block:: python
 
-    from phringe import API
+    from phringe.api import main
     from pathlib import Path
 
     tuple_of_spectra_tuples = (('Planet Name', Path('path_to_planet_name_spectrum_file')),)
 
-    data = API.generate_data(
+    data = main(
         Path('path_to_config_file'),
         Path('path_to_exoplanetary_system_file'),
         tuple_of_spectra_tuples,
         output_dir=Path('path_to_output_directory'),
         fits=True,
         copy=True
-)
+    )
 
 .. warning::
     The ``tuple_of_spectra_tuples`` **must** be a tuple of planet name/spectrum file path tuples. If only for one planet
@@ -117,7 +117,7 @@ exoplanetary system information can also be passed directly as dictionaries:
 
 .. code-block:: python
 
-    from phringe import API
+    from phringe.api import main
     from pathlib import Path
 
     config_dict = {
@@ -136,7 +136,7 @@ exoplanetary system information can also be passed directly as dictionaries:
 
     tuple_of_spectra_tuples = (('Planet Name', Path('path_to_planet_name_spectrum_file')),)
 
-    data = API.generate_data(
+    data = main(
         config_dict,
         exoplanetary_system_dict,
         tuple_of_spectra_tuples,
