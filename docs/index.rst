@@ -29,6 +29,7 @@ noise sources.
 
    overview
    input_files
+   api_documentation
 
 .. toctree::
    :maxdepth: 2

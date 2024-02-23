@@ -84,8 +84,8 @@ Usage From Python Module
 
 
 
-Using Input Files
-~~~~~~~~~~~~~~~~~
+Using External Files
+~~~~~~~~~~~~~~~~~~~~~
 PHRINGE can also be used from within another Python module by making use of its API in the following way:
 
 .. code-block:: python
@@ -93,15 +93,19 @@ PHRINGE can also be used from within another Python module by making use of its 
     from phringe import API
     from pathlib import Path
 
+    list_of_input_spectra = [('Planet Name', Path('path_to_planet_name_spectrum_file')), ...]
+
     data = API.generate_data(
         Path('path_to_config_file'),
         Path('path_to_exoplanetary_system_file'),
-        Path('path_to_spectrum_file'),
+        list_of_input_spectra,
         output_dir=Path('path_to_output_directory'),
         fits=True,
         copy=True
 )
 
+Using Dictionaries
+~~~~~~~~~~~~~~~~~~
 Alternatively, instead of passing the configuration and exoplanetary system file paths, the configuration and
 exoplanetary system information can also be passed directly as dictionaries:
 
@@ -133,6 +137,5 @@ exoplanetary system information can also be passed directly as dictionaries:
         copy=True
     )
 
-.. note::
-    The latter option might be especially useful when generating data within loops, such that in each iteration a different
-    dictionary can be used rather than having to use different files each time.
+This skips the file reading step and might be especially useful when generating data within loops, where for each loop
+e.g. the planet radius should be updated.
