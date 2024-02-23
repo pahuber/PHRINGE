@@ -1,4 +1,4 @@
-.. _phringe_package:
+.. _phringe:
 
 PHRINGE Package
 ===============

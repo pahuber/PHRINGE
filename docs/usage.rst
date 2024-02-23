@@ -128,10 +128,12 @@ exoplanetary system information can also be passed directly as dictionaries:
         ...
     }
 
+    list_of_input_spectra = [('Planet Name', Path('path_to_planet_name_spectrum_file')), ...]
+
     data = API.generate_data(
         config_dict,
         exoplanetary_system_dict,
-        Path('path_to_spectrum_file'),
+        list_of_input_spectra,
         output_dir=Path('path_to_output_directory'),
         fits=True,
         copy=True
