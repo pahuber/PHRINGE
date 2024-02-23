@@ -108,7 +108,7 @@ PHRINGE can also be used from within another Python module by making use of its 
     The ``tuple_of_spectra_tuples`` **must** be a tuple of planet name/spectrum file path tuples. If only for one planet
     a spectrum file should be provided, then the trailing comma after that planet name/spectrum tuple is essential to
     still make the input a tuple of tuples, i.e. ``(('Planet Name', Path('path_to_planet_name_spectrum_file')),)`` and
-    not ``('Planet Name', Path('path_to_planet_name_spectrum_file'))``.
+    not ``(('Planet Name', Path('path_to_planet_name_spectrum_file')))``.
 
 Using Dictionaries
 ~~~~~~~~~~~~~~~~~~
