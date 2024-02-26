@@ -38,13 +38,16 @@ from phringe.api import main
 )
 @click.option('--fits/--no-fits', default=True, help="Write data to FITS file.")
 @click.option('--copy/--no-copy', default=True, help="Write copy of input files to output directory.")
+@click.option('--stats/--no-stats', default=False,
+              help="Enable photon statistics by generate separate data sets for all sources.")
 def cli(
         config: Path,
         exoplanetary_system: Path,
         spectrum_tuples=None,
         output_dir=Path('.'),
         fits=True,
-        copy=True
+        copy=True,
+        stats=False
 ):
     """PHRINGE. synthetic PHotometRy data generator for nullING intErferometers.
 
@@ -57,5 +60,6 @@ def cli(
         spectrum_tuples,
         output_dir,
         fits,
-        copy
+        copy,
+        stats
     )

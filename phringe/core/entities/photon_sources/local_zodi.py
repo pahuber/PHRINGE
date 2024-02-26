@@ -13,7 +13,7 @@ from phringe.util.spectrum import create_blackbody_spectrum
 
 class LocalZodi(BasePhotonSource, BaseModel):
     """Class representation of a local zodi."""
-    name: str = 'Local Zodi'
+    name: str = 'LocalZodi'
 
     def _calculate_mean_spectral_flux_density(
             self,

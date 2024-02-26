@@ -20,8 +20,9 @@ def main(
         exoplanetary_system_file_path_or_dict: Union[Path, dict],
         spectrum_tuple: tuple[tuple[str, Path]] = None,
         output_dir: Path = Path('.'),
-        fits: bool = True,
-        copy: bool = True
+        write_fits: bool = True,
+        create_copy: bool = True,
+        enable_stats: bool = False
 ) -> np.ndarray:
     """Generate synthetic photometry data.
 
@@ -29,8 +30,9 @@ def main(
     :param exoplanetary_system_file_path_or_dict: The path to the exoplanetary system file or the exoplanetary system dictionary
     :param spectrum_tuple: List of tuples containing the planet name and the path to the corresponding spectrum text file
     :param output_dir: The output directory
-    :param fits: Whether to write the data to a FITS file
-    :param copy: Whether to copy the input files to the output directory
+    :param write_fits: Whether to write the data to a FITS file
+    :param create_copy: Whether to copy the input files to the output directory
+    :param enable_stats: Whether to enable photon statistics by generating separate data sets for all sources
     :return: The data
     """
     config_dict = get_dict_from_path_or_dict(config_file_path_or_dict)
@@ -53,17 +55,21 @@ def main(
     observatory.prepare(settings, observation, scene)
     scene.prepare(settings, observation, observatory)
 
-    data_generator = DataGenerator(settings, observation, observatory, scene)
+    data_generator = DataGenerator(settings, observation, observatory, scene, enable_stats=enable_stats)
     data = data_generator.run()
 
-    if fits or copy:
+    if write_fits or create_copy:
         output_dir = output_dir.joinpath(f'out_{datetime.now().strftime("%Y%m%d_%H%M%S.%f")}')
         output_dir.mkdir(parents=True, exist_ok=True)
 
-    if fits:
-        fits_writer = FITSWriter().write(data, output_dir)
+    if write_fits:
+        if enable_stats:
+            for source_name in data:
+                fits_writer = FITSWriter().write(data[source_name], output_dir, source_name)
+        else:
+            fits_writer = FITSWriter().write(data, output_dir)
 
-    if copy:
+    if create_copy:
         if isinstance(config_file_path_or_dict, Path):
             shutil.copyfile(config_file_path_or_dict, output_dir.joinpath(config_file_path_or_dict.name))
         else:

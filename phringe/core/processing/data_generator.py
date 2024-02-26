@@ -63,6 +63,7 @@ class DataGenerator():
     :param baseline_ratio: The baseline ratio
     :param beam_combination_matrix: The beam combination matrix
     :param differential_output_pairs: The differential output pairs
+    :param enable_stats: The flag indicating whether to enable photon statistics by generating separate data sets for all
     :param measured_wavelength_bin_centers: The measured wavelength bin centers
     :param measured_wavelength_bin_edges: The measured wavelength bin edges
     :param measured_wavelength_bin_widths: The measured wavelength bin widths
@@ -92,13 +93,15 @@ class DataGenerator():
                  settings: Settings,
                  observation: Observation,
                  observatory: Observatory,
-                 scene: Scene):
+                 scene: Scene,
+                 enable_stats: bool):
         """Constructor method.
 
         :param settings: The settings object
         :param observation: The observation object
         :param observatory: The observatory object
         :param scene: The scene object
+        :param enable_stats: The flag indicating whether to enable photon statistics by generating separate data sets for all
         """
         self.amplitude_perturbation_time_series = observatory.amplitude_perturbation_time_series
         self.aperture_radius = observatory.aperture_diameter.to(u.m).value / 2
@@ -107,6 +110,7 @@ class DataGenerator():
         self.baseline_ratio = observation.baseline_ratio
         self.beam_combination_matrix = observatory.beam_combination_scheme.get_beam_combination_transfer_matrix()
         self.differential_output_pairs = observatory.beam_combination_scheme.get_differential_output_pairs()
+        self.enable_stats = enable_stats
         self.instrument_wavelength_bin_centers = observatory.wavelength_bin_centers.to(u.m).value
         self.instrument_wavelength_bin_edges = observatory.wavelength_bin_edges.to(u.m).value
         self.instrument_wavelength_bin_widths = observatory.wavelength_bin_widths.to(u.m).value
@@ -137,16 +141,8 @@ class DataGenerator():
         self.unperturbed_instrument_throughput = observatory.unperturbed_instrument_throughput
         self.simulation_wavelength_steps = settings.simulation_wavelength_steps.to(u.m).value
         self.simulation_wavelength_bin_widhts = settings.simulation_wavelength_bin_widths.to(u.m).value
-        self.differential_photon_counts = np.zeros(
-            (
-                len(self.differential_output_pairs),
-                len(self.instrument_wavelength_bin_centers),
-                len(self.instrument_time_steps)
-            )
-        )
-        self.photon_counts_binned = np.zeros(
-            (self.number_of_outputs, len(self.instrument_wavelength_bin_centers), len(self.instrument_time_steps))
-        )
+        self.differential_photon_counts = self._initialize_differential_photon_counts()
+        self.binned_photon_counts = self._initialize_binned_photon_counts()
         self._remove_units_from_source_sky_coordinates()
         self._remove_units_from_source_sky_brightness_distribution()
         self._remove_units_from_collector_coordinates()
@@ -289,6 +285,26 @@ class DataGenerator():
             index_time = index_closest_time_edge
         return index_wavelength_bin, index_time
 
+    def _initialize_binned_photon_counts(self):
+        binned_photon_counts = np.zeros(
+            (self.number_of_outputs, len(self.instrument_wavelength_bin_centers), len(self.instrument_time_steps))
+        )
+        binned_photon_counts = {source.name: np.copy(binned_photon_counts) for source in
+                                self.sources} if self.enable_stats else binned_photon_counts
+        return binned_photon_counts
+
+    def _initialize_differential_photon_counts(self):
+        differential_photon_counts = np.zeros(
+            (
+                len(self.differential_output_pairs),
+                len(self.instrument_wavelength_bin_centers),
+                len(self.instrument_time_steps)
+            )
+        )
+        differential_photon_counts = {source.name: np.copy(differential_photon_counts) for source in
+                                      self.sources} if self.enable_stats else differential_photon_counts
+        return differential_photon_counts
+
     def _remove_units_from_source_sky_coordinates(self):
         for index_source, source in enumerate(self.sources):
             if self.has_planet_orbital_motion and isinstance(source, Planet):
@@ -344,11 +360,22 @@ class DataGenerator():
 
             # Bin the photon counts into the instrument time and wavelength intervals
             index_wavelength, index_time = self._get_binning_indices(time, wavelength)
-            self.photon_counts_binned[:, index_wavelength, index_time] += photon_counts
+            if self.enable_stats:
+                self.binned_photon_counts[source.name][:, index_wavelength, index_time] += photon_counts
+            else:
+                self.binned_photon_counts[:, index_wavelength, index_time] += photon_counts
 
-            # Calculate differential photon counts
-            for index_pair, pair in enumerate(self.differential_output_pairs):
-                self.differential_photon_counts[index_pair] = self.photon_counts_binned[pair[0]] - \
-                                                              self.photon_counts_binned[pair[1]]
+        # Calculate differential photon counts
+        for index_pair, pair in enumerate(self.differential_output_pairs):
+            if self.enable_stats:
+                for source in self.sources:
+                    self.differential_photon_counts[source.name][index_pair] = \
+                        (
+                                self.binned_photon_counts[source.name][pair[0]] - \
+                                self.binned_photon_counts[source.name][pair[1]]
+                        )
+            else:
+                self.differential_photon_counts[index_pair] = self.binned_photon_counts[pair[0]] - \
+                                                              self.binned_photon_counts[pair[1]]
 
-        return self.differential_photon_counts * u.ph
+        return self.differential_photon_counts
