@@ -19,6 +19,7 @@ class BasePhotonSource(ABC, BaseModel):
     :param sky_coordinates: An array containing the sky coordinates for each time and wavelength in units of radians.
         If the sky coordinates are constant over time and/or wavelength, the time/wavelength axes are omitted
     """
+    name: str = None
     mean_spectral_flux_density: Any = None
     sky_brightness_distribution: Any = None
     sky_coordinates: Any = None
@@ -66,6 +67,7 @@ class BasePhotonSource(ABC, BaseModel):
         """
         self.mean_spectral_flux_density = self._calculate_mean_spectral_flux_density(
             wavelength_steps,
+            grid_size,
             **kwargs
         )
         self.sky_coordinates = self._calculate_sky_coordinates(grid_size, **kwargs)
