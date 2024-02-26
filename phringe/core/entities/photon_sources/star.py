@@ -135,6 +135,7 @@ class Star(BasePhotonSource, BaseModel):
     def _calculate_mean_spectral_flux_density(
             self,
             wavelength_steps: np.ndarray,
+            grid_size: int,
             **kwargs
     ) -> np.ndarray:
         return create_blackbody_spectrum(self.temperature, wavelength_steps, self.solid_angle)

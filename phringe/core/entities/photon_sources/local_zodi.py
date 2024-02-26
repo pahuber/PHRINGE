@@ -13,10 +13,12 @@ from phringe.util.spectrum import create_blackbody_spectrum
 
 class LocalZodi(BasePhotonSource, BaseModel):
     """Class representation of a local zodi."""
+    name: str = 'Local Zodi'
 
     def _calculate_mean_spectral_flux_density(
             self,
             wavelength_steps: np.ndarray,
+            grid_size: int,
             **kwargs
     ) -> np.ndarray:
         """Calculate the mean spectral flux density of the local zodi as described in Dannert et al. 2022.

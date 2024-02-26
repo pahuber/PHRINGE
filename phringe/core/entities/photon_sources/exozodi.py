@@ -16,6 +16,7 @@ from phringe.util.spectrum import create_blackbody_spectrum
 class Exozodi(BasePhotonSource, BaseModel):
     """Class representation of an exozodi.
     """
+    name: str = 'Exozodi'
     level: float
     inclination: Any
     field_of_view_in_au_radial_maps: Any = None
@@ -23,12 +24,12 @@ class Exozodi(BasePhotonSource, BaseModel):
     def _calculate_mean_spectral_flux_density(
             self,
             wavelength_steps: np.ndarray,
+            grid_size: int,
             **kwargs
     ) -> np.ndarray:
         field_of_view = kwargs['field_of_view']
         star_distance = kwargs['star_distance']
         star_luminosity = kwargs['star_luminosity']
-        grid_size = kwargs['grid_size']
         field_of_view_in_au = (field_of_view.to(u.rad) / u.rad * star_distance).to(u.au)
 
         temperature_map = np.zeros((len(field_of_view_in_au), grid_size, grid_size)) * u.K

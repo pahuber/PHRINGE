@@ -127,7 +127,8 @@ class Planet(BasePhotonSource, BaseModel):
         """
         return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.deg,))
 
-    def _calculate_mean_spectral_flux_density(self, wavelength_steps: np.ndarray, **kwargs) -> np.ndarray:
+    def _calculate_mean_spectral_flux_density(self, wavelength_steps: np.ndarray, grid_size: int,
+                                              **kwargs) -> np.ndarray:
         """Bin the already generated blackbody spectra / loaded input spectra of the planet to the wavelength steps of
         the simulation.
 

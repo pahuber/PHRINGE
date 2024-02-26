@@ -129,5 +129,4 @@ class Scene(BaseComponent, BaseModel):
                                  settings.grid_size,
                                  field_of_view=observatory.field_of_view,
                                  star_distance=self.star.distance,
-                                 star_luminosity=self.star.luminosity,
-                                 grid_size=settings.grid_size)
+                                 star_luminosity=self.star.luminosity)
