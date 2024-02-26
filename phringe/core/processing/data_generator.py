@@ -15,13 +15,14 @@ from phringe.util.grid import get_index_of_closest_value
 from phringe.util.helpers import Coordinates
 
 
-@jit(complex128[:, :](float64, uint64, uint64, float64, float64[:, :], float64[:, :], float64[:], float64[:],
+@jit(complex128[:, :](float64, uint64, uint64, float64, float64, float64[:, :], float64[:, :], float64[:], float64[:],
                       float64[:, :], float64[:, :]), nopython=True, nogil=True, fastmath=True)
 def _calculate_complex_amplitude_base(
         aperture_radius: float,
         index_input: int,
         index_time: int,
         wavelength: float,
+        unperturbed_instrument_throughput: float,
         amplitude_perturbation_time_series: np.ndarray,
         phase_perturbation_time_series: np.ndarray,
         observatory_coordinates_x: np.ndarray,
@@ -34,11 +35,17 @@ def _calculate_complex_amplitude_base(
     :param index_input: The index of the input
     :param index_time: The index of the time
     :param wavelength: The wavelength
-    :param observatory_coordinates: The observatory coordinates
-    :param source_sky_coordinates: The source sky coordinates
+    :param unperturbed_instrument_throughput: The unperturbed instrument throughput
+    :param amplitude_perturbation_time_series: The amplitude perturbation time series
+    :param phase_perturbation_time_series: The phase perturbation time series
+    :param observatory_coordinates_x: The observatory x coordinates
+    :param observatory_coordinates_y: The observatory y coordinates
+    :param source_sky_coordinates_x: The source sky x coordinates
+    :param source_sky_coordinates_y: The source sky y coordinates
     :return: The complex amplitude element
     """
     return (amplitude_perturbation_time_series[index_input][index_time] * aperture_radius
+            * np.sqrt(unperturbed_instrument_throughput)
             * np.exp(1j * 2 * np.pi / wavelength * (
                     observatory_coordinates_x[index_input] * source_sky_coordinates_x +
                     observatory_coordinates_y[index_input] * source_sky_coordinates_y +
@@ -184,6 +191,7 @@ class DataGenerator():
                 index_input,
                 index_time,
                 wavelength,
+                self.unperturbed_instrument_throughput,
                 self.amplitude_perturbation_time_series,
                 self.phase_perturbation_time_series,
                 observatory_coordinates.x,
@@ -253,8 +261,7 @@ class DataGenerator():
                     np.sum(intensity_response
                            * source_sky_brightness_distribution[index_wavelength]
                            * self.simulation_time_step_duration
-                           * wavelength_bin_width
-                           * self.unperturbed_instrument_throughput)
+                           * wavelength_bin_width)
                     / normalization)
             photon_counts[index_ir] = self._apply_shot_noise(mean_photon_counts)
         return photon_counts
