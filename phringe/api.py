@@ -23,8 +23,10 @@ def main(
         write_fits: bool = True,
         create_copy: bool = True,
         enable_stats: bool = False
-) -> np.ndarray:
-    """Generate synthetic photometry data.
+) -> Union[np.ndarray, dict[str, np.ndarray]]:
+    """Generate synthetic photometry data and return the total data as an array of shape N_differential_outputs x
+    N_spectral_channels x N_time_steps or the data for each source separately in a dictionary of such arrays if
+    enable_stats is True.
 
     :param config_file_path_or_dict: The path to the configuration file or the configuration dictionary
     :param exoplanetary_system_file_path_or_dict: The path to the exoplanetary system file or the exoplanetary system dictionary
@@ -33,7 +35,7 @@ def main(
     :param write_fits: Whether to write the data to a FITS file
     :param create_copy: Whether to copy the input files to the output directory
     :param enable_stats: Whether to enable photon statistics by generating separate data sets for all sources
-    :return: The data
+    :return: The data as an array or a dictionary of arrays if enable_stats is True
     """
     config_dict = get_dict_from_path_or_dict(config_file_path_or_dict)
     system_dict = get_dict_from_path_or_dict(exoplanetary_system_file_path_or_dict)
