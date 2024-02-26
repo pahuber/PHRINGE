@@ -78,6 +78,8 @@ Flags
      - Save the generated data to a FITS file; default is true
    * - ``--copy``/``--no-copy``
      - Create a copy of the configuration and exoplanetary system files in the output directory; default is true
+   * - ``--stats``/``--no-stats``
+     - Save the generated data to a separate FITS file for each photon source; default is false
 
 Usage From Python Module
 ------------------------
@@ -101,7 +103,8 @@ PHRINGE can also be used from within another Python module in the following way:
         tuple_of_spectra_tuples,
         output_dir=Path('path_to_output_directory'),
         fits=True,
-        copy=True
+        copy=True,
+        stats=False
     )
 
 .. warning::
@@ -142,7 +145,8 @@ exoplanetary system information can also be passed directly as dictionaries:
         tuple_of_spectra_tuples,
         output_dir=Path('path_to_output_directory'),
         fits=True,
-        copy=True
+        copy=True,
+        stats=False
     )
 
 This skips the file reading step and might be especially useful when generating data within loops, where for each loop
