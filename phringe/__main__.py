@@ -2,7 +2,7 @@ from pathlib import Path
 
 import click
 
-from phringe.api import main
+from phringe.phringe import PHRINGE
 
 
 @click.command()
@@ -40,7 +40,7 @@ from phringe.api import main
 @click.option('--copy/--no-copy', default=True, help="Write copy of input files to output directory.")
 @click.option('--stats/--no-stats', default=False,
               help="Enable photon statistics by generate separate data sets for all sources.")
-def cli(
+def main(
         config: Path,
         exoplanetary_system: Path,
         spectrum_tuples=None,
@@ -54,12 +54,13 @@ def cli(
     CONFIG: Path to the configuration file.
     EXOPLANETARY_SYSTEM: Path to the exoplanetary system file.
     """
-    main(
-        config,
-        exoplanetary_system,
-        spectrum_tuples,
-        output_dir,
-        fits,
-        copy,
-        stats
+    phringe = PHRINGE()
+    phringe.run(
+        config_file_path_or_dict=config,
+        exoplanetary_system_file_path_or_dict=exoplanetary_system,
+        spectrum_tuple=spectrum_tuples,
+        output_dir=output_dir,
+        write_fits=fits,
+        create_copy=copy,
+        enable_stats=stats
     )

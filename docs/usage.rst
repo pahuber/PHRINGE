@@ -79,32 +79,33 @@ Flags
    * - ``--copy``/``--no-copy``
      - Create a copy of the configuration and exoplanetary system files in the output directory; default is true
    * - ``--stats``/``--no-stats``
-     - Save the generated data to a separate FITS file for each photon source; default is false
+     - Save the generated data to a separate FITS file for each photon source to enable photon statistics; default is false
 
 Usage From Python Module
 ------------------------
 
 
 
-Using External Files
+Using Input Files
 ~~~~~~~~~~~~~~~~~~~~~
 PHRINGE can also be used from within another Python module in the following way:
 
 .. code-block:: python
 
-    from phringe.api import main
+    from phringe.phringe import PHRINGE
     from pathlib import Path
 
     tuple_of_spectra_tuples = (('Planet Name', Path('path_to_planet_name_spectrum_file')),)
 
-    data = main(
-        Path('path_to_config_file'),
-        Path('path_to_exoplanetary_system_file'),
-        tuple_of_spectra_tuples,
+    phringe = PHRINGE()
+    phringe.run(
+        config_file_path_or_dict=Path('path_to_config_file'),
+        exoplanetary_system_file_path_or_dict=Path('path_to_exoplanetary_system_file'),
+        spectrum_tuple=tuple_of_spectra_tuples,
         output_dir=Path('path_to_output_directory'),
-        fits=True,
-        copy=True,
-        stats=False
+        write_fits=True,
+        create_copy=True,
+        enable_stats=False
     )
 
 .. warning::
@@ -139,14 +140,15 @@ exoplanetary system information can also be passed directly as dictionaries:
 
     tuple_of_spectra_tuples = (('Planet Name', Path('path_to_planet_name_spectrum_file')),)
 
-    data = main(
-        config_dict,
-        exoplanetary_system_dict,
-        tuple_of_spectra_tuples,
+    phringe = PHRINGE()
+    phringe.run(
+        config_file_path_or_dict=config_dict,
+        exoplanetary_system_file_path_or_dict=exoplanetary_system_dict,
+        spectrum_tuple=tuple_of_spectra_tuples,
         output_dir=Path('path_to_output_directory'),
-        fits=True,
-        copy=True,
-        stats=False
+        write_fits=True,
+        create_copy=True,
+        enable_stats=False
     )
 
 This skips the file reading step and might be especially useful when generating data within loops, where for each loop
