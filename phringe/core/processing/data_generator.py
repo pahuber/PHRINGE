@@ -140,7 +140,7 @@ class DataGenerator():
         self.simulation_time_steps = settings.simulation_time_steps.to(u.s).value
         self.unperturbed_instrument_throughput = observatory.unperturbed_instrument_throughput
         self.simulation_wavelength_steps = settings.simulation_wavelength_steps.to(u.m).value
-        self.simulation_wavelength_bin_widhts = settings.simulation_wavelength_bin_widths.to(u.m).value
+        self.simulation_wavelength_bin_widths = settings.simulation_wavelength_bin_widths.to(u.m).value
         self.differential_photon_counts = self._initialize_differential_photon_counts()
         self.binned_photon_counts = self._initialize_binned_photon_counts()
         self._remove_units_from_source_sky_coordinates()
@@ -250,7 +250,7 @@ class DataGenerator():
         photon_counts = np.zeros(self.number_of_outputs)
         index_wavelength = int(np.where(self.simulation_wavelength_steps == wavelength)[0])
         normalization = self._calculate_normalization(source_sky_brightness_distribution, index_wavelength)
-        wavelength_bin_width = self.simulation_wavelength_bin_widhts[index_wavelength]
+        wavelength_bin_width = self.simulation_wavelength_bin_widths[index_wavelength]
 
         for index_ir, intensity_response in enumerate(intensity_response):
             mean_photon_counts = (
