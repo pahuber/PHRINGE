@@ -24,10 +24,10 @@ class ArrayConfigurationEnum(Enum):
 class ArrayConfiguration(ABC, BaseModel):
     """Class representation of a collector array configuration.
 
-    :param baseline_length: The length of the baseline
+    :param nulling_baseline_length: The length of the nulling baseline
     :param type: The type of the array configuration
     """
-    baseline_length: Any = None
+    nulling_baseline_length: Any = None
     type: Any = None
     collector_coordinates: Any = None
 
@@ -58,7 +58,7 @@ class EmmaXCircularRotation(ArrayConfiguration):
                                   modulation_period: Quantity,
                                   baseline_ratio: int) -> Coordinates:
         rotation_matrix = get_2d_rotation_matrix(time_steps, modulation_period)
-        emma_x_static = self.baseline_length / 2 * np.array(
+        emma_x_static = self.nulling_baseline_length / 2 * np.array(
             [[baseline_ratio, baseline_ratio, -baseline_ratio, -baseline_ratio], [1, -1, -1, 1]])
         collector_positions = np.einsum('ijl,jk->ikl', rotation_matrix, emma_x_static)
         collector_coordinates = np.zeros(len(time_steps), dtype=object)
@@ -76,11 +76,12 @@ class EmmaXDoubleStretch(ArrayConfiguration):
                                   time_steps: np.ndarray,
                                   modulation_period: Quantity,
                                   baseline_ratio: int) -> np.ndarray:
-        emma_x_static = self.baseline_length / 2 * np.array(
+        emma_x_static = self.nulling_baseline_length / 2 * np.array(
             [[baseline_ratio, baseline_ratio, -baseline_ratio, -baseline_ratio], [1, -1, -1, 1]])
         # TODO: fix calculations
-        collector_positions = emma_x_static * (1 + (2 * self.baseline_length) / self.baseline_length * np.sin(
-            2 * np.pi * u.rad / modulation_period * time_steps))
+        collector_positions = emma_x_static * (
+                    1 + (2 * self.nulling_baseline_length) / self.nulling_baseline_length * np.sin(
+                2 * np.pi * u.rad / modulation_period * time_steps))
         return Coordinates(collector_positions[0], collector_positions[1])
 
 
@@ -93,15 +94,15 @@ class EquilateralTriangleCircularRotation(ArrayConfiguration):
                                   time_steps: np.ndarray,
                                   modulation_period: Quantity,
                                   baseline_ratio: int) -> np.ndarray:
-        height = np.sqrt(3) / 2 * self.baseline_length
+        height = np.sqrt(3) / 2 * self.nulling_baseline_length
         height_to_center = height / 3
         rotation_matrix = get_2d_rotation_matrix(time_steps, modulation_period)
 
         equilateral_triangle_static = np.array(
-            [[0, self.baseline_length.value / 2, -self.baseline_length.value / 2],
+            [[0, self.nulling_baseline_length.value / 2, -self.nulling_baseline_length.value / 2],
              [height.value - height_to_center.value, -height_to_center.value, -height_to_center.value]])
         collector_positions = np.einsum('ijl,jk->ikl', rotation_matrix,
-                                        equilateral_triangle_static) * self.baseline_length.unit
+                                        equilateral_triangle_static) * self.nulling_baseline_length.unit
         collector_coordinates = np.zeros(len(time_steps), dtype=object)
         for i in range(len(time_steps)):
             collector_coordinates[i] = Coordinates(collector_positions[0, :, i], collector_positions[1, :, i])
@@ -119,7 +120,7 @@ class RegularPentagonCircularRotation(ArrayConfiguration):
         :param angle: The angle at which the collector is located
         :return: The x position
         """
-        return 0.851 * self.baseline_length.value * np.cos(angle)
+        return 0.851 * self.nulling_baseline_length.value * np.cos(angle)
 
     def _get_y_position(self, angle) -> astropy.units.Quantity:
         """Return the y position.
@@ -127,7 +128,7 @@ class RegularPentagonCircularRotation(ArrayConfiguration):
         :param angle: The angle at which the collector is located
         :return: The y position
         """
-        return 0.851 * self.baseline_length.value * np.sin(angle)
+        return 0.851 * self.nulling_baseline_length.value * np.sin(angle)
 
     def get_collector_coordinates(self,
                                   time_steps: np.ndarray,
@@ -141,7 +142,7 @@ class RegularPentagonCircularRotation(ArrayConfiguration):
             [self._get_y_position(angles[0]), self._get_y_position(angles[1]), self._get_y_position(angles[2]),
              self._get_y_position(angles[3]), self._get_y_position(angles[4])]])
         collector_positions = np.einsum('ijl,jk->ikl', rotation_matrix,
-                                        pentagon_static) * self.baseline_length.unit
+                                        pentagon_static) * self.nulling_baseline_length.unit
         collector_coordinates = np.zeros(len(time_steps), dtype=object)
         for i in range(len(time_steps)):
             collector_coordinates[i] = Coordinates(collector_positions[0, :, i], collector_positions[1, :, i])
