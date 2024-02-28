@@ -121,7 +121,7 @@ exoplanetary system information can also be passed directly as dictionaries:
 
 .. code-block:: python
 
-    from phringe.api import main
+    from phringe.phringe import PHRINGE
     from pathlib import Path
 
     config_dict = {
