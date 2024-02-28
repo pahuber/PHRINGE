@@ -239,7 +239,7 @@ class Observatory(BaseComponent, BaseModel):
         """
         # TODO: Check all factors again
         factors = (1,)
-        match (self.array_configuration.type, self.beam_combination_scheme.type):
+        match (self.array_configuration.type.value, self.beam_combination_scheme.type):
 
             # 3 collector arrays
             case (ArrayConfigurationEnum.EQUILATERAL_TRIANGLE_CIRCULAR_ROTATION.value,
@@ -348,7 +348,7 @@ class Observatory(BaseComponent, BaseModel):
                 baseline_minimum.to(u.m).value <= optimal_baseline.value
                 and optimal_baseline.value <= baseline_maximum.to(u.m).value
         ):
-            self.array_configuration.baseline_length = optimal_baseline
+            self.array_configuration.nulling_baseline_length = optimal_baseline
         else:
             raise ValueError(
                 f"Optimal baseline of {optimal_baseline} is not within allowed ranges of baselines {self.array_configuration.baseline_minimum}-{self.array_configuration.baseline_maximum}"
