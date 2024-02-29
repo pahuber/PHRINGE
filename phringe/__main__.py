@@ -56,8 +56,8 @@ def main(
     """
     phringe = PHRINGE()
     phringe.run(
-        config_file_path_or_dict=config,
-        exoplanetary_system_file_path_or_dict=exoplanetary_system,
+        config_file_path=config,
+        exoplanetary_system_file_path=exoplanetary_system,
         spectrum_tuple=spectrum_tuples,
         output_dir=output_dir,
         write_fits=fits,

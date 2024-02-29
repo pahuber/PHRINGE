@@ -99,8 +99,8 @@ PHRINGE can also be used from within another Python module in the following way:
 
     phringe = PHRINGE()
     phringe.run(
-        config_file_path_or_dict=Path('path_to_config_file'),
-        exoplanetary_system_file_path_or_dict=Path('path_to_exoplanetary_system_file'),
+        config_file_path=Path('path_to_config_file'),
+        exoplanetary_system_file_path=Path('path_to_exoplanetary_system_file'),
         spectrum_tuple=tuple_of_spectra_tuples,
         output_dir=Path('path_to_output_directory'),
         write_fits=True,
@@ -108,7 +108,7 @@ PHRINGE can also be used from within another Python module in the following way:
         enable_stats=False
     )
 
-.. warning::
+.. hint::
     The ``tuple_of_spectra_tuples`` **must** be a tuple of planet name/spectrum file path tuples. If only for one planet
     a spectrum file should be provided, then the trailing comma after that planet name/spectrum tuple is essential to
     still make the input a tuple of tuples, i.e. ``(('Planet Name', Path('path_to_planet_name_spectrum_file')),)`` and
@@ -141,9 +141,9 @@ exoplanetary system information can also be passed directly as dictionaries:
     tuple_of_spectra_tuples = (('Planet Name', Path('path_to_planet_name_spectrum_file')),)
 
     phringe = PHRINGE()
-    phringe.run(
-        config_file_path_or_dict=config_dict,
-        exoplanetary_system_file_path_or_dict=exoplanetary_system_dict,
+    phringe.run_with_dict(
+        config_dict=config_dict,
+        exoplanetary_system_dict=exoplanetary_system_dict,
         spectrum_tuple=tuple_of_spectra_tuples,
         output_dir=Path('path_to_output_directory'),
         write_fits=True,

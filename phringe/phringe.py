@@ -12,7 +12,7 @@ from phringe.core.entities.scene import Scene
 from phringe.core.entities.settings import Settings
 from phringe.core.processing.data_generator import DataGenerator
 from phringe.io.fits_writer import FITSWriter
-from phringe.io.utils import get_dict_from_path_or_dict, get_spectra_from_path
+from phringe.io.utils import get_dict_from_path, get_spectra_from_path
 from phringe.io.yaml_handler import YAMLHandler
 
 
@@ -53,8 +53,8 @@ class PHRINGE():
 
     def run(
             self,
-            config_file_path_or_dict: Union[Path, dict],
-            exoplanetary_system_file_path_or_dict: Union[Path, dict],
+            config_file_path: Path,
+            exoplanetary_system_file_path: Path,
             spectrum_tuple: tuple[tuple[str, Path]] = None,
             output_dir: Path = Path('.'),
             write_fits: bool = True,
@@ -65,8 +65,8 @@ class PHRINGE():
         N_spectral_channels x N_time_steps or the data for each source separately in a dictionary of such arrays if
         enable_stats is True.
 
-        :param config_file_path_or_dict: The path to the configuration file or the configuration dictionary
-        :param exoplanetary_system_file_path_or_dict: The path to the exoplanetary system file or the exoplanetary system dictionary
+        :param config_file_path: The path to the configuration file
+        :param exoplanetary_system_file_path: The path to the exoplanetary system file
         :param spectrum_tuple: List of tuples containing the planet name and the path to the corresponding spectrum text file
         :param output_dir: The output directory
         :param write_fits: Whether to write the data to a FITS file
@@ -74,8 +74,32 @@ class PHRINGE():
         :param enable_stats: Whether to enable photon statistics by generating separate data sets for all sources
         :return: The data as an array or a dictionary of arrays if enable_stats is True
         """
-        config_dict = get_dict_from_path_or_dict(config_file_path_or_dict)
-        system_dict = get_dict_from_path_or_dict(exoplanetary_system_file_path_or_dict)
+        config_dict = get_dict_from_path(config_file_path)
+        system_dict = get_dict_from_path(exoplanetary_system_file_path)
+        self.run_with_dict(
+            config_dict,
+            system_dict,
+            spectrum_tuple,
+            output_dir,
+            write_fits,
+            create_copy,
+            enable_stats,
+            config_file_path,
+            exoplanetary_system_file_path
+        )
+
+    def run_with_dict(
+            self,
+            config_dict: dict,
+            exoplanetary_system_dict: dict,
+            spectrum_tuple: tuple[tuple[str, Path]] = None,
+            output_dir: Path = Path('.'),
+            write_fits: bool = True,
+            create_copy: bool = True,
+            enable_stats: bool = False,
+            config_file_path: Path = None,
+            exoplanetary_system_file_path: Path = None
+    ) -> Union[np.ndarray, dict[str, np.ndarray]]:
         spectrum_tuple = get_spectra_from_path(spectrum_tuple) if spectrum_tuple else None
         output_dir = Path(output_dir)
 
@@ -83,7 +107,7 @@ class PHRINGE():
         self._observation = Observation(**config_dict['observation'])
         self._observatory = Observatory(**config_dict['observatory'])
         self._scene = Scene(
-            **system_dict,
+            **exoplanetary_system_dict,
             wavelength_range_lower_limit=self._observatory.wavelength_range_lower_limit,
             wavelength_range_upper_limit=self._observatory.wavelength_range_upper_limit,
             spectrum_list=spectrum_tuple
@@ -110,14 +134,14 @@ class PHRINGE():
                 fits_writer = FITSWriter().write(self._data, output_dir)
 
         if create_copy:
-            if isinstance(config_file_path_or_dict, Path):
-                shutil.copyfile(config_file_path_or_dict, output_dir.joinpath(config_file_path_or_dict.name))
+            if config_file_path:
+                shutil.copyfile(config_file_path, output_dir.joinpath(config_file_path.name))
             else:
-                YAMLHandler().write(config_file_path_or_dict, output_dir.joinpath('config.yaml'))
-            if isinstance(exoplanetary_system_file_path_or_dict, Path):
+                YAMLHandler().write(config_file_path, output_dir.joinpath('config.yaml'))
+            if exoplanetary_system_file_path:
                 shutil.copyfile(
-                    exoplanetary_system_file_path_or_dict,
-                    output_dir.joinpath(exoplanetary_system_file_path_or_dict.name)
+                    exoplanetary_system_file_path,
+                    output_dir.joinpath(exoplanetary_system_file_path.name)
                 )
             else:
-                YAMLHandler().write(exoplanetary_system_file_path_or_dict, output_dir.joinpath('system.yaml'))
+                YAMLHandler().write(exoplanetary_system_file_path, output_dir.joinpath('system.yaml'))

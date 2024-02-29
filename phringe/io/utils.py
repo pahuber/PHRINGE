@@ -1,23 +1,18 @@
 from pathlib import Path
-from typing import Union
 
 from phringe.io.txt_reader import TXTReader
 from phringe.io.yaml_handler import YAMLHandler
 from phringe.util.helpers import SpectrumContext
 
 
-def get_dict_from_path_or_dict(file_path_or_dict: Union[Path, dict]) -> dict:
-    """Read the dictionary from the path and return it or return the dictionary directly.
+def get_dict_from_path(file_path: Path) -> dict:
+    """Read the dictionary from the path and return it.
 
-    :param file_path_or_dict: The path to the file or the dictionary
+    :param file_path: The path to the file
     :return: The dictionary
     """
-    try:
-        config_file_path_or_dict = Path(file_path_or_dict)
-        config_dict = YAMLHandler().read(file_path_or_dict)
-    except TypeError:
-        config_dict = file_path_or_dict
-    return config_dict
+    dict = YAMLHandler().read(file_path)
+    return dict
 
 
 def get_spectra_from_path(spectrum_tuple: tuple[tuple[str, Path]]) -> list[SpectrumContext]:
