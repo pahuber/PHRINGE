@@ -78,8 +78,8 @@ Flags
      - Save the generated data to a FITS file; default is true
    * - ``--copy``/``--no-copy``
      - Create a copy of the configuration and exoplanetary system files in the output directory; default is true
-   * - ``--stats``/``--no-stats``
-     - Save the generated data to a separate FITS file for each photon source to enable photon statistics; default is false
+   * - ``--sep``/``--no-sep``
+     - Generate separate data for each individual photon source; default is false
 
 Usage From Python Module
 ------------------------

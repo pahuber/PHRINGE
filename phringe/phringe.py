@@ -59,7 +59,7 @@ class PHRINGE():
             output_dir: Path = Path('.'),
             write_fits: bool = True,
             create_copy: bool = True,
-            enable_stats: bool = False
+            generate_separate: bool = False
     ) -> Union[np.ndarray, dict[str, np.ndarray]]:
         """Generate synthetic photometry data and return the total data as an array of shape N_differential_outputs x
         N_spectral_channels x N_time_steps or the data for each source separately in a dictionary of such arrays if
@@ -71,7 +71,7 @@ class PHRINGE():
         :param output_dir: The output directory
         :param write_fits: Whether to write the data to a FITS file
         :param create_copy: Whether to copy the input files to the output directory
-        :param enable_stats: Whether to enable photon statistics by generating separate data sets for all sources
+        :param generate_separate: Whether to generate separate data sets for all individual sources
         :return: The data as an array or a dictionary of arrays if enable_stats is True
         """
         config_dict = get_dict_from_path(config_file_path)
@@ -83,7 +83,7 @@ class PHRINGE():
             output_dir,
             write_fits,
             create_copy,
-            enable_stats,
+            generate_separate,
             config_file_path,
             exoplanetary_system_file_path
         )
@@ -96,10 +96,26 @@ class PHRINGE():
             output_dir: Path = Path('.'),
             write_fits: bool = True,
             create_copy: bool = True,
-            enable_stats: bool = False,
+            generate_separate: bool = False,
             config_file_path: Path = None,
             exoplanetary_system_file_path: Path = None
     ) -> Union[np.ndarray, dict[str, np.ndarray]]:
+        """Generate synthetic photometry data and return the total data as an array of shape N_differential_outputs x
+        N_spectral_channels x N_time_steps or the data for each source separately in a dictionary of such arrays if
+        enable_stats is True. This method takes dictionaries as input instead of file paths.
+
+        :param config_dict: The configuration dictionary
+        :param exoplanetary_system_dict: The exoplanetary system dictionary
+        :param spectrum_tuple: List of tuples containing the planet name and the path to the corresponding spectrum text file
+        :param output_dir: The output directory
+        :param write_fits: Whether to write the data to a FITS file
+        :param create_copy: Whether to copy the input files to the output directory
+        :param generate_separate: Whether to generate separate data sets for all individual sources
+        :param config_file_path: The path to the configuration file so the input config file can be copied if create_copy is True
+        :param exoplanetary_system_file_path: The path to the exoplanetary system file so the input exoplanetary system file can be copied if create_copy is True
+
+        :return: The data as an array or a dictionary of arrays if enable_stats is True
+        """
         spectrum_tuple = get_spectra_from_path(spectrum_tuple) if spectrum_tuple else None
         output_dir = Path(output_dir)
 
@@ -119,7 +135,7 @@ class PHRINGE():
         self._scene.prepare(self._settings, self._observation, self._observatory)
 
         data_generator = DataGenerator(self._settings, self._observation, self._observatory, self._scene,
-                                       enable_stats=enable_stats)
+                                       enable_stats=generate_separate)
         self._data = data_generator.run()
 
         if write_fits or create_copy:
@@ -127,7 +143,7 @@ class PHRINGE():
             output_dir.mkdir(parents=True, exist_ok=True)
 
         if write_fits:
-            if enable_stats:
+            if generate_separate:
                 for source_name in self._data:
                     fits_writer = FITSWriter().write(self._data[source_name], output_dir, source_name)
             else:

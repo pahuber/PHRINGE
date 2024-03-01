@@ -38,8 +38,8 @@ from phringe.phringe import PHRINGE
 )
 @click.option('--fits/--no-fits', default=True, help="Write data to FITS file.")
 @click.option('--copy/--no-copy', default=True, help="Write copy of input files to output directory.")
-@click.option('--stats/--no-stats', default=False,
-              help="Enable photon statistics by generate separate data sets for all sources.")
+@click.option('--sep/--no-sep', default=False,
+              help="Generate separate data for the individual sources.")
 def main(
         config: Path,
         exoplanetary_system: Path,
@@ -47,7 +47,7 @@ def main(
         output_dir=Path('.'),
         fits=True,
         copy=True,
-        stats=False
+        sep=False
 ):
     """PHRINGE. synthetic PHotometRy data generator for nullING intErferometers.
 
@@ -62,5 +62,5 @@ def main(
         output_dir=output_dir,
         write_fits=fits,
         create_copy=copy,
-        enable_stats=stats
+        generate_separate=sep
     )
