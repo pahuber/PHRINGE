@@ -105,7 +105,7 @@ PHRINGE can also be used from within another Python module in the following way:
         output_dir=Path('path_to_output_directory'),
         write_fits=True,
         create_copy=True,
-        enable_stats=False
+        generate_separate=False
     )
 
 .. hint::
@@ -148,7 +148,7 @@ exoplanetary system information can also be passed directly as dictionaries:
         output_dir=Path('path_to_output_directory'),
         write_fits=True,
         create_copy=True,
-        enable_stats=False
+        generate_separate=False
     )
 
 This skips the file reading step and might be especially useful when generating data within loops, where for each loop
