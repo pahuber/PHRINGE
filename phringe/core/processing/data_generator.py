@@ -405,6 +405,8 @@ class DataGenerator():
         # Start time, wavelength and source loop
         for source in self.sources:
 
+            t0 = time.time_ns()
+
             photon_counts = torch.zeros(
                 (self.number_of_outputs, len(self.simulation_wavelength_steps), len(self.simulation_time_steps)),
                 device=self.device
@@ -418,6 +420,9 @@ class DataGenerator():
             # Calculate photon counts
             photon_counts = self._calculate_photon_counts(source, intensity_response)
             intensity_response.to('cpu')
+
+            t1 = time.time_ns()
+            print(f'Elapsed time source: {(t1 - t0) / 1e9} s')
 
             # Bin the photon counts into the instrument time and wavelength intervals
             for index_time2, time2 in enumerate(self.simulation_time_steps):

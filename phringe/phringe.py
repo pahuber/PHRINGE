@@ -1,5 +1,4 @@
 import shutil
-import time
 from datetime import datetime
 from pathlib import Path
 from typing import Union
@@ -137,9 +136,9 @@ class PHRINGE():
 
         data_generator = DataGenerator(self._settings, self._observation, self._observatory, self._scene,
                                        generate_separate=generate_separate)
-        t0 = time.time_ns()
+        # t0 = time.time_ns()
         self._data = data_generator.run()
-        t1 = time.time_ns()
+        # t1 = time.time_ns()
 
         if write_fits or create_copy:
             output_dir = output_dir.joinpath(f'out_{datetime.now().strftime("%Y%m%d_%H%M%S.%f")}')
@@ -165,4 +164,4 @@ class PHRINGE():
             else:
                 YAMLHandler().write(exoplanetary_system_file_path, output_dir.joinpath('system.yaml'))
 
-        print(f'PHRINGE run time: {(t1 - t0) / 1e9} seconds')
+        # print(f'PHRINGE run time: {(t1 - t0) / 1e9} seconds')
