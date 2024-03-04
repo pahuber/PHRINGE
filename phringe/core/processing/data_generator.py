@@ -144,10 +144,6 @@ class DataGenerator():
         self.star = scene.star
         self.simulation_time_step_duration = settings.simulation_time_step_duration.to(u.s).value
         self.unperturbed_instrument_throughput = observatory.unperturbed_instrument_throughput
-        self.differential_photon_counts = self._initialize_differential_photon_counts()
-        self._remove_units_from_source_sky_coordinates()
-        self._remove_units_from_source_sky_brightness_distribution()
-        self._remove_units_from_collector_coordinates()
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
         # GPU stuff starts here
@@ -172,6 +168,10 @@ class DataGenerator():
         self.simulation_wavelength_bin_widths = torch.asarray(
             settings.simulation_wavelength_bin_widths.to(u.m).value).to(self.device)
         self.binned_photon_counts = self._initialize_binned_photon_counts()
+        self.differential_photon_counts = self._initialize_differential_photon_counts()
+        self._remove_units_from_source_sky_coordinates()
+        self._remove_units_from_source_sky_brightness_distribution()
+        self._remove_units_from_collector_coordinates()
 
     def _apply_shot_noise(self, mean_photon_counts) -> int:
         """Apply shot noise to the mean photon counts.
