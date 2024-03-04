@@ -119,13 +119,15 @@ class DataGenerator():
         :param scene: The scene object
         :param enable_stats: The flag indicating whether to enable photon statistics by generating separate data sets for all
         """
-        self.amplitude_perturbation_time_series = torch.asarray(observatory.amplitude_perturbation_time_series)
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        self.amplitude_perturbation_time_series = torch.asarray(observatory.amplitude_perturbation_time_series).to(
+            self.device)
         self.aperture_radius = observatory.aperture_diameter.to(u.m).value / 2
         self.baseline_maximum = observation.baseline_maximum.to(u.m).value
         self.baseline_minimum = observation.baseline_minimum.to(u.m).value
         self.baseline_ratio = observation.baseline_ratio
         self.beam_combination_matrix = torch.asarray(
-            observatory.beam_combination_scheme.get_beam_combination_transfer_matrix())
+            observatory.beam_combination_scheme.get_beam_combination_transfer_matrix()).to(self.device)
         self.differential_output_pairs = observatory.beam_combination_scheme.get_differential_output_pairs()
         self.enable_stats = enable_stats
         self.instrument_wavelength_bin_centers = observatory.wavelength_bin_centers.to(u.m).value
@@ -145,9 +147,10 @@ class DataGenerator():
         self.optimized_differential_output = observation.optimized_differential_output
         self.optimized_star_separation = observation.optimized_star_separation
         self.optimized_wavelength = observation.optimized_wavelength.to(u.m).value
-        self.phase_perturbation_time_series = torch.asarray(observatory.phase_perturbation_time_series.to(u.m).value)
+        self.phase_perturbation_time_series = torch.asarray(
+            observatory.phase_perturbation_time_series.to(u.m).value).to(self.device)
         self.polarization_perturbation_time_series = torch.asarray(
-            observatory.polarization_perturbation_time_series.to(u.rad).value)
+            observatory.polarization_perturbation_time_series.to(u.rad).value).to(self.device)
         self.sources = scene.get_all_sources(
             settings.has_stellar_leakage,
             settings.has_local_zodi_leakage,
@@ -155,10 +158,12 @@ class DataGenerator():
         )
         self.star = scene.star
         self.simulation_time_step_duration = settings.simulation_time_step_duration.to(u.s).value
-        self.simulation_time_steps = torch.asarray(settings.simulation_time_steps.to(u.s).value)
+        self.simulation_time_steps = torch.asarray(settings.simulation_time_steps.to(u.s).value).to(self.device)
         self.unperturbed_instrument_throughput = observatory.unperturbed_instrument_throughput
-        self.simulation_wavelength_steps = torch.asarray(settings.simulation_wavelength_steps.to(u.m).value)
-        self.simulation_wavelength_bin_widths = torch.asarray(settings.simulation_wavelength_bin_widths.to(u.m).value)
+        self.simulation_wavelength_steps = torch.asarray(settings.simulation_wavelength_steps.to(u.m).value).to(
+            self.device)
+        self.simulation_wavelength_bin_widths = torch.asarray(
+            settings.simulation_wavelength_bin_widths.to(u.m).value).to(self.device)
         self.differential_photon_counts = self._initialize_differential_photon_counts()
         self.binned_photon_counts = self._initialize_binned_photon_counts()
         self._remove_units_from_source_sky_coordinates()
@@ -191,7 +196,8 @@ class DataGenerator():
         # complex_amplitude = np.zeros((self.number_of_inputs, 2, self.grid_size, self.grid_size), dtype=complex)
         observatory_coordinates = self.observatory.array_configuration.collector_coordinates
         polarization_angle = torch.zeros((self.number_of_inputs,
-                                          len(self.simulation_time_steps)))  # TODO: Check that we can set this to 0 without loss of generality
+                                          len(self.simulation_time_steps))).to(
+            self.device)  # TODO: Check that we can set this to 0 without loss of generality
 
         if self.has_planet_orbital_motion and isinstance(source, Planet):
             source_sky_coordinates = source.sky_coordinates
@@ -258,7 +264,7 @@ class DataGenerator():
         :param source_sky_brightness_distribution: The source sky brightness distribution
         :return: The normalization
         """
-        normalization = torch.empty(len(source_sky_brightness_distribution))
+        normalization = torch.empty(len(source_sky_brightness_distribution)).to(self.device)
         for index_wavelength, wavelength in enumerate(self.simulation_wavelength_steps):
             source_sky_brightness_distribution2 = source_sky_brightness_distribution[index_wavelength]
             normalization[index_wavelength] = len(
@@ -332,7 +338,7 @@ class DataGenerator():
     def _initialize_binned_photon_counts(self):
         binned_photon_counts = torch.zeros(
             (self.number_of_outputs, len(self.instrument_wavelength_bin_centers), len(self.instrument_time_steps))
-        )
+        ).to(self.device)
         binned_photon_counts = {source.name: np.copy(binned_photon_counts) for source in
                                 self.sources} if self.enable_stats else binned_photon_counts
         return binned_photon_counts
@@ -392,11 +398,9 @@ class DataGenerator():
 
         t0 = time.time_ns()
 
-        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        self.binned_photon_counts = self.binned_photon_counts.to(device)
+        self.binned_photon_counts = self.binned_photon_counts.to(self.device)
         self.observatory.array_configuration.collector_coordinates = torch.asarray(
-            self.observatory.array_configuration.collector_coordinates).to(
-            device)
+            self.observatory.array_configuration.collector_coordinates).to(self.device)
 
         # Start time, wavelength and source loop
         for source in self.sources:
@@ -406,10 +410,10 @@ class DataGenerator():
                 self.grid_size, self.grid_size), dtype=torch.complex64)
             photon_counts = torch.zeros(
                 (self.number_of_outputs, len(self.simulation_wavelength_steps), len(self.simulation_time_steps)))
-            intensity_response = intensity_response.to(device)
-            photon_counts = photon_counts.to(device)
-            source.sky_coordinates = torch.asarray(source.sky_coordinates).to(device)
-            source.sky_brightness_distribution = torch.asarray(source.sky_brightness_distribution).to(device)
+            intensity_response = intensity_response.to(self.device)
+            photon_counts = photon_counts.to(self.device)
+            source.sky_coordinates = torch.asarray(source.sky_coordinates).to(self.device)
+            source.sky_brightness_distribution = torch.asarray(source.sky_brightness_distribution).to(self.device)
 
             # Calculate intensity response
             intensity_response = self._calculate_intensity_response(source)
