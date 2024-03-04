@@ -1,6 +1,5 @@
 import numpy as np
 from astropy import units as u
-from matplotlib import pyplot as plt
 from numpy.random import normal, poisson
 
 from phringe.core.entities.observation import Observation
@@ -272,8 +271,7 @@ class DataGenerator():
         a = self.simulation_time_step_duration * np.einsum('ijklm, ilm, i, i-> ijklm', intensity_response,
                                                            source_sky_brightness_distribution, wavelength_bin_width,
                                                            1 / normalization)
-        mean_photon_counts = np.sum(a, axis=(3, 4)).reshape(self.number_of_outputs,
-                                                            len(self.simulation_wavelength_steps), -1)
+        mean_photon_counts = np.sum(a, axis=(3, 4)).swapaxes(0, 1)
 
         # for index_ir, intensity_response in enumerate(intensity_response):
         #     mean_photon_counts = (
@@ -375,13 +373,6 @@ class DataGenerator():
             # Calculate intensity response
             intensity_response = self._calculate_intensity_response(source)
 
-            for index_time, time in enumerate(self.simulation_time_steps):
-                if index_time % 10 == 0:
-                    plt.imshow(intensity_response[20, 2, index_time] - intensity_response[20, 3, index_time])
-                    plt.colorbar()
-                    plt.savefig(f'./intensity_response_{index_time}.png')
-                    # plt.show()
-                    plt.close()
             # Calculate photon counts
             photon_counts = self._calculate_photon_counts(source, intensity_response)
 
@@ -392,7 +383,8 @@ class DataGenerator():
                     index_wavelength, index_time = self._get_binning_indices(time, wavelength)
                     print(f'{index_time2, index_wavelength2} -> {index_time, index_wavelength}')
                     if self.enable_stats:
-                        self.binned_photon_counts[source.name][:, index_wavelength, index_time] += photon_counts[:,
+                        self.binned_photon_counts[source.name][:, index_wavelength, index_time] += photon_counts[
+                                                                                                   :,
                                                                                                    index_wavelength2,
                                                                                                    index_time2]
                     else:
