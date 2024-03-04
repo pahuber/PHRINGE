@@ -398,6 +398,7 @@ class DataGenerator():
         """
         # Run animation, if applicable
         # TODO: add animation
+        self.device = 'cpu'
 
         self.observatory.array_configuration.collector_coordinates = torch.asarray(
             self.observatory.array_configuration.collector_coordinates).to(self.device)
