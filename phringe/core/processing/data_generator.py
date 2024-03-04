@@ -143,7 +143,7 @@ class DataGenerator():
         )
         self.star = scene.star
         self.simulation_time_step_duration = settings.simulation_time_step_duration.to(u.s).value
-        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        self.device = 'cpu'  # torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
         # GPU stuff starts here
         self.unperturbed_instrument_throughput = torch.tensor(observatory.unperturbed_instrument_throughput,
@@ -398,7 +398,6 @@ class DataGenerator():
         """
         # Run animation, if applicable
         # TODO: add animation
-        self.device = 'cpu'
 
         self.observatory.array_configuration.collector_coordinates = torch.asarray(
             self.observatory.array_configuration.collector_coordinates).to(self.device)
