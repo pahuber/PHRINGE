@@ -450,8 +450,8 @@ class DataGenerator():
                                     self.binned_photon_counts[source.name][pair[1]]
                             )
                 else:
-                    self.differential_photon_counts[index_pair] = self.binned_photon_counts[pair[0]] - \
-                                                                  self.binned_photon_counts[pair[1]]
+                    self.differential_photon_counts[index_pair] = self.binned_photon_counts[pair[0]].cpu() - \
+                                                                  self.binned_photon_counts[pair[1]].cpu()
 
         t1 = time.time_ns()
 
