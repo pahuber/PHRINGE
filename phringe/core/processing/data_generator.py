@@ -1,5 +1,8 @@
+import time
+
 import numpy as np
 from astropy import units as u
+from numba import complex128, float64, uint64, jit
 from numpy.random import normal, poisson
 
 from phringe.core.entities.observation import Observation
@@ -13,8 +16,12 @@ from phringe.util.grid import get_index_of_closest_value
 from phringe.util.helpers import Coordinates
 
 
-# @jit(complex128[:, :](float64, float64, float64[:, :], float64[:, :], float64[:, :], float64[:, :],
-#                       float64[:, :], float64[:, :], float64[:]), nopython=True, nogil=True, fastmath=True)
+# @jit(complex128[:, :, :, :, :](float64, float64, float64[:, :], float64[:, :], float64[:, :], float64[:, :],
+#                                float64[:, :], float64[:, :], float64[:], uint64), nopython=True, nogil=True,
+#      fastmath=True)
+@jit(complex128[:, :, :, :, :](float64, float64, float64[:, :], float64[:, :], float64[:, :], float64[:, :],
+                               float64[:, :], float64[:, :], float64[:], uint64), nopython=True, nogil=True,
+     fastmath=True)
 def _calculate_complex_amplitude_base(
         aperture_radius: float,
         unperturbed_instrument_throughput: float,
@@ -25,6 +32,7 @@ def _calculate_complex_amplitude_base(
         source_sky_coordinates_x: np.ndarray,
         source_sky_coordinates_y: np.ndarray,
         wavelength_steps: np.ndarray,
+        grid_size: int
 ) -> np.ndarray:
     """Calculate the complex amplitude element for a single polarization.
 
@@ -38,25 +46,26 @@ def _calculate_complex_amplitude_base(
     :return: The complex amplitude element
     """
     const = aperture_radius * np.sqrt(unperturbed_instrument_throughput)
+    exp_const = 2j * np.pi
 
-    exp_const = 1j * 2 * np.pi
+    obs_x_source_x = (
+            observatory_coordinates_x[..., None, None] *
+            source_sky_coordinates_x[None, None, ...])
 
-    obs_x_source_x = np.einsum('ij, kl-> ijkl', observatory_coordinates_x, source_sky_coordinates_x)
-    obs_y_source_y = np.einsum('ij, kl-> ijkl', observatory_coordinates_y, source_sky_coordinates_y)
-    grid_size = int(source_sky_coordinates_x.shape[-1])
-    phase_pert = phase_perturbation_time_series[..., np.newaxis, np.newaxis]
+    obs_y_source_y = (
+            observatory_coordinates_y[..., None, None] *
+            source_sky_coordinates_y[None, None, ...])
+
+    phase_pert = phase_perturbation_time_series[..., None, None]
 
     sum = obs_x_source_x + obs_y_source_y + phase_pert
-    exp = exp_const * np.einsum('i, jklm->ijklm', 1 / wavelength_steps, sum)
 
-    return const * np.einsum('jk, ijklm->ijklm', amplitude_perturbation_time_series, np.exp(exp))
+    exp = (exp_const * (1 / wavelength_steps)[..., None, None, None, None] *
+           (obs_x_source_x + obs_y_source_y + phase_pert)[None, ...])
 
-    # return (amplitude_perturbation_time_series[index_input][index_time] * aperture_radius
-    #         * np.sqrt(unperturbed_instrument_throughput)
-    #         * np.exp(1j * 2 * np.pi / wavelength * (
-    #                 observatory_coordinates_x[index_input] * source_sky_coordinates_x +
-    #                 observatory_coordinates_y[index_input] * source_sky_coordinates_y +
-    #                 phase_perturbation_time_series[index_input][index_time])))
+    a = const * amplitude_perturbation_time_series[None, ..., None, None] * np.exp(exp)
+
+    return a
 
 
 class DataGenerator():
@@ -190,6 +199,8 @@ class DataGenerator():
             source_sky_coordinates = source.sky_coordinates
 
         # for index_input in range(self.number_of_inputs):
+        t0 = time.time()
+
         base_complex_amplitude = _calculate_complex_amplitude_base(
             self.aperture_radius,
             self.unperturbed_instrument_throughput,
@@ -199,8 +210,11 @@ class DataGenerator():
             observatory_coordinates[1],
             source_sky_coordinates[0],
             source_sky_coordinates[1],
-            self.simulation_wavelength_steps
+            self.simulation_wavelength_steps,
+            self.grid_size
         )
+        t1 = time.time()
+        print(f'Elapsed time: {t1 - t0}')
         complex_amplitude_x = np.einsum('ijklm, jk->ijklm', base_complex_amplitude,
                                         np.cos(polarization_angle + self.polarization_perturbation_time_series))
         complex_amplitude_y = np.einsum('ijklm, jk->ijklm', base_complex_amplitude,
