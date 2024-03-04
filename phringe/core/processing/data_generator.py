@@ -226,12 +226,12 @@ class DataGenerator():
 
         # complex_amplitude_x = np.einsum('ijklm, jk->ijklm', base_complex_amplitude,
         #                                 np.cos(polarization_angle + self.polarization_perturbation_time_series))
-        complex_amplitude_x = base_complex_amplitude * np.cos(
+        complex_amplitude_x = base_complex_amplitude * torch.cos(
             self.polarization_perturbation_time_series[None, ..., None, None])
 
         # complex_amplitude_y = np.einsum('ijklm, jk->ijklm', base_complex_amplitude,
         #                             np.sin(polarization_angle + self.polarization_perturbation_time_series))
-        complex_amplitude_y = base_complex_amplitude * np.sin(
+        complex_amplitude_y = base_complex_amplitude * torch.sin(
             self.polarization_perturbation_time_series[None, ..., None, None])
 
         # complex_amplitude[index_input][0] = (base_complex_amplitude * np.cos(
