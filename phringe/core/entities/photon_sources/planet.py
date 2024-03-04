@@ -14,7 +14,6 @@ from pydantic_core.core_schema import ValidationInfo
 from phringe.core.entities.photon_sources.base_photon_source import BasePhotonSource
 from phringe.io.validators import validate_quantity_units
 from phringe.util.grid import get_index_of_closest_value, get_meshgrid
-from phringe.util.helpers import Coordinates
 from phringe.util.spectrum import create_blackbody_spectrum
 
 
@@ -170,12 +169,12 @@ class Planet(BasePhotonSource, BaseModel):
         else:
             sky_brightness_distribution = np.zeros(
                 (number_of_wavelength_steps, grid_size, grid_size)) * self.mean_spectral_flux_density.unit
-            index_x = get_index_of_closest_value(self.sky_coordinates.x[0, :], self.angular_separation_from_star_x[0])
-            index_y = get_index_of_closest_value(self.sky_coordinates.y[:, 0], self.angular_separation_from_star_y[0])
+            index_x = get_index_of_closest_value(self.sky_coordinates[0, 0, :], self.angular_separation_from_star_x[0])
+            index_y = get_index_of_closest_value(self.sky_coordinates[1, :, 0], self.angular_separation_from_star_y[0])
             sky_brightness_distribution[:, index_y, index_x] = self.mean_spectral_flux_density
         return sky_brightness_distribution
 
-    def _calculate_sky_coordinates(self, grid_size, **kwargs) -> Coordinates:
+    def _calculate_sky_coordinates(self, grid_size, **kwargs) -> np.ndarray:
         """Calculate and return the sky coordinates of the planet. Choose the maximum extent of the sky coordinates such
         that a circle with the radius of the planet's separation lies well (i.e. + 2x 20%) within the map. The construction
         of such a circle will be important to estimate the noise during signal extraction.
@@ -217,7 +216,7 @@ class Planet(BasePhotonSource, BaseModel):
             has_planet_orbital_motion: bool,
             star_distance: Quantity,
             star_mass: Quantity
-    ) -> Coordinates:
+    ) -> np.ndarray:
         """Return the sky coordinates of the planet.
 
         :param grid_size: The grid size
@@ -236,7 +235,7 @@ class Planet(BasePhotonSource, BaseModel):
 
         sky_coordinates_at_time_step = get_meshgrid(2 * (1.2 * angular_radius), grid_size)
 
-        return Coordinates(sky_coordinates_at_time_step[0], sky_coordinates_at_time_step[1])
+        return np.stack((sky_coordinates_at_time_step[0], sky_coordinates_at_time_step[1]))
 
     def _get_x_y_separation_from_star(
             self,

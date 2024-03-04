@@ -1,8 +1,7 @@
 import numpy as np
 from astropy import units as u
-from numba import jit, complex128, float64, uint64
+from matplotlib import pyplot as plt
 from numpy.random import normal, poisson
-from tqdm.contrib.itertools import product
 
 from phringe.core.entities.observation import Observation
 from phringe.core.entities.observatory.observatory import Observatory
@@ -15,13 +14,10 @@ from phringe.util.grid import get_index_of_closest_value
 from phringe.util.helpers import Coordinates
 
 
-@jit(complex128[:, :](float64, uint64, uint64, float64, float64, float64[:, :], float64[:, :], float64[:], float64[:],
-                      float64[:, :], float64[:, :]), nopython=True, nogil=True, fastmath=True)
+# @jit(complex128[:, :](float64, float64, float64[:, :], float64[:, :], float64[:, :], float64[:, :],
+#                       float64[:, :], float64[:, :], float64[:]), nopython=True, nogil=True, fastmath=True)
 def _calculate_complex_amplitude_base(
         aperture_radius: float,
-        index_input: int,
-        index_time: int,
-        wavelength: float,
         unperturbed_instrument_throughput: float,
         amplitude_perturbation_time_series: np.ndarray,
         phase_perturbation_time_series: np.ndarray,
@@ -29,12 +25,10 @@ def _calculate_complex_amplitude_base(
         observatory_coordinates_y: np.ndarray,
         source_sky_coordinates_x: np.ndarray,
         source_sky_coordinates_y: np.ndarray,
+        wavelength_steps: np.ndarray,
 ) -> np.ndarray:
     """Calculate the complex amplitude element for a single polarization.
 
-    :param index_input: The index of the input
-    :param index_time: The index of the time
-    :param wavelength: The wavelength
     :param unperturbed_instrument_throughput: The unperturbed instrument throughput
     :param amplitude_perturbation_time_series: The amplitude perturbation time series
     :param phase_perturbation_time_series: The phase perturbation time series
@@ -44,12 +38,26 @@ def _calculate_complex_amplitude_base(
     :param source_sky_coordinates_y: The source sky y coordinates
     :return: The complex amplitude element
     """
-    return (amplitude_perturbation_time_series[index_input][index_time] * aperture_radius
-            * np.sqrt(unperturbed_instrument_throughput)
-            * np.exp(1j * 2 * np.pi / wavelength * (
-                    observatory_coordinates_x[index_input] * source_sky_coordinates_x +
-                    observatory_coordinates_y[index_input] * source_sky_coordinates_y +
-                    phase_perturbation_time_series[index_input][index_time])))
+    const = aperture_radius * np.sqrt(unperturbed_instrument_throughput)
+
+    exp_const = 1j * 2 * np.pi
+
+    obs_x_source_x = np.einsum('ij, kl-> ijkl', observatory_coordinates_x, source_sky_coordinates_x)
+    obs_y_source_y = np.einsum('ij, kl-> ijkl', observatory_coordinates_y, source_sky_coordinates_y)
+    grid_size = int(source_sky_coordinates_x.shape[-1])
+    phase_pert = phase_perturbation_time_series[..., np.newaxis, np.newaxis]
+
+    sum = obs_x_source_x + obs_y_source_y + phase_pert
+    exp = exp_const * np.einsum('i, jklm->ijklm', 1 / wavelength_steps, sum)
+
+    return const * np.einsum('jk, ijklm->ijklm', amplitude_perturbation_time_series, np.exp(exp))
+
+    # return (amplitude_perturbation_time_series[index_input][index_time] * aperture_radius
+    #         * np.sqrt(unperturbed_instrument_throughput)
+    #         * np.exp(1j * 2 * np.pi / wavelength * (
+    #                 observatory_coordinates_x[index_input] * source_sky_coordinates_x +
+    #                 observatory_coordinates_y[index_input] * source_sky_coordinates_y +
+    #                 phase_perturbation_time_series[index_input][index_time])))
 
 
 class DataGenerator():
@@ -160,7 +168,7 @@ class DataGenerator():
             photon_counts = round(normal(mean_photon_counts, 1))
         return photon_counts
 
-    def _calculate_complex_amplitude(self, time, wavelength, source) -> np.ndarray:
+    def _calculate_complex_amplitude(self, source) -> np.ndarray:
         """Calculate the complex amplitude.
 
         :param time: The time
@@ -168,99 +176,114 @@ class DataGenerator():
         :param source: The source
         :return: The complex amplitude
         """
-        index_time = int(np.where(self.simulation_time_steps == time)[0])
-        index_wavelength = int(np.where(self.simulation_wavelength_steps == wavelength)[0])
-        complex_amplitude = np.zeros((self.number_of_inputs, 2, self.grid_size, self.grid_size), dtype=complex)
-        observatory_coordinates = self.observatory.array_configuration.collector_coordinates[index_time]
-        polarization_angle = 0  # TODO: Check that we can set this to 0 without loss of generality
+        # index_time = int(np.where(self.simulation_time_steps == time)[0])
+        # index_wavelength = int(np.where(self.simulation_wavelength_steps == wavelength)[0])
+        # complex_amplitude = np.zeros((self.number_of_inputs, 2, self.grid_size, self.grid_size), dtype=complex)
+        observatory_coordinates = self.observatory.array_configuration.collector_coordinates
+        polarization_angle = np.zeros((self.number_of_inputs,
+                                       len(self.simulation_time_steps)))  # TODO: Check that we can set this to 0 without loss of generality
 
         if self.has_planet_orbital_motion and isinstance(source, Planet):
-            source_sky_coordinates = source.sky_coordinates[index_time]
+            source_sky_coordinates = source.sky_coordinates
         elif isinstance(source, LocalZodi) or isinstance(source, Exozodi):
-            source_sky_coordinates = source.sky_coordinates[index_wavelength]
+            source_sky_coordinates = source.sky_coordinates
         else:
             source_sky_coordinates = source.sky_coordinates
 
-        for index_input in range(self.number_of_inputs):
-            base_complex_amplitude = _calculate_complex_amplitude_base(
-                self.aperture_radius,
-                index_input,
-                index_time,
-                wavelength,
-                self.unperturbed_instrument_throughput,
-                self.amplitude_perturbation_time_series,
-                self.phase_perturbation_time_series,
-                observatory_coordinates.x,
-                observatory_coordinates.y,
-                source_sky_coordinates.x,
-                source_sky_coordinates.y
-            )
-            complex_amplitude[index_input][0] = (base_complex_amplitude * np.cos(
-                polarization_angle + self.polarization_perturbation_time_series[index_input][index_time]))
+        # for index_input in range(self.number_of_inputs):
+        base_complex_amplitude = _calculate_complex_amplitude_base(
+            self.aperture_radius,
+            self.unperturbed_instrument_throughput,
+            self.amplitude_perturbation_time_series,
+            self.phase_perturbation_time_series,
+            observatory_coordinates[0],
+            observatory_coordinates[1],
+            source_sky_coordinates[0],
+            source_sky_coordinates[1],
+            self.simulation_wavelength_steps
+        )
+        complex_amplitude_x = np.einsum('ijklm, jk->ijklm', base_complex_amplitude,
+                                        np.cos(polarization_angle + self.polarization_perturbation_time_series))
+        complex_amplitude_y = np.einsum('ijklm, jk->ijklm', base_complex_amplitude,
+                                        np.sin(polarization_angle + self.polarization_perturbation_time_series))
 
-            complex_amplitude[index_input][1] = (base_complex_amplitude * np.sin(
-                polarization_angle + self.polarization_perturbation_time_series[index_input][index_time]))
-        return complex_amplitude
+        # complex_amplitude[index_input][0] = (base_complex_amplitude * np.cos(
+        #     polarization_angle + self.polarization_perturbation_time_series[index_input][index_time]))
+        #
+        # complex_amplitude[index_input][1] = (base_complex_amplitude * np.sin(
+        #     polarization_angle + self.polarization_perturbation_time_series[index_input][index_time]))
+        return np.stack((complex_amplitude_x, complex_amplitude_y))
 
-    def _calculate_intensity_response(self, time, wavelength, source) -> np.ndarray:
+    def _calculate_intensity_response(self, source) -> np.ndarray:
         """Calculate the intensity response.
 
-        :param time: The time
-        :param wavelength: The wavelength
         :param source: The source
         :return: The intensity response
         """
-        complex_amplitude = (self._calculate_complex_amplitude(time, wavelength, source)
-                             .reshape(self.number_of_inputs, 2, self.grid_size ** 2))
-        return ((abs(np.dot(self.beam_combination_matrix, complex_amplitude[:, 0])) ** 2 +
-                 abs(np.dot(self.beam_combination_matrix, complex_amplitude[:, 1])) ** 2)
-                .reshape(self.number_of_outputs, self.grid_size, self.grid_size))
+        complex_amplitude = self._calculate_complex_amplitude(source)
+        # complex_amplitude = complex_amplitude.reshape(complex_amplitude.shape[0:-2] + (-1,))
 
-    def _calculate_normalization(self, source_sky_brightness_distribution, index_wavelength: int) -> int:
+        i_x = abs(np.einsum('nj, ijklm->inklm', self.beam_combination_matrix, complex_amplitude[0])) ** 2
+        i_y = abs(np.einsum('nj, ijklm->inklm', self.beam_combination_matrix, complex_amplitude[1])) ** 2
+        return i_x + i_y
+        #
+        # return ((abs(np.dot(self.beam_combination_matrix, complex_amplitude[:, 0])) ** 2 +
+        #          abs(np.dot(self.beam_combination_matrix, complex_amplitude[:, 1])) ** 2)
+        #         .reshape(self.number_of_outputs, self.grid_size, self.grid_size))
+
+    def _calculate_normalization(self, source_sky_brightness_distribution) -> int:
         """Calculate the normalization.
 
         :param source_sky_brightness_distribution: The source sky brightness distribution
         :return: The normalization
         """
-        source_sky_brightness_distribution = source_sky_brightness_distribution[index_wavelength]
-        return len(source_sky_brightness_distribution[source_sky_brightness_distribution > 0]) if not len(
-            source_sky_brightness_distribution[source_sky_brightness_distribution > 0]) == 0 else 1
+        normalization = np.empty(len(source_sky_brightness_distribution))
+        for index_wavelength, wavelength in enumerate(self.simulation_wavelength_steps):
+            source_sky_brightness_distribution2 = source_sky_brightness_distribution[index_wavelength]
+            normalization[index_wavelength] = len(
+                source_sky_brightness_distribution2[source_sky_brightness_distribution2 > 0]) if not len(
+                source_sky_brightness_distribution2[source_sky_brightness_distribution2 > 0]) == 0 else 1
+
+        return normalization
+        # return len(source_sky_brightness_distribution[source_sky_brightness_distribution > 0]) if not len(
+        #     source_sky_brightness_distribution[source_sky_brightness_distribution > 0]) == 0 else 1
 
     def _calculate_photon_counts(
             self,
-            time,
-            wavelength,
             source,
             intensity_response
     ) -> np.ndarray:
         """Calculate the photon counts.
 
-        :param time: The time
-        :param wavelength: The wavelength
         :param source: The source
         :param intensity_response: The intensity response
         :return: The photon counts
         """
-        if self.has_planet_orbital_motion and isinstance(source, Planet):
-            index_time = int(np.where(self.simulation_time_steps == time)[0])
-            source_sky_brightness_distribution = source.sky_brightness_distribution[index_time]
-        else:
-            source_sky_brightness_distribution = source.sky_brightness_distribution
+        # if self.has_planet_orbital_motion and isinstance(source, Planet):
+        #     index_time = int(np.where(self.simulation_time_steps == time)[0])
+        #     source_sky_brightness_distribution = source.sky_brightness_distribution[index_time]
+        # else:
+        source_sky_brightness_distribution = source.sky_brightness_distribution
 
-        photon_counts = np.zeros(self.number_of_outputs)
-        index_wavelength = int(np.where(self.simulation_wavelength_steps == wavelength)[0])
-        normalization = self._calculate_normalization(source_sky_brightness_distribution, index_wavelength)
-        wavelength_bin_width = self.simulation_wavelength_bin_widths[index_wavelength]
+        normalization = self._calculate_normalization(source_sky_brightness_distribution)
+        wavelength_bin_width = self.simulation_wavelength_bin_widths
+        # time_step_durations = np.repeat(self.simulation_time_step_duration, len(self.simulation_time_steps))
 
-        for index_ir, intensity_response in enumerate(intensity_response):
-            mean_photon_counts = (
-                    np.sum(intensity_response
-                           * source_sky_brightness_distribution[index_wavelength]
-                           * self.simulation_time_step_duration
-                           * wavelength_bin_width)
-                    / normalization)
-            photon_counts[index_ir] = self._apply_shot_noise(mean_photon_counts)
-        return photon_counts
+        a = self.simulation_time_step_duration * np.einsum('ijklm, ilm, i, i-> ijklm', intensity_response,
+                                                           source_sky_brightness_distribution, wavelength_bin_width,
+                                                           1 / normalization)
+        mean_photon_counts = np.sum(a, axis=(3, 4)).reshape(self.number_of_outputs,
+                                                            len(self.simulation_wavelength_steps), -1)
+
+        # for index_ir, intensity_response in enumerate(intensity_response):
+        #     mean_photon_counts = (
+        #             np.sum(intensity_response
+        #                    * source_sky_brightness_distribution[index_wavelength]
+        #                    * self.simulation_time_step_duration
+        #                    * wavelength_bin_width)
+        #             / normalization)
+        # photon_counts[index_ir] = self._apply_shot_noise(mean_photon_counts)
+        return mean_photon_counts
 
     def _get_binning_indices(self, time, wavelength) -> tuple:
         """Get the binning indices.
@@ -320,10 +343,11 @@ class DataGenerator():
                         source.sky_coordinates[index_wavelength].y.to(u.rad).value
                     )
             else:
-                self.sources[index_source].sky_coordinates = Coordinates(
-                    source.sky_coordinates.x.to(u.rad).value,
-                    source.sky_coordinates.y.to(u.rad).value
-                )
+                self.sources[index_source].sky_coordinates = self.sources[index_source].sky_coordinates.to(u.rad).value
+                # self.sources[index_source].sky_coordinates = Coordinates(
+                #     source.sky_coordinates.x.to(u.rad).value,
+                #     source.sky_coordinates.y.to(u.rad).value
+                # )
 
     def _remove_units_from_source_sky_brightness_distribution(self):
         for index_source, source in enumerate(self.sources):
@@ -331,11 +355,13 @@ class DataGenerator():
                 u.ph / (u.m ** 3 * u.s)).value
 
     def _remove_units_from_collector_coordinates(self):
-        for index_time, time in enumerate(self.simulation_time_steps):
-            self.observatory.array_configuration.collector_coordinates[index_time] = Coordinates(
-                self.observatory.array_configuration.collector_coordinates[index_time].x.to(u.m).value,
-                self.observatory.array_configuration.collector_coordinates[index_time].y.to(u.m).value
-            )
+        self.observatory.array_configuration.collector_coordinates = self.observatory.array_configuration.collector_coordinates.to(
+            u.m).value
+        # for index_time, time in enumerate(self.simulation_time_steps):
+        #     self.observatory.array_configuration.collector_coordinates[index_time] = Coordinates(
+        #         self.observatory.array_configuration.collector_coordinates[index_time].x.to(u.m).value,
+        #         self.observatory.array_configuration.collector_coordinates[index_time].y.to(u.m).value
+        #     )
 
     def run(self) -> np.ndarray:
         """Run the data generator.
@@ -344,38 +370,47 @@ class DataGenerator():
         # TODO: add animation
 
         # Start time, wavelength and source loop
-        for time, wavelength, source in product(self.simulation_time_steps, self.simulation_wavelength_steps,
-                                                self.sources):
+        for source in self.sources:
 
             # Calculate intensity response
-            intensity_response = self._calculate_intensity_response(time, wavelength, source)
+            intensity_response = self._calculate_intensity_response(source)
 
+            for index_time, time in enumerate(self.simulation_time_steps):
+                if index_time % 10 == 0:
+                    plt.imshow(intensity_response[20, 2, index_time] - intensity_response[20, 3, index_time])
+                    plt.colorbar()
+                    plt.savefig(f'./intensity_response_{index_time}.png')
+                    # plt.show()
+                    plt.close()
             # Calculate photon counts
-            photon_counts = self._calculate_photon_counts(
-                time,
-                wavelength,
-                source,
-                intensity_response
-            )
+            photon_counts = self._calculate_photon_counts(source, intensity_response)
 
             # Bin the photon counts into the instrument time and wavelength intervals
-            index_wavelength, index_time = self._get_binning_indices(time, wavelength)
-            if self.enable_stats:
-                self.binned_photon_counts[source.name][:, index_wavelength, index_time] += photon_counts
-            else:
-                self.binned_photon_counts[:, index_wavelength, index_time] += photon_counts
+            for index_time2, time in enumerate(self.simulation_time_steps):
+                for index_wavelength2, wavelength in enumerate(self.simulation_wavelength_steps):
 
-        # Calculate differential photon counts
-        for index_pair, pair in enumerate(self.differential_output_pairs):
-            if self.enable_stats:
-                for source in self.sources:
-                    self.differential_photon_counts[source.name][index_pair] = \
-                        (
-                                self.binned_photon_counts[source.name][pair[0]] - \
-                                self.binned_photon_counts[source.name][pair[1]]
-                        )
-            else:
-                self.differential_photon_counts[index_pair] = self.binned_photon_counts[pair[0]] - \
-                                                              self.binned_photon_counts[pair[1]]
+                    index_wavelength, index_time = self._get_binning_indices(time, wavelength)
+                    print(f'{index_time2, index_wavelength2} -> {index_time, index_wavelength}')
+                    if self.enable_stats:
+                        self.binned_photon_counts[source.name][:, index_wavelength, index_time] += photon_counts[:,
+                                                                                                   index_wavelength2,
+                                                                                                   index_time2]
+                    else:
+                        self.binned_photon_counts[:, index_wavelength, index_time] += photon_counts[:,
+                                                                                      index_wavelength2,
+                                                                                      index_time2]
+
+            # Calculate differential photon counts
+            for index_pair, pair in enumerate(self.differential_output_pairs):
+                if self.enable_stats:
+                    for source in self.sources:
+                        self.differential_photon_counts[source.name][index_pair] = \
+                            (
+                                    self.binned_photon_counts[source.name][pair[0]] - \
+                                    self.binned_photon_counts[source.name][pair[1]]
+                            )
+                else:
+                    self.differential_photon_counts[index_pair] = self.binned_photon_counts[pair[0]] - \
+                                                                  self.binned_photon_counts[pair[1]]
 
         return self.differential_photon_counts

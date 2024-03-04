@@ -61,10 +61,7 @@ class EmmaXCircularRotation(ArrayConfiguration):
         emma_x_static = self.nulling_baseline_length / 2 * np.array(
             [[baseline_ratio, baseline_ratio, -baseline_ratio, -baseline_ratio], [1, -1, -1, 1]])
         collector_positions = np.einsum('ijl,jk->ikl', rotation_matrix, emma_x_static)
-        collector_coordinates = np.zeros(len(time_steps), dtype=object)
-        for i in range(len(time_steps)):
-            collector_coordinates[i] = Coordinates(collector_positions[0, :, i], collector_positions[1, :, i])
-        return collector_coordinates
+        return collector_positions
 
 
 class EmmaXDoubleStretch(ArrayConfiguration):
@@ -80,8 +77,8 @@ class EmmaXDoubleStretch(ArrayConfiguration):
             [[baseline_ratio, baseline_ratio, -baseline_ratio, -baseline_ratio], [1, -1, -1, 1]])
         # TODO: fix calculations
         collector_positions = emma_x_static * (
-                    1 + (2 * self.nulling_baseline_length) / self.nulling_baseline_length * np.sin(
-                2 * np.pi * u.rad / modulation_period * time_steps))
+                1 + (2 * self.nulling_baseline_length) / self.nulling_baseline_length * np.sin(
+            2 * np.pi * u.rad / modulation_period * time_steps))
         return Coordinates(collector_positions[0], collector_positions[1])
 
 
