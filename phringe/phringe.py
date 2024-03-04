@@ -1,5 +1,4 @@
 import shutil
-import time
 from datetime import datetime
 from pathlib import Path
 from typing import Union
@@ -117,7 +116,6 @@ class PHRINGE():
 
         :return: The data as an array or a dictionary of arrays if enable_stats is True
         """
-        t0 = time.time_ns()
         spectrum_tuple = get_spectra_from_path(spectrum_tuple) if spectrum_tuple else None
         output_dir = Path(output_dir)
 
@@ -137,8 +135,10 @@ class PHRINGE():
         self._scene.prepare(self._settings, self._observation, self._observatory)
 
         data_generator = DataGenerator(self._settings, self._observation, self._observatory, self._scene,
-                                       enable_stats=generate_separate)
+                                       generate_separate=generate_separate)
+        # t0 = time.time_ns()
         self._data = data_generator.run()
+        # t1 = time.time_ns()
 
         if write_fits or create_copy:
             output_dir = output_dir.joinpath(f'out_{datetime.now().strftime("%Y%m%d_%H%M%S.%f")}')
@@ -164,5 +164,4 @@ class PHRINGE():
             else:
                 YAMLHandler().write(exoplanetary_system_file_path, output_dir.joinpath('system.yaml'))
 
-        t1 = time.time_ns()
-        print(f'PHRINGE run time: {(t1 - t0) / 1e9} seconds')
+        # print(f'PHRINGE run time: {(t1 - t0) / 1e9} seconds')

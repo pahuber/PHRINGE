@@ -1,6 +1,7 @@
 from typing import Tuple, Any
 
 import numpy as np
+import torch
 from astropy.units import Quantity
 
 
@@ -26,14 +27,14 @@ def get_radial_map(full_extent: Quantity, grid_size: int) -> Tuple[np.ndarray, n
     return np.sqrt(meshgrid[0] ** 2 + meshgrid[1] ** 2)
 
 
-def get_index_of_closest_value(array: np.ndarray, value: Quantity):
+def get_index_of_closest_value(array: torch.tensor, value: Quantity):
     """Return the index of a value in an array closest to the provided value.
 
     :param array: The array to search in
     :param value: The value to check
     :return: The index of the closest value
     """
-    return np.abs(array - value).argmin()
+    return torch.abs(array - value).argmin()
 
 
 def get_number_of_instances_in_list(list: list, instance_type: Any) -> int:
