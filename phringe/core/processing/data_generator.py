@@ -215,17 +215,23 @@ class DataGenerator():
         )
         t1 = time.time()
         print(f'Elapsed time: {t1 - t0}')
-        complex_amplitude_x = np.einsum('ijklm, jk->ijklm', base_complex_amplitude,
-                                        np.cos(polarization_angle + self.polarization_perturbation_time_series))
-        complex_amplitude_y = np.einsum('ijklm, jk->ijklm', base_complex_amplitude,
-                                        np.sin(polarization_angle + self.polarization_perturbation_time_series))
+
+        # complex_amplitude_x = np.einsum('ijklm, jk->ijklm', base_complex_amplitude,
+        #                                 np.cos(polarization_angle + self.polarization_perturbation_time_series))
+        complex_amplitude_x = base_complex_amplitude * np.cos(
+            self.polarization_perturbation_time_series[None, ..., None, None])
+
+        # complex_amplitude_y = np.einsum('ijklm, jk->ijklm', base_complex_amplitude,
+        #                             np.sin(polarization_angle + self.polarization_perturbation_time_series))
+        complex_amplitude_y = base_complex_amplitude * np.sin(
+            self.polarization_perturbation_time_series[None, ..., None, None])
 
         # complex_amplitude[index_input][0] = (base_complex_amplitude * np.cos(
         #     polarization_angle + self.polarization_perturbation_time_series[index_input][index_time]))
         #
         # complex_amplitude[index_input][1] = (base_complex_amplitude * np.sin(
         #     polarization_angle + self.polarization_perturbation_time_series[index_input][index_time]))
-        return np.stack((complex_amplitude_x, complex_amplitude_y))
+        return complex_amplitude_x, complex_amplitude_y
 
     def _calculate_intensity_response(self, source) -> np.ndarray:
         """Calculate the intensity response.
