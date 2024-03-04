@@ -354,7 +354,7 @@ class DataGenerator():
             )
         )
         differential_photon_counts = {source.name: np.copy(differential_photon_counts) for source in
-                                      self.sources} if self.enable_stats else differential_photon_counts
+                                      self.sources} if self.generate_separate else differential_photon_counts
         return differential_photon_counts
 
     def _remove_units_from_source_sky_coordinates(self):
