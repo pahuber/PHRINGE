@@ -1,8 +1,8 @@
 import time
 
 import numpy as np
+import torch
 from astropy import units as u
-from numba import complex128, float64, uint64, jit
 from numpy.random import normal, poisson
 
 from phringe.core.entities.observation import Observation
@@ -19,9 +19,9 @@ from phringe.util.helpers import Coordinates
 # @jit(complex128[:, :, :, :, :](float64, float64, float64[:, :], float64[:, :], float64[:, :], float64[:, :],
 #                                float64[:, :], float64[:, :], float64[:], uint64), nopython=True, nogil=True,
 #      fastmath=True)
-@jit(complex128[:, :, :, :, :](float64, float64, float64[:, :], float64[:, :], float64[:, :], float64[:, :],
-                               float64[:, :], float64[:, :], float64[:], uint64), nopython=True, nogil=True,
-     fastmath=True)
+# @jit(complex128[:, :, :, :, :](float64, float64, float64[:, :], float64[:, :], float64[:, :], float64[:, :],
+#                                float64[:, :], float64[:, :], float64[:], uint64), nopython=True, nogil=True,
+#      fastmath=True)
 def _calculate_complex_amplitude_base(
         aperture_radius: float,
         unperturbed_instrument_throughput: float,
@@ -63,7 +63,7 @@ def _calculate_complex_amplitude_base(
     exp = (exp_const * (1 / wavelength_steps)[..., None, None, None, None] *
            (obs_x_source_x + obs_y_source_y + phase_pert)[None, ...])
 
-    a = const * amplitude_perturbation_time_series[None, ..., None, None] * np.exp(exp)
+    a = const * amplitude_perturbation_time_series[None, ..., None, None] * torch.exp(exp)
 
     return a
 
@@ -119,12 +119,13 @@ class DataGenerator():
         :param scene: The scene object
         :param enable_stats: The flag indicating whether to enable photon statistics by generating separate data sets for all
         """
-        self.amplitude_perturbation_time_series = observatory.amplitude_perturbation_time_series
+        self.amplitude_perturbation_time_series = torch.asarray(observatory.amplitude_perturbation_time_series)
         self.aperture_radius = observatory.aperture_diameter.to(u.m).value / 2
         self.baseline_maximum = observation.baseline_maximum.to(u.m).value
         self.baseline_minimum = observation.baseline_minimum.to(u.m).value
         self.baseline_ratio = observation.baseline_ratio
-        self.beam_combination_matrix = observatory.beam_combination_scheme.get_beam_combination_transfer_matrix()
+        self.beam_combination_matrix = torch.asarray(
+            observatory.beam_combination_scheme.get_beam_combination_transfer_matrix())
         self.differential_output_pairs = observatory.beam_combination_scheme.get_differential_output_pairs()
         self.enable_stats = enable_stats
         self.instrument_wavelength_bin_centers = observatory.wavelength_bin_centers.to(u.m).value
@@ -144,8 +145,9 @@ class DataGenerator():
         self.optimized_differential_output = observation.optimized_differential_output
         self.optimized_star_separation = observation.optimized_star_separation
         self.optimized_wavelength = observation.optimized_wavelength.to(u.m).value
-        self.phase_perturbation_time_series = observatory.phase_perturbation_time_series.to(u.m).value
-        self.polarization_perturbation_time_series = observatory.polarization_perturbation_time_series.to(u.rad).value
+        self.phase_perturbation_time_series = torch.asarray(observatory.phase_perturbation_time_series.to(u.m).value)
+        self.polarization_perturbation_time_series = torch.asarray(
+            observatory.polarization_perturbation_time_series.to(u.rad).value)
         self.sources = scene.get_all_sources(
             settings.has_stellar_leakage,
             settings.has_local_zodi_leakage,
@@ -153,10 +155,10 @@ class DataGenerator():
         )
         self.star = scene.star
         self.simulation_time_step_duration = settings.simulation_time_step_duration.to(u.s).value
-        self.simulation_time_steps = settings.simulation_time_steps.to(u.s).value
+        self.simulation_time_steps = torch.asarray(settings.simulation_time_steps.to(u.s).value)
         self.unperturbed_instrument_throughput = observatory.unperturbed_instrument_throughput
-        self.simulation_wavelength_steps = settings.simulation_wavelength_steps.to(u.m).value
-        self.simulation_wavelength_bin_widths = settings.simulation_wavelength_bin_widths.to(u.m).value
+        self.simulation_wavelength_steps = torch.asarray(settings.simulation_wavelength_steps.to(u.m).value)
+        self.simulation_wavelength_bin_widths = torch.asarray(settings.simulation_wavelength_bin_widths.to(u.m).value)
         self.differential_photon_counts = self._initialize_differential_photon_counts()
         self.binned_photon_counts = self._initialize_binned_photon_counts()
         self._remove_units_from_source_sky_coordinates()
@@ -188,8 +190,8 @@ class DataGenerator():
         # index_wavelength = int(np.where(self.simulation_wavelength_steps == wavelength)[0])
         # complex_amplitude = np.zeros((self.number_of_inputs, 2, self.grid_size, self.grid_size), dtype=complex)
         observatory_coordinates = self.observatory.array_configuration.collector_coordinates
-        polarization_angle = np.zeros((self.number_of_inputs,
-                                       len(self.simulation_time_steps)))  # TODO: Check that we can set this to 0 without loss of generality
+        polarization_angle = torch.zeros((self.number_of_inputs,
+                                          len(self.simulation_time_steps)))  # TODO: Check that we can set this to 0 without loss of generality
 
         if self.has_planet_orbital_motion and isinstance(source, Planet):
             source_sky_coordinates = source.sky_coordinates
@@ -242,8 +244,8 @@ class DataGenerator():
         complex_amplitude = self._calculate_complex_amplitude(source)
         # complex_amplitude = complex_amplitude.reshape(complex_amplitude.shape[0:-2] + (-1,))
 
-        i_x = abs(np.einsum('nj, ijklm->inklm', self.beam_combination_matrix, complex_amplitude[0])) ** 2
-        i_y = abs(np.einsum('nj, ijklm->inklm', self.beam_combination_matrix, complex_amplitude[1])) ** 2
+        i_x = abs(torch.einsum('nj, ijklm->inklm', self.beam_combination_matrix, complex_amplitude[0])) ** 2
+        i_y = abs(torch.einsum('nj, ijklm->inklm', self.beam_combination_matrix, complex_amplitude[1])) ** 2
         return i_x + i_y
         #
         # return ((abs(np.dot(self.beam_combination_matrix, complex_amplitude[:, 0])) ** 2 +
@@ -256,7 +258,7 @@ class DataGenerator():
         :param source_sky_brightness_distribution: The source sky brightness distribution
         :return: The normalization
         """
-        normalization = np.empty(len(source_sky_brightness_distribution))
+        normalization = torch.empty(len(source_sky_brightness_distribution))
         for index_wavelength, wavelength in enumerate(self.simulation_wavelength_steps):
             source_sky_brightness_distribution2 = source_sky_brightness_distribution[index_wavelength]
             normalization[index_wavelength] = len(
@@ -288,10 +290,10 @@ class DataGenerator():
         wavelength_bin_width = self.simulation_wavelength_bin_widths
         # time_step_durations = np.repeat(self.simulation_time_step_duration, len(self.simulation_time_steps))
 
-        a = self.simulation_time_step_duration * np.einsum('ijklm, ilm, i, i-> ijklm', intensity_response,
-                                                           source_sky_brightness_distribution, wavelength_bin_width,
-                                                           1 / normalization)
-        mean_photon_counts = np.sum(a, axis=(3, 4)).swapaxes(0, 1)
+        a = self.simulation_time_step_duration * torch.einsum('ijklm, ilm, i, i-> ijklm', intensity_response,
+                                                              source_sky_brightness_distribution, wavelength_bin_width,
+                                                              1 / normalization)
+        mean_photon_counts = torch.sum(a, axis=(3, 4)).swapaxes(0, 1)
 
         # for index_ir, intensity_response in enumerate(intensity_response):
         #     mean_photon_counts = (
@@ -310,14 +312,15 @@ class DataGenerator():
         :param wavelength: The wavelength
         :return: The binning indices
         """
-        index_closest_wavelength_edge = get_index_of_closest_value(self.instrument_wavelength_bin_edges, wavelength)
+        index_closest_wavelength_edge = get_index_of_closest_value(np.asarray(self.instrument_wavelength_bin_edges),
+                                                                   np.asarray(wavelength))
         if index_closest_wavelength_edge == 0:
             index_wavelength_bin = 0
         elif wavelength <= self.instrument_wavelength_bin_edges[index_closest_wavelength_edge]:
             index_wavelength_bin = index_closest_wavelength_edge - 1
         else:
             index_wavelength_bin = index_closest_wavelength_edge
-        index_closest_time_edge = get_index_of_closest_value(self.instrument_time_steps, time)
+        index_closest_time_edge = get_index_of_closest_value(self.instrument_time_steps, np.asarray(time))
         if index_closest_time_edge == 0:
             index_time = 0
         elif time <= self.instrument_time_steps[index_closest_time_edge]:
@@ -327,7 +330,7 @@ class DataGenerator():
         return index_wavelength_bin, index_time
 
     def _initialize_binned_photon_counts(self):
-        binned_photon_counts = np.zeros(
+        binned_photon_counts = torch.zeros(
             (self.number_of_outputs, len(self.instrument_wavelength_bin_centers), len(self.instrument_time_steps))
         )
         binned_photon_counts = {source.name: np.copy(binned_photon_counts) for source in
@@ -387,21 +390,40 @@ class DataGenerator():
         # Run animation, if applicable
         # TODO: add animation
 
+        t0 = time.time_ns()
+
+        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        self.binned_photon_counts = self.binned_photon_counts.to(device)
+        self.observatory.array_configuration.collector_coordinates = torch.asarray(
+            self.observatory.array_configuration.collector_coordinates).to(
+            device)
+
         # Start time, wavelength and source loop
         for source in self.sources:
+
+            intensity_response = torch.zeros((
+                len(self.simulation_wavelength_steps), self.number_of_outputs, len(self.simulation_time_steps),
+                self.grid_size, self.grid_size), dtype=torch.complex64)
+            photon_counts = torch.zeros(
+                (self.number_of_outputs, len(self.simulation_wavelength_steps), len(self.simulation_time_steps)))
+            intensity_response = intensity_response.to(device)
+            photon_counts = photon_counts.to(device)
+            source.sky_coordinates = torch.asarray(source.sky_coordinates).to(device)
+            source.sky_brightness_distribution = torch.asarray(source.sky_brightness_distribution).to(device)
 
             # Calculate intensity response
             intensity_response = self._calculate_intensity_response(source)
 
             # Calculate photon counts
             photon_counts = self._calculate_photon_counts(source, intensity_response)
+            intensity_response.to('cpu')
 
             # Bin the photon counts into the instrument time and wavelength intervals
-            for index_time2, time in enumerate(self.simulation_time_steps):
+            for index_time2, time2 in enumerate(self.simulation_time_steps):
                 for index_wavelength2, wavelength in enumerate(self.simulation_wavelength_steps):
 
-                    index_wavelength, index_time = self._get_binning_indices(time, wavelength)
-                    print(f'{index_time2, index_wavelength2} -> {index_time, index_wavelength}')
+                    index_wavelength, index_time = self._get_binning_indices(time2, wavelength)
+                    # print(f'{index_time2, index_wavelength2} -> {index_time, index_wavelength}')
                     if self.enable_stats:
                         self.binned_photon_counts[source.name][:, index_wavelength, index_time] += photon_counts[
                                                                                                    :,
@@ -411,6 +433,8 @@ class DataGenerator():
                         self.binned_photon_counts[:, index_wavelength, index_time] += photon_counts[:,
                                                                                       index_wavelength2,
                                                                                       index_time2]
+
+            photon_counts.to('cpu')
 
             # Calculate differential photon counts
             for index_pair, pair in enumerate(self.differential_output_pairs):
@@ -424,5 +448,9 @@ class DataGenerator():
                 else:
                     self.differential_photon_counts[index_pair] = self.binned_photon_counts[pair[0]] - \
                                                                   self.binned_photon_counts[pair[1]]
+
+        t1 = time.time_ns()
+
+        print(f'Elapsed time run: {(t1 - t0) / 1e9} s')
 
         return self.differential_photon_counts
