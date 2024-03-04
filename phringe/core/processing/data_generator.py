@@ -126,14 +126,7 @@ class DataGenerator():
         self.differential_output_pairs = observatory.beam_combination_scheme.get_differential_output_pairs()
         self.generate_separate = generate_separate
         self.instrument_wavelength_bin_centers = observatory.wavelength_bin_centers.to(u.m).value
-        self.instrument_wavelength_bin_edges = torch.asarray(observatory.wavelength_bin_edges.to(u.m).value).to(
-            self.device)
         self.instrument_wavelength_bin_widths = observatory.wavelength_bin_widths.to(u.m).value
-        self.instrument_time_steps = torch.asarray(np.linspace(
-            0,
-            observation.total_integration_time,
-            int(observation.total_integration_time / observation.detector_integration_time)
-        ).to(u.s).value).to(self.device)
         self.grid_size = settings.grid_size
         self.has_planet_orbital_motion = settings.has_planet_orbital_motion
         self.modulation_period = observation.modulation_period.to(u.s).value
@@ -158,6 +151,13 @@ class DataGenerator():
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
         # GPU stuff starts here
+        self.instrument_wavelength_bin_edges = torch.asarray(observatory.wavelength_bin_edges.to(u.m).value).to(
+            self.device)
+        self.instrument_time_steps = torch.asarray(np.linspace(
+            0,
+            observation.total_integration_time,
+            int(observation.total_integration_time / observation.detector_integration_time)
+        ).to(u.s).value).to(self.device)
         self.amplitude_perturbation_time_series = torch.asarray(observatory.amplitude_perturbation_time_series).to(
             self.device)
         self.beam_combination_matrix = torch.asarray(
