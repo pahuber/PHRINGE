@@ -319,14 +319,14 @@ class DataGenerator():
         :return: The binning indices
         """
         index_closest_wavelength_edge = get_index_of_closest_value(np.asarray(self.instrument_wavelength_bin_edges),
-                                                                   np.asarray(wavelength))
+                                                                   np.asarray(wavelength.cpu()))
         if index_closest_wavelength_edge == 0:
             index_wavelength_bin = 0
         elif wavelength <= self.instrument_wavelength_bin_edges[index_closest_wavelength_edge]:
             index_wavelength_bin = index_closest_wavelength_edge - 1
         else:
             index_wavelength_bin = index_closest_wavelength_edge
-        index_closest_time_edge = get_index_of_closest_value(self.instrument_time_steps, np.asarray(time))
+        index_closest_time_edge = get_index_of_closest_value(self.instrument_time_steps, np.asarray(time.cpu()))
         if index_closest_time_edge == 0:
             index_time = 0
         elif time <= self.instrument_time_steps[index_closest_time_edge]:
