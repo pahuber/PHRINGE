@@ -169,8 +169,10 @@ class Planet(BasePhotonSource, BaseModel):
         else:
             sky_brightness_distribution = np.zeros(
                 (number_of_wavelength_steps, grid_size, grid_size)) * self.mean_spectral_flux_density.unit
-            index_x = get_index_of_closest_value(self.sky_coordinates[0, 0, :], self.angular_separation_from_star_x[0])
-            index_y = get_index_of_closest_value(self.sky_coordinates[1, :, 0], self.angular_separation_from_star_y[0])
+            index_x = get_index_of_closest_value(self.sky_coordinates[0, 0, :].value,
+                                                 self.angular_separation_from_star_x[0].value)
+            index_y = get_index_of_closest_value(self.sky_coordinates[1, :, 0].value,
+                                                 self.angular_separation_from_star_y[0].value)
             sky_brightness_distribution[:, index_y, index_x] = self.mean_spectral_flux_density
         return sky_brightness_distribution
 
