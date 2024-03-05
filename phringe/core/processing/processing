@@ -24,6 +24,9 @@ def _calculate_complex_amplitude_base(
     """
     exp_const = 2j * torch.pi
 
+    # obs_x_source_x = torch.einsum('ij,kl->ijkl', observatory_coordinates_x, source_sky_coordinates_x)
+    # obs_y_source_y = torch.einsum('ij,kl->ijkl', observatory_coordinates_y, source_sky_coordinates_y)
+
     obs_x_source_x = (
             observatory_coordinates_x[..., None, None] *
             source_sky_coordinates_x[None, None, ...])
@@ -34,18 +37,22 @@ def _calculate_complex_amplitude_base(
 
     phase_pert = phase_perturbation_time_series[..., None, None]
 
-    sum = obs_x_source_x + obs_y_source_y + phase_pert
+    # sum = obs_x_source_x + obs_y_source_y + phase_pert
+    # exp = exp_const * torch.einsum('i, jklm->ijklm', 1 / wavelength_steps, sum)
 
     exp = (exp_const * (1 / wavelength_steps)[..., None, None, None, None] *
            (obs_x_source_x + obs_y_source_y + phase_pert)[None, ...])
 
     a = amplitude_perturbation_time_series[None, ..., None, None] * torch.exp(exp)
+    # a = torch.einsum('jk, ijklm->ijklm', amplitude_perturbation_time_series, torch.exp(exp))
 
     return a
 
 
-def _calculate_complex_amplitude(base_complex_amplitude: Tensor,
-                                 polarization_perturbation_time_series: Tensor) -> Tensor:
+def _calculate_complex_amplitude(
+        base_complex_amplitude: Tensor,
+        polarization_perturbation_time_series: Tensor
+) -> Tensor:
     """Calculate the complex amplitude.
 
     :param base_complex_amplitude: The base complex amplitude
@@ -61,9 +68,11 @@ def _calculate_complex_amplitude(base_complex_amplitude: Tensor,
     return complex_amplitude_x, complex_amplitude_y
 
 
-def _calculate_intensity_response(complex_amplitude_x: Tensor,
-                                  complex_amplitude_y: Tensor,
-                                  beam_combination_matrix: Tensor) -> torch.tensor:
+def _calculate_intensity_response(
+        complex_amplitude_x: Tensor,
+        complex_amplitude_y: Tensor,
+        beam_combination_matrix: Tensor
+) -> Tensor:
     """Calculate the intensity response.
 
     :param complex_amplitude_x: The complex amplitude x
@@ -71,16 +80,23 @@ def _calculate_intensity_response(complex_amplitude_x: Tensor,
     :param beam_combination_matrix: The beam combination matrix
     :return: The intensity response
     """
-    i_x = torch.abs(torch.einsum('nj, ijklm->inklm', beam_combination_matrix, complex_amplitude_x)) ** 2
-    i_y = torch.abs(torch.einsum('nj, ijklm->inklm', beam_combination_matrix, complex_amplitude_y)) ** 2
+    # i_x = torch.abs(torch.einsum('nj, ijklm->inklm', beam_combination_matrix, complex_amplitude_x)) ** 2
+    # i_y = torch.abs(torch.einsum('nj, ijklm->inklm', beam_combination_matrix, complex_amplitude_y)) ** 2
 
-    return i_x + i_y
+    dot_product_x = beam_combination_matrix[None, ..., None, None, None] * complex_amplitude_x.unsqueeze(1)
+    result_x = torch.abs(torch.sum(dot_product_x, dim=2)) ** 2
+
+    dot_product_y = beam_combination_matrix[None, ..., None, None, None] * complex_amplitude_y.unsqueeze(1)
+    result_y = torch.abs(torch.sum(dot_product_y, dim=2)) ** 2
+
+    return result_x + result_y
 
 
 def _calculate_normalization(
         device: torch.device,
         source_sky_brightness_distribution: Tensor,
         simulation_wavelength_steps: Tensor,
+        normalization: Tensor
 ) -> int:
     """Calculate the normalization.
 
@@ -89,7 +105,7 @@ def _calculate_normalization(
     :param simulation_wavelength_steps: The simulation wavelength steps
     :return: The normalization
     """
-    normalization = torch.empty(len(source_sky_brightness_distribution), device=device)
+    # normalization = torch.empty(len(source_sky_brightness_distribution), device=device)
     for index_wavelength, wavelength in enumerate(simulation_wavelength_steps):
         source_sky_brightness_distribution2 = source_sky_brightness_distribution[index_wavelength]
         normalization[index_wavelength] = len(
@@ -105,7 +121,8 @@ def _calculate_photon_counts_from_intensity_response(
         source_sky_brightness_distribution: Tensor,
         simulation_wavelength_steps: Tensor,
         simulation_wavelength_bin_widths: Tensor,
-        simulation_time_step_duration: float
+        simulation_time_step_duration: float,
+        normalization: Tensor
 ) -> Tensor:
     """Calculate the photon counts.
 
@@ -119,7 +136,14 @@ def _calculate_photon_counts_from_intensity_response(
     normalization = _calculate_normalization(
         device,
         source_sky_brightness_distribution,
-        simulation_wavelength_steps)
+        simulation_wavelength_steps,
+        normalization
+    )
+
+    # a = (simulation_time_step_duration * intensity_response.swapaxes(0, 2)
+    #      * source_sky_brightness_distribution[None, None, ...]
+    #      * simulation_wavelength_bin_widths[None, None, ..., None, None]
+    #      / normalization[None, None, ..., None, None])
 
     a = simulation_time_step_duration * torch.einsum(
         'ijklm, ilm, i, i-> ijklm',
@@ -135,8 +159,8 @@ def _calculate_photon_counts_from_intensity_response(
 
 def calculate_photon_counts_gpu(
         device: torch.device,
-        aperture_radius: float,
-        unperturbed_instrument_throughput: float,
+        aperture_radius: Tensor,
+        unperturbed_instrument_throughput: Tensor,
         amplitude_perturbation_time_series: Tensor,
         phase_perturbation_time_series: Tensor,
         polarization_perturbation_time_series: Tensor,
@@ -148,7 +172,8 @@ def calculate_photon_counts_gpu(
         simulation_wavelength_steps: Tensor,
         simulation_wavelength_bin_widths: Tensor,
         simulation_time_step_duration: float,
-        beam_combination_matrix: Tensor
+        beam_combination_matrix: Tensor,
+        normalization_array: Tensor
 ):
     """Calculate the photon counts.
 
@@ -183,6 +208,7 @@ def calculate_photon_counts_gpu(
         base_complex_amplitude,
         polarization_perturbation_time_series
     )
+
     intensity_response = _calculate_intensity_response(
         complex_amplitude_x,
         complex_amplitude_y,
@@ -195,6 +221,7 @@ def calculate_photon_counts_gpu(
         source_sky_brightness_distribution,
         simulation_wavelength_steps,
         simulation_wavelength_bin_widths,
-        simulation_time_step_duration
+        simulation_time_step_duration,
+        normalization_array
     )
     return photon_counts
