@@ -12,6 +12,7 @@ from phringe.core.entities.photon_sources.local_zodi import LocalZodi
 from phringe.core.entities.photon_sources.planet import Planet
 from phringe.core.entities.scene import Scene
 from phringe.core.entities.settings import Settings
+from phringe.core.processing.gpu import calculate_photon_counts_gpu
 from phringe.util.grid import get_index_of_closest_value
 from phringe.util.helpers import Coordinates
 
@@ -22,50 +23,50 @@ from phringe.util.helpers import Coordinates
 # @jit(complex128[:, :, :, :, :](float64, float64, float64[:, :], float64[:, :], float64[:, :], float64[:, :],
 #                                float64[:, :], float64[:, :], float64[:], uint64), nopython=True, nogil=True,
 #      fastmath=True)
-def _calculate_complex_amplitude_base(
-        aperture_radius: float,
-        unperturbed_instrument_throughput: float,
-        amplitude_perturbation_time_series: np.ndarray,
-        phase_perturbation_time_series: np.ndarray,
-        observatory_coordinates_x: np.ndarray,
-        observatory_coordinates_y: np.ndarray,
-        source_sky_coordinates_x: np.ndarray,
-        source_sky_coordinates_y: np.ndarray,
-        wavelength_steps: np.ndarray,
-        grid_size: int
-) -> np.ndarray:
-    """Calculate the complex amplitude element for a single polarization.
-
-    :param unperturbed_instrument_throughput: The unperturbed instrument throughput
-    :param amplitude_perturbation_time_series: The amplitude perturbation time series
-    :param phase_perturbation_time_series: The phase perturbation time series
-    :param observatory_coordinates_x: The observatory x coordinates
-    :param observatory_coordinates_y: The observatory y coordinates
-    :param source_sky_coordinates_x: The source sky x coordinates
-    :param source_sky_coordinates_y: The source sky y coordinates
-    :return: The complex amplitude element
-    """
-    const = aperture_radius * torch.sqrt(unperturbed_instrument_throughput)
-    exp_const = 2j * torch.pi
-
-    obs_x_source_x = (
-            observatory_coordinates_x[..., None, None] *
-            source_sky_coordinates_x[None, None, ...])
-
-    obs_y_source_y = (
-            observatory_coordinates_y[..., None, None] *
-            source_sky_coordinates_y[None, None, ...])
-
-    phase_pert = phase_perturbation_time_series[..., None, None]
-
-    sum = obs_x_source_x + obs_y_source_y + phase_pert
-
-    exp = (exp_const * (1 / wavelength_steps)[..., None, None, None, None] *
-           (obs_x_source_x + obs_y_source_y + phase_pert)[None, ...])
-
-    a = const * amplitude_perturbation_time_series[None, ..., None, None] * torch.exp(exp)
-
-    return a
+# def _calculate_complex_amplitude_base(
+#         aperture_radius: float,
+#         unperturbed_instrument_throughput: float,
+#         amplitude_perturbation_time_series: np.ndarray,
+#         phase_perturbation_time_series: np.ndarray,
+#         observatory_coordinates_x: np.ndarray,
+#         observatory_coordinates_y: np.ndarray,
+#         source_sky_coordinates_x: np.ndarray,
+#         source_sky_coordinates_y: np.ndarray,
+#         wavelength_steps: np.ndarray,
+#         grid_size: int
+# ) -> np.ndarray:
+#     """Calculate the complex amplitude element for a single polarization.
+#
+#     :param unperturbed_instrument_throughput: The unperturbed instrument throughput
+#     :param amplitude_perturbation_time_series: The amplitude perturbation time series
+#     :param phase_perturbation_time_series: The phase perturbation time series
+#     :param observatory_coordinates_x: The observatory x coordinates
+#     :param observatory_coordinates_y: The observatory y coordinates
+#     :param source_sky_coordinates_x: The source sky x coordinates
+#     :param source_sky_coordinates_y: The source sky y coordinates
+#     :return: The complex amplitude element
+#     """
+#     const = aperture_radius * torch.sqrt(unperturbed_instrument_throughput)
+#     exp_const = 2j * torch.pi
+#
+#     obs_x_source_x = (
+#             observatory_coordinates_x[..., None, None] *
+#             source_sky_coordinates_x[None, None, ...])
+#
+#     obs_y_source_y = (
+#             observatory_coordinates_y[..., None, None] *
+#             source_sky_coordinates_y[None, None, ...])
+#
+#     phase_pert = phase_perturbation_time_series[..., None, None]
+#
+#     sum = obs_x_source_x + obs_y_source_y + phase_pert
+#
+#     exp = (exp_const * (1 / wavelength_steps)[..., None, None, None, None] *
+#            (obs_x_source_x + obs_y_source_y + phase_pert)[None, ...])
+#
+#     a = const * amplitude_perturbation_time_series[None, ..., None, None] * torch.exp(exp)
+#
+#     return a
 
 
 class DataGenerator():
@@ -187,132 +188,127 @@ class DataGenerator():
             photon_counts = round(normal(mean_photon_counts, 1))
         return photon_counts
 
-    def _calculate_complex_amplitude(self, source) -> np.ndarray:
-        """Calculate the complex amplitude.
+    # def _calculate_complex_amplitude(self, source) -> np.ndarray:
+    #     """Calculate the complex amplitude.
+    #
+    #     :param time: The time
+    #     :param wavelength: The wavelength
+    #     :param source: The source
+    #     :return: The complex amplitude
+    #     """
+    #     # index_time = int(np.where(self.simulation_time_steps == time)[0])
+    #     # index_wavelength = int(np.where(self.simulation_wavelength_steps == wavelength)[0])
+    #     # complex_amplitude = np.zeros((self.number_of_inputs, 2, self.grid_size, self.grid_size), dtype=complex)
+    #     observatory_coordinates = self.observatory.array_configuration.collector_coordinates
+    #     polarization_angle = torch.zeros((self.number_of_inputs,
+    #                                       len(self.simulation_time_steps)))  # TODO: Check that we can set this to 0 without loss of generality
+    #
+    #     if self.has_planet_orbital_motion and isinstance(source, Planet):
+    #         source_sky_coordinates = source.sky_coordinates
+    #     elif isinstance(source, LocalZodi) or isinstance(source, Exozodi):
+    #         source_sky_coordinates = source.sky_coordinates
+    #     else:
+    #         source_sky_coordinates = source.sky_coordinates
+    #
+    #     base_complex_amplitude = _calculate_complex_amplitude_base(
+    #         self.aperture_radius,
+    #         self.unperturbed_instrument_throughput,
+    #         self.amplitude_perturbation_time_series,
+    #         self.phase_perturbation_time_series,
+    #         observatory_coordinates[0],
+    #         observatory_coordinates[1],
+    #         source_sky_coordinates[0],
+    #         source_sky_coordinates[1],
+    #         self.simulation_wavelength_steps,
+    #         self.grid_size
+    #     )
+    #
+    #     # complex_amplitude_x = np.einsum('ijklm, jk->ijklm', base_complex_amplitude,
+    #     #                                 np.cos(polarization_angle + self.polarization_perturbation_time_series))
+    #     complex_amplitude_x = base_complex_amplitude * torch.cos(
+    #         self.polarization_perturbation_time_series[None, ..., None, None])
+    #
+    #     # complex_amplitude_y = np.einsum('ijklm, jk->ijklm', base_complex_amplitude,
+    #     #                             np.sin(polarization_angle + self.polarization_perturbation_time_series))
+    #     complex_amplitude_y = base_complex_amplitude * torch.sin(
+    #         self.polarization_perturbation_time_series[None, ..., None, None])
+    #
+    #     # complex_amplitude[index_input][0] = (base_complex_amplitude * np.cos(
+    #     #     polarization_angle + self.polarization_perturbation_time_series[index_input][index_time]))
+    #     #
+    #     # complex_amplitude[index_input][1] = (base_complex_amplitude * np.sin(
+    #     #     polarization_angle + self.polarization_perturbation_time_series[index_input][index_time]))
+    #     return complex_amplitude_x, complex_amplitude_y
+    #
+    # # def _calculate_intensity_response(self, source) -> np.ndarray:
+    #     """Calculate the intensity response.
+    #
+    #     :param source: The source
+    #     :return: The intensity response
+    #     """
+    #     complex_amplitude = self._calculate_complex_amplitude(source)
+    #     # complex_amplitude = complex_amplitude.reshape(complex_amplitude.shape[0:-2] + (-1,))
+    #
+    #     i_x = torch.abs(torch.einsum('nj, ijklm->inklm', self.beam_combination_matrix, complex_amplitude[0])) ** 2
+    #     i_y = torch.abs(torch.einsum('nj, ijklm->inklm', self.beam_combination_matrix, complex_amplitude[1])) ** 2
+    #     return i_x + i_y
+    #     #
+    #     # return ((abs(np.dot(self.beam_combination_matrix, complex_amplitude[:, 0])) ** 2 +
+    #     #          abs(np.dot(self.beam_combination_matrix, complex_amplitude[:, 1])) ** 2)
+    #     #         .reshape(self.number_of_outputs, self.grid_size, self.grid_size))
 
-        :param time: The time
-        :param wavelength: The wavelength
-        :param source: The source
-        :return: The complex amplitude
-        """
-        # index_time = int(np.where(self.simulation_time_steps == time)[0])
-        # index_wavelength = int(np.where(self.simulation_wavelength_steps == wavelength)[0])
-        # complex_amplitude = np.zeros((self.number_of_inputs, 2, self.grid_size, self.grid_size), dtype=complex)
-        observatory_coordinates = self.observatory.array_configuration.collector_coordinates
-        polarization_angle = torch.zeros((self.number_of_inputs,
-                                          len(self.simulation_time_steps)))  # TODO: Check that we can set this to 0 without loss of generality
+    # def _calculate_normalization(self, source_sky_brightness_distribution) -> int:
+    #     """Calculate the normalization.
+    #
+    #     :param source_sky_brightness_distribution: The source sky brightness distribution
+    #     :return: The normalization
+    #     """
+    #     normalization = torch.empty(len(source_sky_brightness_distribution)).to(self.device)
+    #     for index_wavelength, wavelength in enumerate(self.simulation_wavelength_steps):
+    #         source_sky_brightness_distribution2 = source_sky_brightness_distribution[index_wavelength]
+    #         normalization[index_wavelength] = len(
+    #             source_sky_brightness_distribution2[source_sky_brightness_distribution2 > 0]) if not len(
+    #             source_sky_brightness_distribution2[source_sky_brightness_distribution2 > 0]) == 0 else 1
+    #
+    #     return normalization
+    #     # return len(source_sky_brightness_distribution[source_sky_brightness_distribution > 0]) if not len(
+    #     #     source_sky_brightness_distribution[source_sky_brightness_distribution > 0]) == 0 else 1
 
-        if self.has_planet_orbital_motion and isinstance(source, Planet):
-            source_sky_coordinates = source.sky_coordinates
-        elif isinstance(source, LocalZodi) or isinstance(source, Exozodi):
-            source_sky_coordinates = source.sky_coordinates
-        else:
-            source_sky_coordinates = source.sky_coordinates
-
-        # for index_input in range(self.number_of_inputs):
-        t0 = time.time()
-
-        base_complex_amplitude = _calculate_complex_amplitude_base(
-            self.aperture_radius,
-            self.unperturbed_instrument_throughput,
-            self.amplitude_perturbation_time_series,
-            self.phase_perturbation_time_series,
-            observatory_coordinates[0],
-            observatory_coordinates[1],
-            source_sky_coordinates[0],
-            source_sky_coordinates[1],
-            self.simulation_wavelength_steps,
-            self.grid_size
-        )
-        t1 = time.time()
-        print(f'Elapsed time: {t1 - t0}')
-
-        # complex_amplitude_x = np.einsum('ijklm, jk->ijklm', base_complex_amplitude,
-        #                                 np.cos(polarization_angle + self.polarization_perturbation_time_series))
-        complex_amplitude_x = base_complex_amplitude * torch.cos(
-            self.polarization_perturbation_time_series[None, ..., None, None])
-
-        # complex_amplitude_y = np.einsum('ijklm, jk->ijklm', base_complex_amplitude,
-        #                             np.sin(polarization_angle + self.polarization_perturbation_time_series))
-        complex_amplitude_y = base_complex_amplitude * torch.sin(
-            self.polarization_perturbation_time_series[None, ..., None, None])
-
-        # complex_amplitude[index_input][0] = (base_complex_amplitude * np.cos(
-        #     polarization_angle + self.polarization_perturbation_time_series[index_input][index_time]))
-        #
-        # complex_amplitude[index_input][1] = (base_complex_amplitude * np.sin(
-        #     polarization_angle + self.polarization_perturbation_time_series[index_input][index_time]))
-        return complex_amplitude_x, complex_amplitude_y
-
-    def _calculate_intensity_response(self, source) -> np.ndarray:
-        """Calculate the intensity response.
-
-        :param source: The source
-        :return: The intensity response
-        """
-        complex_amplitude = self._calculate_complex_amplitude(source)
-        # complex_amplitude = complex_amplitude.reshape(complex_amplitude.shape[0:-2] + (-1,))
-
-        i_x = torch.abs(torch.einsum('nj, ijklm->inklm', self.beam_combination_matrix, complex_amplitude[0])) ** 2
-        i_y = torch.abs(torch.einsum('nj, ijklm->inklm', self.beam_combination_matrix, complex_amplitude[1])) ** 2
-        return i_x + i_y
-        #
-        # return ((abs(np.dot(self.beam_combination_matrix, complex_amplitude[:, 0])) ** 2 +
-        #          abs(np.dot(self.beam_combination_matrix, complex_amplitude[:, 1])) ** 2)
-        #         .reshape(self.number_of_outputs, self.grid_size, self.grid_size))
-
-    def _calculate_normalization(self, source_sky_brightness_distribution) -> int:
-        """Calculate the normalization.
-
-        :param source_sky_brightness_distribution: The source sky brightness distribution
-        :return: The normalization
-        """
-        normalization = torch.empty(len(source_sky_brightness_distribution)).to(self.device)
-        for index_wavelength, wavelength in enumerate(self.simulation_wavelength_steps):
-            source_sky_brightness_distribution2 = source_sky_brightness_distribution[index_wavelength]
-            normalization[index_wavelength] = len(
-                source_sky_brightness_distribution2[source_sky_brightness_distribution2 > 0]) if not len(
-                source_sky_brightness_distribution2[source_sky_brightness_distribution2 > 0]) == 0 else 1
-
-        return normalization
-        # return len(source_sky_brightness_distribution[source_sky_brightness_distribution > 0]) if not len(
-        #     source_sky_brightness_distribution[source_sky_brightness_distribution > 0]) == 0 else 1
-
-    def _calculate_photon_counts(
-            self,
-            source,
-            intensity_response
-    ) -> np.ndarray:
-        """Calculate the photon counts.
-
-        :param source: The source
-        :param intensity_response: The intensity response
-        :return: The photon counts
-        """
-        # if self.has_planet_orbital_motion and isinstance(source, Planet):
-        #     index_time = int(np.where(self.simulation_time_steps == time)[0])
-        #     source_sky_brightness_distribution = source.sky_brightness_distribution[index_time]
-        # else:
-        source_sky_brightness_distribution = source.sky_brightness_distribution
-
-        normalization = self._calculate_normalization(source_sky_brightness_distribution)
-        wavelength_bin_width = self.simulation_wavelength_bin_widths
-        # time_step_durations = np.repeat(self.simulation_time_step_duration, len(self.simulation_time_steps))
-
-        a = self.simulation_time_step_duration * torch.einsum('ijklm, ilm, i, i-> ijklm', intensity_response,
-                                                              source_sky_brightness_distribution, wavelength_bin_width,
-                                                              1 / normalization)
-        mean_photon_counts = torch.sum(a, axis=(3, 4)).swapaxes(0, 1)
-
-        # for index_ir, intensity_response in enumerate(intensity_response):
-        #     mean_photon_counts = (
-        #             np.sum(intensity_response
-        #                    * source_sky_brightness_distribution[index_wavelength]
-        #                    * self.simulation_time_step_duration
-        #                    * wavelength_bin_width)
-        #             / normalization)
-        # photon_counts[index_ir] = self._apply_shot_noise(mean_photon_counts)
-        return mean_photon_counts
+    # def _calculate_photon_counts(
+    #         self,
+    #         source,
+    #         intensity_response
+    # ) -> np.ndarray:
+    #     """Calculate the photon counts.
+    #
+    #     :param source: The source
+    #     :param intensity_response: The intensity response
+    #     :return: The photon counts
+    #     """
+    #     # if self.has_planet_orbital_motion and isinstance(source, Planet):
+    #     #     index_time = int(np.where(self.simulation_time_steps == time)[0])
+    #     #     source_sky_brightness_distribution = source.sky_brightness_distribution[index_time]
+    #     # else:
+    #     source_sky_brightness_distribution = source.sky_brightness_distribution
+    #
+    #     normalization = self._calculate_normalization(source_sky_brightness_distribution)
+    #     wavelength_bin_width = self.simulation_wavelength_bin_widths
+    #     # time_step_durations = np.repeat(self.simulation_time_step_duration, len(self.simulation_time_steps))
+    #
+    #     a = self.simulation_time_step_duration * torch.einsum('ijklm, ilm, i, i-> ijklm', intensity_response,
+    #                                                           source_sky_brightness_distribution, wavelength_bin_width,
+    #                                                           1 / normalization)
+    #     mean_photon_counts = torch.sum(a, axis=(3, 4)).swapaxes(0, 1)
+    #
+    #     # for index_ir, intensity_response in enumerate(intensity_response):
+    #     #     mean_photon_counts = (
+    #     #             np.sum(intensity_response
+    #     #                    * source_sky_brightness_distribution[index_wavelength]
+    #     #                    * self.simulation_time_step_duration
+    #     #                    * wavelength_bin_width)
+    #     #             / normalization)
+    #     # photon_counts[index_ir] = self._apply_shot_noise(mean_photon_counts)
+    #     return mean_photon_counts
 
     def _get_binning_indices(self, time, wavelength) -> tuple:
         """Get the binning indices.
@@ -406,20 +402,50 @@ class DataGenerator():
         for source in self.sources:
 
             t0 = time.time_ns()
-
-            photon_counts = torch.zeros(
-                (self.number_of_outputs, len(self.simulation_wavelength_steps), len(self.simulation_time_steps)),
-                device=self.device
-            )
+            #
+            # photon_counts = torch.zeros(
+            #     (self.number_of_outputs, len(self.simulation_wavelength_steps), len(self.simulation_time_steps)),
+            #     device=self.device
+            # )
             source.sky_coordinates = torch.asarray(source.sky_coordinates).to(self.device)
             source.sky_brightness_distribution = torch.asarray(source.sky_brightness_distribution).to(self.device)
 
             # Calculate intensity response
-            intensity_response = self._calculate_intensity_response(source)
+            # intensity_response = self._calculate_intensity_response(source)
+            #
+            # # Calculate photon counts
+            # photon_counts = self._calculate_photon_counts(source, intensity_response)
+            # intensity_response.to('cpu')
 
-            # Calculate photon counts
-            photon_counts = self._calculate_photon_counts(source, intensity_response)
-            intensity_response.to('cpu')
+            # if self.has_planet_orbital_motion and isinstance(source, Planet):
+            #     index_time = int(np.where(self.simulation_time_steps == time)[0])
+            #     source_sky_brightness_distribution = source.sky_brightness_distribution[index_time]
+            # else:
+            source_sky_brightness_distribution = source.sky_brightness_distribution
+            if self.has_planet_orbital_motion and isinstance(source, Planet):
+                source_sky_coordinates = source.sky_coordinates
+            elif isinstance(source, LocalZodi) or isinstance(source, Exozodi):
+                source_sky_coordinates = source.sky_coordinates
+            else:
+                source_sky_coordinates = source.sky_coordinates
+
+            photon_counts = calculate_photon_counts_gpu(
+                self.device,
+                self.aperture_radius,
+                self.unperturbed_instrument_throughput,
+                self.amplitude_perturbation_time_series,
+                self.phase_perturbation_time_series,
+                self.polarization_perturbation_time_series,
+                self.observatory.array_configuration.collector_coordinates[0],
+                self.observatory.array_configuration.collector_coordinates[1],
+                source_sky_coordinates[0],
+                source_sky_coordinates[1],
+                source_sky_brightness_distribution,
+                self.simulation_wavelength_steps,
+                self.simulation_wavelength_bin_widths,
+                self.simulation_time_step_duration,
+                self.beam_combination_matrix,
+            )
 
             t1 = time.time_ns()
             print(f'Elapsed time source: {(t1 - t0) / 1e9} s')
