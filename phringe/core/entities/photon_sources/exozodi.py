@@ -79,15 +79,16 @@ class Exozodi(BasePhotonSource, BaseModel):
 
     def _calculate_sky_coordinates(self, grid_size: int, **kwargs) -> Coordinates:
         field_of_view = kwargs['field_of_view']
-        sky_coordinates = np.zeros(len(field_of_view), dtype=object)
+        sky_coordinates = np.zeros((2, len(field_of_view), grid_size, grid_size))
 
         # The sky coordinates have a different extent for each field of view, i.e. for each wavelength
         for index_fov in range(len(field_of_view)):
             sky_coordinates_at_fov = get_meshgrid(
                 field_of_view[index_fov].to(u.rad),
                 grid_size)
-            sky_coordinates[index_fov] = Coordinates(sky_coordinates_at_fov[0], sky_coordinates_at_fov[1])
-        return sky_coordinates
+            sky_coordinates[:, index_fov] = np.stack(
+                (sky_coordinates_at_fov[0].value, sky_coordinates_at_fov[1].value))
+        return sky_coordinates * u.rad
 
     def _calculate_temperature_profile(
             self,

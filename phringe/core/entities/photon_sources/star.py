@@ -144,7 +144,7 @@ class Star(BasePhotonSource, BaseModel):
         number_of_wavelength_steps = kwargs['number_of_wavelength_steps']
         sky_brightness_distribution = (
                 np.zeros((number_of_wavelength_steps, grid_size, grid_size)) * self.mean_spectral_flux_density.unit)
-        radius_map = (np.sqrt(self.sky_coordinates.x ** 2 + self.sky_coordinates.y ** 2) <= self.angular_radius)
+        radius_map = (np.sqrt(self.sky_coordinates[0] ** 2 + self.sky_coordinates[1] ** 2) <= self.angular_radius)
 
         for index_wavelength in range(len(self.mean_spectral_flux_density)):
             sky_brightness_distribution[index_wavelength] = radius_map * self.mean_spectral_flux_density[
@@ -161,4 +161,4 @@ class Star(BasePhotonSource, BaseModel):
         :return: A coordinates object containing the x- and y-sky coordinate maps
         """
         sky_coordinates = get_meshgrid(2 * (1.05 * self.angular_radius), grid_size)
-        return Coordinates(sky_coordinates[0], sky_coordinates[1])
+        return np.stack((sky_coordinates[0], sky_coordinates[1]))

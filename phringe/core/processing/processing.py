@@ -27,21 +27,38 @@ def _calculate_complex_amplitude_base(
     # obs_x_source_x = torch.einsum('ij,kl->ijkl', observatory_coordinates_x, source_sky_coordinates_x)
     # obs_y_source_y = torch.einsum('ij,kl->ijkl', observatory_coordinates_y, source_sky_coordinates_y)
 
-    obs_x_source_x = (
-            observatory_coordinates_x[..., None, None] *
-            source_sky_coordinates_x[None, None, ...])
+    # Source = Star or = Planet and no planet orbital motion
+    if len(source_sky_coordinates_x.shape) == 2:
+        obs_x = observatory_coordinates_x[..., None, None]
+        obs_y = observatory_coordinates_y[..., None, None]
+        src_x = source_sky_coordinates_x[None, None, ...]
+        src_y = source_sky_coordinates_y[None, None, ...]
+    # Source = Planet and planet orbital motion
+    elif len(source_sky_coordinates_x.shape) == 3 and observatory_coordinates_x.shape[-1] == \
+            source_sky_coordinates_x.shape[0]:
+        obs_x = observatory_coordinates_x[..., None, None]
+        obs_y = observatory_coordinates_y[..., None, None]
+        src_x = source_sky_coordinates_x[None, ...]
+        src_y = source_sky_coordinates_y[None, ...]
+    # Source = Local or Exozodi
+    elif len(source_sky_coordinates_x.shape) == 3:
+        obs_x = observatory_coordinates_x[None, ..., None, None]
+        obs_y = observatory_coordinates_y[None, ..., None, None]
+        src_x = source_sky_coordinates_x.unsqueeze(1).unsqueeze(2)
+        src_y = source_sky_coordinates_y.unsqueeze(1).unsqueeze(2)
 
-    obs_y_source_y = (
-            observatory_coordinates_y[..., None, None] *
-            source_sky_coordinates_y[None, None, ...])
+    obs_x_source_x = obs_x * src_x
+    obs_y_source_y = obs_y * src_y
 
     phase_pert = phase_perturbation_time_series[..., None, None]
 
-    # sum = obs_x_source_x + obs_y_source_y + phase_pert
+    if len(source_sky_coordinates_x.shape) == 2:
+        sum = (obs_x_source_x + obs_y_source_y + phase_pert)[None, ...]
+    else:
+        sum = (obs_x_source_x + obs_y_source_y + phase_pert)
     # exp = exp_const * torch.einsum('i, jklm->ijklm', 1 / wavelength_steps, sum)
 
-    exp = (exp_const * (1 / wavelength_steps)[..., None, None, None, None] *
-           (obs_x_source_x + obs_y_source_y + phase_pert)[None, ...])
+    exp = exp_const * (1 / wavelength_steps)[..., None, None, None, None] * sum
 
     a = amplitude_perturbation_time_series[None, ..., None, None] * torch.exp(exp)
     # a = torch.einsum('jk, ijklm->ijklm', amplitude_perturbation_time_series, torch.exp(exp))
@@ -105,7 +122,7 @@ def _calculate_normalization(
     :param simulation_wavelength_steps: The simulation wavelength steps
     :return: The normalization
     """
-    # normalization = torch.empty(len(source_sky_brightness_distribution), device=device)
+    normalization = torch.empty(len(source_sky_brightness_distribution), device=device)
     for index_wavelength, wavelength in enumerate(simulation_wavelength_steps):
         source_sky_brightness_distribution2 = source_sky_brightness_distribution[index_wavelength]
         normalization[index_wavelength] = len(
@@ -154,7 +171,7 @@ def _calculate_photon_counts_from_intensity_response(
     )
     mean_photon_counts = torch.sum(a, axis=(3, 4)).swapaxes(0, 1)
 
-    return mean_photon_counts
+    return torch.poisson(mean_photon_counts)
 
 
 def calculate_photon_counts_gpu(

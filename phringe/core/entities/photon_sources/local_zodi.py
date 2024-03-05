@@ -58,12 +58,13 @@ class LocalZodi(BasePhotonSource, BaseModel):
         number_of_wavelength_steps = kwargs['number_of_wavelength_steps']
         field_of_view = kwargs['field_of_view']
 
-        sky_coordinates = np.zeros(number_of_wavelength_steps, dtype=object)
+        sky_coordinates = np.zeros((2, number_of_wavelength_steps, grid_size, grid_size))
         # The sky coordinates have a different extent for each field of view, i.e. for each wavelength
         for index_fov in range(number_of_wavelength_steps):
             sky_coordinates_at_fov = get_meshgrid(field_of_view[index_fov].to(u.rad), grid_size)
-            sky_coordinates[index_fov] = Coordinates(sky_coordinates_at_fov[0], sky_coordinates_at_fov[1])
-        return sky_coordinates
+            sky_coordinates[:, index_fov] = np.stack(
+                (sky_coordinates_at_fov[0].value, sky_coordinates_at_fov[1].value))
+        return sky_coordinates * u.rad
 
     def _get_ecliptic_coordinates(self, star_right_ascension, star_declination, solar_ecliptic_latitude) -> Tuple:
         """Return the ecliptic latitude and relative ecliptic longitude that correspond to the star position in the sky.
