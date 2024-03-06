@@ -157,16 +157,17 @@ class Planet(BasePhotonSource, BaseModel):
         if has_planet_orbital_motion:
             sky_brightness_distribution = np.zeros((len(self.sky_coordinates[1]), number_of_wavelength_steps, grid_size,
                                                     grid_size)) * self.mean_spectral_flux_density[0].unit
-            for index_sc, sky_coordinates in enumerate(self.sky_coordinates):
+            for index_time in range(len(self.sky_coordinates[1])):
+                sky_coordinates = self.sky_coordinates[:, index_time]
                 index_x = get_index_of_closest_value_numpy(
                     sky_coordinates[0, 0, :].value,
-                    self.angular_separation_from_star_x[index_sc].to(u.rad).value
+                    self.angular_separation_from_star_x[index_time].to(u.rad).value
                 )
                 index_y = get_index_of_closest_value_numpy(
                     sky_coordinates[1, :, 0].value,
-                    self.angular_separation_from_star_y[index_sc].to(u.rad).value
+                    self.angular_separation_from_star_y[index_time].to(u.rad).value
                 )
-                sky_brightness_distribution[index_sc, :, index_y, index_x] = self.mean_spectral_flux_density
+                sky_brightness_distribution[index_time, :, index_y, index_x] = self.mean_spectral_flux_density
         else:
             sky_brightness_distribution = np.zeros(
                 (number_of_wavelength_steps, grid_size, grid_size)) * self.mean_spectral_flux_density.unit

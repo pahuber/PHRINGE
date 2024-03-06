@@ -112,9 +112,8 @@ def _calculate_intensity_response(
 def _calculate_normalization(
         device: torch.device,
         source_sky_brightness_distribution: Tensor,
-        simulation_wavelength_steps: Tensor,
-        normalization: Tensor
-) -> int:
+        simulation_wavelength_steps: Tensor
+) -> Tensor:
     """Calculate the normalization.
 
     :param device: The device
@@ -122,7 +121,11 @@ def _calculate_normalization(
     :param simulation_wavelength_steps: The simulation wavelength steps
     :return: The normalization
     """
-    normalization = torch.empty(len(source_sky_brightness_distribution), device=device)
+    # Index -3 corresponds to wavelength for all sources and for the case of planet orbital motion
+    if len(source_sky_brightness_distribution.shape) == 3:
+        normalization = torch.empty(len(source_sky_brightness_distribution), device=device)
+    elif len(source_sky_brightness_distribution.shape) == 4:
+        normalization = torch.empty(len(source_sky_brightness_distribution[1]), device=device)
     for index_wavelength, wavelength in enumerate(simulation_wavelength_steps):
         source_sky_brightness_distribution2 = source_sky_brightness_distribution[index_wavelength]
         normalization[index_wavelength] = len(
@@ -153,22 +156,36 @@ def _calculate_photon_counts_from_intensity_response(
     normalization = _calculate_normalization(
         device,
         source_sky_brightness_distribution,
-        simulation_wavelength_steps,
-        normalization
+        simulation_wavelength_steps
     )
+
+    c = 0
 
     # a = (simulation_time_step_duration * intensity_response.swapaxes(0, 2)
     #      * source_sky_brightness_distribution[None, None, ...]
     #      * simulation_wavelength_bin_widths[None, None, ..., None, None]
     #      / normalization[None, None, ..., None, None])
 
-    a = simulation_time_step_duration * torch.einsum(
-        'ijklm, ilm, i, i-> ijklm',
-        intensity_response,
-        source_sky_brightness_distribution,
-        simulation_wavelength_bin_widths,
-        1 / normalization
-    )
+    if len(source_sky_brightness_distribution.shape) == 3:
+        a = simulation_time_step_duration * torch.einsum(
+            'ijklm, ilm, i, i-> ijklm',
+            intensity_response,
+            source_sky_brightness_distribution,
+            simulation_wavelength_bin_widths,
+            1 / normalization
+        )
+    elif len(source_sky_brightness_distribution.shape) == 4:
+        a = simulation_time_step_duration * torch.einsum(
+            'ijklm, kilm, i, i-> ijklm',
+            intensity_response,
+            source_sky_brightness_distribution,
+            simulation_wavelength_bin_widths,
+            1 / normalization
+        )
+        mean_photon_counts = torch.sum(a, axis=(3, 4)).swapaxes(0, 1)
+
+        return torch.poisson(mean_photon_counts)
+
     mean_photon_counts = torch.sum(a, axis=(3, 4)).swapaxes(0, 1)
 
     return torch.poisson(mean_photon_counts)
