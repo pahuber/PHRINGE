@@ -87,7 +87,7 @@ class Settings(BaseComponent, BaseModel):
                 scene.maximum_simulation_wavelength_steps
             )
 
-            indices = np.where(np.abs(spectrum_gradient) > 1)
+            indices = np.where(np.abs(spectrum_gradient) > 5)
             mask = np.zeros(len(scene.maximum_simulation_wavelength_steps))
             mask[indices] = 1
 

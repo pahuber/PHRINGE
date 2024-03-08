@@ -117,6 +117,7 @@ class PHRINGE():
 
         :return: The data as an array or a dictionary of arrays if enable_stats is True
         """
+        t0 = time.time_ns()
         spectrum_tuple = get_spectra_from_path(spectrum_tuple) if spectrum_tuple else None
         output_dir = Path(output_dir)
 
@@ -137,7 +138,6 @@ class PHRINGE():
 
         data_generator = DataGenerator(self._settings, self._observation, self._observatory, self._scene,
                                        generate_separate=generate_separate)
-        t0 = time.time_ns()
         self._data = data_generator.run()
         t1 = time.time_ns()
         print(f'PHRINGE run time: {(t1 - t0) / 1e9} seconds')

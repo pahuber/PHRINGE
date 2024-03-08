@@ -1,3 +1,4 @@
+import time
 from typing import Any, Tuple
 
 import astropy
@@ -137,12 +138,16 @@ class Planet(BasePhotonSource, BaseModel):
         """
         maximum_wavelength_steps = kwargs.get('maximum_wavelength_steps')
 
+        t0 = time.time_ns()
         binned_mean_spectral_flux_density = spectres.spectres(
             wavelength_steps.to(u.um).value,
             maximum_wavelength_steps,
             self.mean_spectral_flux_density.value,
             fill=0
         ) * self.mean_spectral_flux_density.unit
+
+        t1 = time.time_ns()
+        print(f"Time to bin mean spectral flux density: {(t1 - t0) / 1e9} s")
         return binned_mean_spectral_flux_density
 
     def _calculate_sky_brightness_distribution(self, grid_size: int, **kwargs) -> np.ndarray:
@@ -244,6 +249,51 @@ class Planet(BasePhotonSource, BaseModel):
 
         return np.stack((sky_coordinates_at_time_step[0], sky_coordinates_at_time_step[1]))
 
+    def orbital_elements_to_sky_position(self, a, e, i, Omega, omega, nu):
+        # Convert angles from degrees to radians
+        # i = np.radians(i)
+        # Omega = np.radians(Omega)
+        # omega = np.radians(omega)
+        # nu = np.radians(nu)
+        # https://downloads.rene-schwarz.com/download/M001-Keplerian_Orbit_Elements_to_Cartesian_State_Vectors.pdf
+
+        M = np.arctan2(-np.sqrt(1 - e ** 2) * np.sin(nu), -e - np.cos(nu)) + np.pi - e * (
+                np.sqrt(1 - e ** 2) * np.sin(nu)) / (1 + e * np.cos(nu))
+
+        E = M
+        for _ in range(10):  # Newton's method iteration
+            E = E - (E - e * np.sin(E) - M) / (1 - e * np.cos(E))
+
+        # nu2 = 2 * np.arctan2(np.sqrt(1 + e) * np.sin(E / 2), np.sqrt(1 - e) * np.cos(E / 2))
+
+        r = a * (1 - e * np.cos(E))
+
+        # Position in the orbital plane
+        x_orb = r * np.cos(nu)
+        y_orb = r * np.sin(nu)
+
+        x = x_orb * (np.cos(omega) * np.cos(Omega) - np.sin(omega) * np.sin(Omega) * np.cos(i)) - y_orb * (
+                np.sin(omega) * np.cos(Omega) + np.cos(omega) * np.sin(Omega) * np.cos(i))
+        y = x_orb * (np.cos(omega) * np.sin(Omega) + np.sin(omega) * np.cos(Omega) * np.cos(i)) + y_orb * (
+                np.cos(omega) * np.cos(Omega) * np.cos(i) - np.sin(omega) * np.sin(Omega))
+
+        # x_temp = x_orb * np.cos(omega) - y_orb * np.sin(omega)
+        # y_temp = x_orb * np.sin(omega) + y_orb * np.cos(omega)
+        # z_temp = 0  # Initial z-position is 0 since in orbital plane
+        #
+        # # Rotate by inclination (i)
+        # x_inclined = x_temp
+        # y_inclined = y_temp * np.cos(i)
+        # z_inclined = y_temp * np.sin(i)
+        #
+        # # Rotate by longitude of ascending node (Omega)
+        # x_final = x_inclined * np.cos(Omega) - z_inclined * np.sin(Omega)
+        # y_final = y_inclined
+        # z_final = x_inclined * np.sin(Omega) + z_inclined * np.cos(Omega)
+
+        # For sky projection, we are generally interested in the x and y components
+        return x, y
+
     def _get_x_y_separation_from_star(
             self,
             time_step: Quantity,
@@ -258,16 +308,53 @@ class Planet(BasePhotonSource, BaseModel):
         :param star_mass: The mass of the star
         :return: A tuple containing the x- and y- coordinates
         """
+        # t0 = time.time_ns()
         star = Body(parent=None, k=G * (star_mass + self.mass), name='Star')
         orbit = Orbit.from_classical(star, a=self.semi_major_axis, ecc=u.Quantity(self.eccentricity),
                                      inc=self.inclination,
                                      raan=self.raan,
                                      argp=self.argument_of_periapsis, nu=self.true_anomaly)
+        # t1 = time.time_ns()
+        # print(f"Time to set up orbit: {(t1 - t0) / 1e9} s")
         if has_planet_orbital_motion:
-            orbit_propagated = orbit.propagate(time_step)
+            # orbit_propagated = orbit.propagate(time_step)
+            pass
         else:
-            orbit_propagated = orbit
-        return (orbit_propagated.r[0], orbit_propagated.r[1])
+            # orbit_propagated = orbit
+            # t0 = time.time_ns()
+            # a = (
+            #     (self.semi_major_axis * (1 - self.eccentricity ** 2)).to(u.km),
+            #     Quantity(self.eccentricity),
+            #     self.inclination.to(u.rad),
+            #     self.raan.to(u.rad),
+            #     self.argument_of_periapsis.to(u.rad),
+            #     self.true_anomaly.to(u.rad),
+            # )
+            # r, v = coe2rv(
+            #     (G * (star_mass + self.mass)).to(u.km ** 3 / u.s ** 2), *a
+            # )
+            # t1 = time.time_ns()
+            # print(f"Time to create orbit: {(t1 - t0) / 1e9} s")
+
+            # Example usage
+            a = self.semi_major_axis.to(u.m).value  # Semi-major axis
+            e = self.eccentricity  # Eccentricity
+            i = self.inclination.to(u.rad).value  # Inclination in degrees
+            Omega = self.raan.to(u.rad).value  # Longitude of the ascending node in degrees
+            omega = self.argument_of_periapsis.to(u.rad).value  # Argument of periapsis in degrees
+            M = self.true_anomaly.to(u.rad).value  # Mean anomaly in degrees
+            # t0 = time.time_ns()
+
+            x1, y1 = self.orbital_elements_to_sky_position(a, e, i, Omega, omega, M)
+            # t1 = time.time_ns()
+            # print(f"Time to create orbit 2: {(t1 - t0) / 1e9} s")
+            #
+            # x = (orbit_propagated.r[0], orbit_propagated.r[1], orbit_propagated.r[2])
+            # print(x)
+            # print(x1, y1)
+        return x1 * u.m, y1 * u.m
+        # print(x)
+        # return x
 
     def _get_x_y_angular_separation_from_star(
             self,
@@ -301,4 +388,6 @@ class Planet(BasePhotonSource, BaseModel):
         star_distance = kwargs.get('star_distance')
         solid_angle = np.pi * (self.radius.to(u.m) / (star_distance.to(u.m)) * u.rad) ** 2
 
-        return create_blackbody_spectrum(self.temperature, wavelength_steps, solid_angle)
+        a = create_blackbody_spectrum(self.temperature, wavelength_steps, solid_angle)
+
+        return a
