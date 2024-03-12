@@ -1,7 +1,7 @@
 import numpy as np
-from astropy import units as u
+import torch
 from astropy.units import Quantity
-from numpy import cos, sin, pi
+from torch import cos, sin, pi
 
 
 def get_2d_rotation_matrix(time: Quantity, rotation_period: Quantity) -> np.ndarray:
@@ -11,6 +11,8 @@ def get_2d_rotation_matrix(time: Quantity, rotation_period: Quantity) -> np.ndar
     :param rotation_period: Rotation period for a full rotation in seconds
     :return: An array containing the matrix
     """
-    argument = 2 * pi * u.rad / rotation_period * time
-    return np.array([[cos(argument), -sin(argument)],
-                     [sin(argument), cos(argument)]])
+    argument = torch.tensor(2 * pi / rotation_period * time, dtype=torch.float32).unsqueeze(0).squeeze()
+    return torch.stack([
+        cos(argument), -sin(argument),
+        sin(argument), cos(argument)
+    ], dim=1).view(-1, 2, 2)

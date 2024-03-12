@@ -121,16 +121,27 @@ def _calculate_normalization(
     :param simulation_wavelength_steps: The simulation wavelength steps
     :return: The normalization
     """
-    # Index -3 corresponds to wavelength for all sources and for the case of planet orbital motion
     if len(source_sky_brightness_distribution.shape) == 3:
         normalization = torch.empty(len(source_sky_brightness_distribution), device=device)
+        for index_wavelength, wavelength in enumerate(simulation_wavelength_steps):
+            source_sky_brightness_distribution2 = source_sky_brightness_distribution[index_wavelength]
+            normalization[index_wavelength] = len(
+                source_sky_brightness_distribution2[source_sky_brightness_distribution2 > 0]) if not len(
+                source_sky_brightness_distribution2[source_sky_brightness_distribution2 > 0]) == 0 else 1
     elif len(source_sky_brightness_distribution.shape) == 4:
-        normalization = torch.empty(len(source_sky_brightness_distribution[1]), device=device)
-    for index_wavelength, wavelength in enumerate(simulation_wavelength_steps):
-        source_sky_brightness_distribution2 = source_sky_brightness_distribution[index_wavelength]
-        normalization[index_wavelength] = len(
-            source_sky_brightness_distribution2[source_sky_brightness_distribution2 > 0]) if not len(
-            source_sky_brightness_distribution2[source_sky_brightness_distribution2 > 0]) == 0 else 1
+        normalization = torch.empty(
+            (source_sky_brightness_distribution.shape[0], source_sky_brightness_distribution.shape[1]), device=device)
+
+        for index_wavelength, wavelength in enumerate(simulation_wavelength_steps):
+            for index_time in range(source_sky_brightness_distribution.shape[0]):
+                source_sky_brightness_distribution2 = source_sky_brightness_distribution[index_time, index_wavelength]
+                non_zero_pixels = len(
+                    source_sky_brightness_distribution2[
+                        source_sky_brightness_distribution2 > 0]
+                )
+
+                normalization[index_time, index_wavelength] = non_zero_pixels if (not non_zero_pixels == 0) and (
+                    not torch.isnan(torch.tensor(non_zero_pixels))) else 1
 
     return normalization
 
@@ -176,7 +187,7 @@ def _calculate_photon_counts_from_intensity_response(
         )
     elif len(source_sky_brightness_distribution.shape) == 4:
         a = simulation_time_step_duration * torch.einsum(
-            'ijklm, kilm, i, i-> ijklm',
+            'ijklm, kilm, i, ki-> ijklm',
             intensity_response,
             source_sky_brightness_distribution,
             simulation_wavelength_bin_widths,

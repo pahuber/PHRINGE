@@ -2,8 +2,7 @@ from functools import cached_property
 from typing import Any
 
 import numpy as np
-from astropy import units as u
-from astropy.units import Quantity
+import torch
 from pydantic import BaseModel
 
 from phringe.core.entities.base_component import BaseComponent
@@ -36,12 +35,12 @@ class Settings(BaseComponent, BaseModel):
     simulation_wavelength_bin_widths: Any = None
 
     @cached_property
-    def simulation_time_step_duration(self) -> Quantity:
-        """Return the simulation time step duration.
+    def simulation_time_step_duration(self) -> float:
+        """Return the simulation time step duration in seconds.
 
         :return: The simulation time step duration
         """
-        return (1 * u.min).to(u.s)
+        return torch.tensor(60, dtype=torch.float32)
 
     def _calculate_simulation_time_steps(self, observation) -> np.ndarray:
         """Calculate the simulation time steps.
@@ -49,8 +48,8 @@ class Settings(BaseComponent, BaseModel):
         :param observation: The observation
         :return: The simulation time steps
         """
-        number_of_steps = int(observation.total_integration_time.to(u.s) / self.simulation_time_step_duration)
-        return np.linspace(0, observation.total_integration_time, number_of_steps)
+        number_of_steps = int(observation.total_integration_time / self.simulation_time_step_duration)
+        return torch.linspace(0, observation.total_integration_time, number_of_steps)
 
     def _calculate_simulation_wavelength_bin_widths(self, observatory) -> np.ndarray:
         """Calculate the simulation wavelength bin widths.
@@ -64,10 +63,9 @@ class Settings(BaseComponent, BaseModel):
             upper_wavelength = self.simulation_wavelength_steps[index + 1] if index < len(
                 self.simulation_wavelength_steps) - 1 else observatory.wavelength_range_upper_limit
             bin_widths.append(
-                ((wavelength - current_edge) + (upper_wavelength - wavelength) / 2).to(
-                    u.um).value)
-            current_edge += bin_widths[index] * u.um
-        return np.array(bin_widths) * u.um
+                ((wavelength - current_edge) + (upper_wavelength - wavelength) / 2))
+            current_edge += bin_widths[index]
+        return torch.asarray(bin_widths, dtype=torch.float32)
 
     def _calculate_simulation_wavelength_steps(self, observatory, scene) -> np.ndarray:
         """Calculate the optimized wavelength sampling for the simulation. This is done by taking the gradient of the
@@ -82,13 +80,12 @@ class Settings(BaseComponent, BaseModel):
         optimized_wavelength_steps = []
         instrument_wavelength_bin_centers = observatory.wavelength_bin_centers
         for planet in scene.planets:
-            spectrum_gradient = np.gradient(
-                planet.mean_spectral_flux_density.value / np.max(planet.mean_spectral_flux_density.value),
-                scene.maximum_simulation_wavelength_steps
-            )
+            spectrum_gradient = torch.gradient(
+                planet.mean_spectral_flux_density / torch.max(planet.mean_spectral_flux_density)
+            )[0]
 
-            indices = np.where(np.abs(spectrum_gradient) > 5)
-            mask = np.zeros(len(scene.maximum_simulation_wavelength_steps))
+            indices = torch.where(torch.abs(spectrum_gradient) > 5)
+            mask = torch.zeros(len(scene.maximum_simulation_wavelength_steps))
             mask[indices] = 1
 
             for index, value in enumerate(mask):
@@ -96,10 +93,10 @@ class Settings(BaseComponent, BaseModel):
                     optimized_wavelength_steps.append(scene.maximum_simulation_wavelength_steps[index])
 
             optimized_wavelength_steps = optimized_wavelength_steps + list(
-                instrument_wavelength_bin_centers.to(u.um).value)
+                instrument_wavelength_bin_centers)
             optimized_wavelength_steps = sorted(optimized_wavelength_steps)
 
-        return np.unique(np.array(optimized_wavelength_steps)) * u.um
+        return torch.unique(torch.tensor(optimized_wavelength_steps, dtype=torch.float32))
 
     def prepare(self, observation, observatory, scene):
         """Prepare the settings for the simulation.

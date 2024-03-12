@@ -4,6 +4,7 @@ from typing import Any
 
 import astropy.units
 import numpy as np
+import torch
 from astropy import units as u
 from astropy.units import Quantity
 from pydantic import BaseModel
@@ -58,10 +59,10 @@ class EmmaXCircularRotation(ArrayConfiguration):
                                   modulation_period: Quantity,
                                   baseline_ratio: int) -> Coordinates:
         rotation_matrix = get_2d_rotation_matrix(time_steps, modulation_period)
-        emma_x_static = self.nulling_baseline_length / 2 * np.array(
-            [[baseline_ratio, baseline_ratio, -baseline_ratio, -baseline_ratio], [1, -1, -1, 1]])
-        collector_positions = np.einsum('ijl,jk->ikl', rotation_matrix, emma_x_static)
-        return collector_positions
+        emma_x_static = self.nulling_baseline_length / 2 * torch.asarray(
+            [[baseline_ratio, baseline_ratio, -baseline_ratio, -baseline_ratio], [1, -1, -1, 1]], dtype=torch.float32)
+        collector_positions = torch.einsum('ijl,jk->ikl', rotation_matrix, emma_x_static)
+        return collector_positions.swapaxes(0, 2)
 
 
 class EmmaXDoubleStretch(ArrayConfiguration):

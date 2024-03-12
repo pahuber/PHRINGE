@@ -2,7 +2,6 @@ import time
 
 import numpy as np
 import torch
-from astropy import units as u
 from skimage.measure import block_reduce
 from torch import Tensor
 
@@ -120,54 +119,54 @@ class DataGenerator():
         :param scene: The scene object
         :param generate_separate: Whether to separate data sets for all sources
         """
-        self.aperture_radius = observatory.aperture_diameter.to(u.m).value / 2
-        self.baseline_maximum = observation.baseline_maximum.to(u.m).value
-        self.baseline_minimum = observation.baseline_minimum.to(u.m).value
+        self.aperture_radius = observatory.aperture_diameter / 2
+        self.baseline_maximum = observation.baseline_maximum
+        self.baseline_minimum = observation.baseline_minimum
         self.baseline_ratio = observation.baseline_ratio
         self.differential_output_pairs = observatory.beam_combination_scheme.get_differential_output_pairs()
         self.generate_separate = generate_separate
-        self.instrument_wavelength_bin_centers = observatory.wavelength_bin_centers.to(u.m).value
-        self.instrument_wavelength_bin_widths = observatory.wavelength_bin_widths.to(u.m).value
+        self.instrument_wavelength_bin_centers = observatory.wavelength_bin_centers
+        self.instrument_wavelength_bin_widths = observatory.wavelength_bin_widths
         self.grid_size = settings.grid_size
         self.has_planet_orbital_motion = settings.has_planet_orbital_motion
-        self.modulation_period = observation.modulation_period.to(u.s).value
+        self.modulation_period = observation.modulation_period
         self.number_of_inputs = observatory.beam_combination_scheme.number_of_inputs
         self.number_of_outputs = observatory.beam_combination_scheme.number_of_outputs
         self.observatory = observatory
         self.optimized_differential_output = observation.optimized_differential_output
         self.optimized_star_separation = observation.optimized_star_separation
-        self.optimized_wavelength = observation.optimized_wavelength.to(u.m).value
+        self.optimized_wavelength = observation.optimized_wavelength
         self.sources = scene.get_all_sources(
             settings.has_stellar_leakage,
             settings.has_local_zodi_leakage,
             settings.has_exozodi_leakage
         )
         self.star = scene.star
-        self.simulation_time_step_duration = settings.simulation_time_step_duration.to(u.s).value
+        self.simulation_time_step_duration = settings.simulation_time_step_duration
         self.device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
         print(f'Using device: {self.device}')
         # torch.set_num_threads(1)
 
         # GPU stuff starts here
         self.unperturbed_instrument_throughput = observatory.unperturbed_instrument_throughput
-        self.instrument_wavelength_bin_edges = observatory.wavelength_bin_edges.to(u.m).value
-        self.instrument_time_steps = np.linspace(
+        self.instrument_wavelength_bin_edges = observatory.wavelength_bin_edges
+        self.instrument_time_steps = torch.linspace(
             0,
             observation.total_integration_time,
             int(observation.total_integration_time / observation.detector_integration_time)
-        ).to(u.s).value
+        )
         self.amplitude_perturbation_time_series = observatory.amplitude_perturbation_time_series
         self.beam_combination_matrix = observatory.beam_combination_scheme.get_beam_combination_transfer_matrix()
-        self.phase_perturbation_time_series = observatory.phase_perturbation_time_series.to(u.m).value
-        self.polarization_perturbation_time_series = observatory.polarization_perturbation_time_series.to(u.rad).value
-        self.simulation_time_steps = settings.simulation_time_steps.to(u.s).value
-        self.simulation_wavelength_steps = settings.simulation_wavelength_steps.to(u.m).value
-        self.simulation_wavelength_bin_widths = settings.simulation_wavelength_bin_widths.to(u.m).value
+        self.phase_perturbation_time_series = observatory.phase_perturbation_time_series
+        self.polarization_perturbation_time_series = observatory.polarization_perturbation_time_series
+        self.simulation_time_steps = settings.simulation_time_steps
+        self.simulation_wavelength_steps = settings.simulation_wavelength_steps
+        self.simulation_wavelength_bin_widths = settings.simulation_wavelength_bin_widths
         self.binned_photon_counts = self._initialize_binned_photon_counts()
         self.differential_photon_counts = self._initialize_differential_photon_counts()
-        self._remove_units_from_source_sky_coordinates()
-        self._remove_units_from_source_sky_brightness_distribution()
-        self._remove_units_from_collector_coordinates()
+        # self._remove_units_from_source_sky_coordinates()
+        # self._remove_units_from_source_sky_brightness_distribution()
+        # self._remove_units_from_collector_coordinates()
 
     def _get_binning_indices(self, time, wavelength) -> tuple:
         """Get the binning indices.
@@ -220,40 +219,40 @@ class DataGenerator():
                                       self.sources} if self.generate_separate else differential_photon_counts
         return differential_photon_counts
 
-    def _remove_units_from_source_sky_coordinates(self):
-        for index_source, source in enumerate(self.sources):
-            # if self.has_planet_orbital_motion and isinstance(source, Planet):
-            #     for index_time, time in enumerate(self.simulation_time_steps):
-            #         self.sources[index_source].sky_coordinates[index_time] = Coordinates(
-            #             source.sky_coordinates[index_time].x.to(u.rad).value,
-            #             source.sky_coordinates[index_time].y.to(u.rad).value
-            #         )
-            # elif isinstance(source, LocalZodi) or isinstance(source, Exozodi):
-            #     for index_wavelength, wavelength in enumerate(self.simulation_wavelength_steps):
-            #         self.sources[index_source].sky_coordinates[index_wavelength] = Coordinates(
-            #             source.sky_coordinates[index_wavelength].x.to(u.rad).value,
-            #             source.sky_coordinates[index_wavelength].y.to(u.rad).value
-            #         )
-            # else:
-            self.sources[index_source].sky_coordinates = self.sources[index_source].sky_coordinates.to(u.rad).value
-            # self.sources[index_source].sky_coordinates = Coordinates(
-            #     source.sky_coordinates.x.to(u.rad).value,
-            #     source.sky_coordinates.y.to(u.rad).value
-            # )
+    # def _remove_units_from_source_sky_coordinates(self):
+    #     for index_source, source in enumerate(self.sources):
+    #         # if self.has_planet_orbital_motion and isinstance(source, Planet):
+    #         #     for index_time, time in enumerate(self.simulation_time_steps):
+    #         #         self.sources[index_source].sky_coordinates[index_time] = Coordinates(
+    #         #             source.sky_coordinates[index_time].x.to(u.rad).value,
+    #         #             source.sky_coordinates[index_time].y.to(u.rad).value
+    #         #         )
+    #         # elif isinstance(source, LocalZodi) or isinstance(source, Exozodi):
+    #         #     for index_wavelength, wavelength in enumerate(self.simulation_wavelength_steps):
+    #         #         self.sources[index_source].sky_coordinates[index_wavelength] = Coordinates(
+    #         #             source.sky_coordinates[index_wavelength].x.to(u.rad).value,
+    #         #             source.sky_coordinates[index_wavelength].y.to(u.rad).value
+    #         #         )
+    #         # else:
+    #         self.sources[index_source].sky_coordinates = self.sources[index_source].sky_coordinates.to(u.rad).value
+    #         # self.sources[index_source].sky_coordinates = Coordinates(
+    #         #     source.sky_coordinates.x.to(u.rad).value,
+    #         #     source.sky_coordinates.y.to(u.rad).value
+    #         # )
 
-    def _remove_units_from_source_sky_brightness_distribution(self):
-        for index_source, source in enumerate(self.sources):
-            self.sources[index_source].sky_brightness_distribution = source.sky_brightness_distribution.to(
-                u.ph / (u.m ** 3 * u.s)).value
+    # def _remove_units_from_source_sky_brightness_distribution(self):
+    #     for index_source, source in enumerate(self.sources):
+    #         self.sources[index_source].sky_brightness_distribution = source.sky_brightness_distribution.to(
+    #             u.ph / (u.m ** 3 * u.s)).value
 
-    def _remove_units_from_collector_coordinates(self):
-        self.observatory.array_configuration.collector_coordinates = self.observatory.array_configuration.collector_coordinates.to(
-            u.m).value
-        # for index_time, time in enumerate(self.simulation_time_steps):
-        #     self.observatory.array_configuration.collector_coordinates[index_time] = Coordinates(
-        #         self.observatory.array_configuration.collector_coordinates[index_time].x.to(u.m).value,
-        #         self.observatory.array_configuration.collector_coordinates[index_time].y.to(u.m).value
-        #     )
+    # def _remove_units_from_collector_coordinates(self):
+    #     self.observatory.array_configuration.collector_coordinates = self.observatory.array_configuration.collector_coordinates.to(
+    #         u.m).value
+    #     # for index_time, time in enumerate(self.simulation_time_steps):
+    #     #     self.observatory.array_configuration.collector_coordinates[index_time] = Coordinates(
+    #     #         self.observatory.array_configuration.collector_coordinates[index_time].x.to(u.m).value,
+    #     #         self.observatory.array_configuration.collector_coordinates[index_time].y.to(u.m).value
+    #     #     )
 
     def run(self) -> np.ndarray:
         """Run the data generator.
@@ -261,41 +260,22 @@ class DataGenerator():
         # Run animation, if applicable
         # TODO: add animation
 
-        self.unperturbed_instrument_throughput = torch.asarray(
-            self.unperturbed_instrument_throughput,
-            dtype=torch.float32
-        ).to(self.device)
-        self.aperture_radius = torch.tensor(self.aperture_radius, dtype=torch.float32).to(self.device)
-        self.amplitude_perturbation_time_series = torch.asarray(
-            self.amplitude_perturbation_time_series,
-            dtype=torch.float32
-        ).to(self.device)
-        self.phase_perturbation_time_series = torch.asarray(
-            self.phase_perturbation_time_series,
-            dtype=torch.float32
-        ).to(self.device)
-        self.polarization_perturbation_time_series = torch.asarray(
-            self.polarization_perturbation_time_series,
-            dtype=torch.float32
-        ).to(self.device)
-        self.observatory.array_configuration.collector_coordinates = torch.asarray(
-            self.observatory.array_configuration.collector_coordinates,
-            dtype=torch.float32
-        ).to(self.device)
-        self.simulation_wavelength_bin_widths = torch.asarray(
-            self.simulation_wavelength_bin_widths,
-            dtype=torch.float32
-        ).to(self.device)
-        self.simulation_time_step_duration = torch.tensor(
-            self.simulation_time_step_duration,
-            dtype=torch.float32
-        ).to(self.device)
-        self.beam_combination_matrix = torch.asarray(
-            self.beam_combination_matrix,
-            dtype=torch.complex64
-        ).to(self.device)
+        # self.unperturbed_instrument_throughput = torch.asarray(
+        #     self.unperturbed_instrument_throughput,
+        #     dtype=torch.float32
+        # ).to(self.device)
+        self.unperturbed_instrument_throughput = self.unperturbed_instrument_throughput.to(self.device)
+        # self.aperture_radius = torch.tensor(self.aperture_radius, dtype=torch.float32).to(self.device)
+        self.aperture_radius = self.aperture_radius.to(self.device)
+        self.amplitude_perturbation_time_series = self.amplitude_perturbation_time_series.to(self.device)
+        self.phase_perturbation_time_series = self.phase_perturbation_time_series.to(self.device)
+        self.polarization_perturbation_time_series = self.polarization_perturbation_time_series.to(self.device)
+        self.observatory.array_configuration.collector_coordinates = self.observatory.array_configuration.collector_coordinates.to(
+            self.device)
+        self.simulation_wavelength_bin_widths = self.simulation_wavelength_bin_widths.to(self.device)
+        self.simulation_time_step_duration = self.simulation_time_step_duration.to(self.device)
+        self.beam_combination_matrix = self.beam_combination_matrix.to(self.device)
 
-        seconds = 0
         total_photon_counts = torch.zeros(
             (self.number_of_outputs, len(self.simulation_wavelength_steps), len(self.simulation_time_steps)),
             device='cpu'
@@ -307,18 +287,9 @@ class DataGenerator():
             source_sky_coordinates = source.sky_coordinates
 
             # t0 = time.time_ns()
-            source_sky_coordinates = torch.asarray(
-                source_sky_coordinates,
-                dtype=torch.float32
-            ).to(self.device)
-            source_sky_brightness_distribution = torch.asarray(
-                source_sky_brightness_distribution,
-                dtype=torch.float32
-            ).to(self.device)
-            self.simulation_wavelength_steps = torch.asarray(
-                self.simulation_wavelength_steps,
-                dtype=torch.float32
-            ).to(self.device)
+            source_sky_coordinates = source_sky_coordinates.to(self.device)
+            source_sky_brightness_distribution = source_sky_brightness_distribution.to(self.device)
+            self.simulation_wavelength_steps = self.simulation_wavelength_steps.to(self.device)
 
             photon_counts = calculate_photon_counts_gpu(
                 self.device,
@@ -339,7 +310,7 @@ class DataGenerator():
                 torch.empty(len(source_sky_brightness_distribution), device=self.device)
             )
 
-            self.simulation_wavelength_steps = self.simulation_wavelength_steps.to('cpu').numpy()
+            # self.simulation_wavelength_steps = self.simulation_wavelength_steps.to('cpu').numpy()
 
             photon_counts = photon_counts.to('cpu').numpy()
             total_photon_counts += photon_counts

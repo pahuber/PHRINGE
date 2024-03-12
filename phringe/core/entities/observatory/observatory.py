@@ -3,10 +3,12 @@ from typing import Tuple, Union, Any
 
 import astropy
 import numpy as np
+import torch
 from astropy import units as u
 from astropy.units import Quantity
 from pydantic import BaseModel, field_validator
 from pydantic_core.core_schema import ValidationInfo
+from torch import Tensor
 
 from phringe.core.entities.base_component import BaseComponent
 from phringe.core.entities.observatory.array_configuration import (
@@ -78,54 +80,61 @@ class Observatory(BaseComponent, BaseModel):
         self.beam_combination_scheme = self._load_beam_combination_scheme(self.beam_combination_scheme)
 
     @field_validator('aperture_diameter')
-    def _validate_aperture_diameter(cls, value: Any, info: ValidationInfo) -> astropy.units.Quantity:
+    def _validate_aperture_diameter(cls, value: Any, info: ValidationInfo) -> Tensor:
         """Validate the aperture diameter input.
 
         :param value: Value given as input
         :param info: ValidationInfo object
         :return: The aperture diameter in units of length
         """
-        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,)).to(u.m)
+        return torch.tensor(
+            validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,)).si.value,
+            dtype=torch.float32
+        )
 
     @field_validator('phase_perturbation_rms')
-    def _validate_phase_perturbation_rms(cls, value: Any, info: ValidationInfo) -> astropy.units.Quantity:
+    def _validate_phase_perturbation_rms(cls, value: Any, info: ValidationInfo) -> float:
         """Validate the phase perturbation rms input.
 
         :param value: Value given as input
         :param info: ValidationInfo object
         :return: The phase perturbation rms in units of length
         """
-        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,))
+        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,)).si.value
 
     @field_validator('polarization_perturbation_rms')
-    def _validate_polarization_perturbation_rms(cls, value: Any, info: ValidationInfo) -> astropy.units.Quantity:
+    def _validate_polarization_perturbation_rms(cls, value: Any, info: ValidationInfo) -> float:
         """Validate the polarization perturbation rms input.
 
         :param value: Value given as input
         :param info: ValidationInfo object
         :return: The polarization perturbation rms in units of radians
         """
-        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.rad,))
+        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.rad,)).si.value
+
+    @field_validator('unperturbed_instrument_throughput')
+    def _validate_unperturbed_instrument_throughput(cls, value: Any, info: ValidationInfo) -> Tensor:
+        return torch.tensor(value, dtype=torch.float32)
 
     @field_validator('wavelength_range_lower_limit')
-    def _validate_wavelength_range_lower_limit(cls, value: Any, info: ValidationInfo) -> astropy.units.Quantity:
+    def _validate_wavelength_range_lower_limit(cls, value: Any, info: ValidationInfo) -> float:
         """Validate the wavelength range lower limit input.
 
         :param value: Value given as input
         :param info: ValidationInfo object
         :return: The lower wavelength range limit in units of length
         """
-        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,)).to(u.um)
+        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,)).si.value
 
     @field_validator('wavelength_range_upper_limit')
-    def _validate_wavelength_range_upper_limit(cls, value: Any, info: ValidationInfo) -> astropy.units.Quantity:
+    def _validate_wavelength_range_upper_limit(cls, value: Any, info: ValidationInfo) -> float:
         """Validate the wavelength range upper limit input.
 
         :param value: Value given as input
         :param info: ValidationInfo object
         :return: The upper wavelength range limit in units of length
         """
-        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,)).to(u.um)
+        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,)).si.value
 
     @cached_property
     def _wavelength_bins(self) -> Tuple[np.ndarray, np.ndarray]:
@@ -162,9 +171,10 @@ class Observatory(BaseComponent, BaseModel):
         :param settings: The settings object
         :return: The amplitude perturbation time series
         """
-        return np.random.uniform(0.8, 0.9,
-                                 (self.beam_combination_scheme.number_of_inputs, len(settings.simulation_time_steps))) \
-            if settings.has_amplitude_perturbations else np.ones(
+        return 0.7 + (0.9 - 0.7) * torch.rand((
+            self.beam_combination_scheme.number_of_inputs,
+            len(settings.simulation_time_steps)), dtype=torch.float32) \
+            if settings.has_amplitude_perturbations else torch.ones(
             (self.beam_combination_scheme.number_of_inputs, len(settings.simulation_time_steps)))
 
     def _calculate_phase_perturbation_time_series(self, settings, observation) -> np.ndarray:
@@ -181,8 +191,8 @@ class Observatory(BaseComponent, BaseModel):
             self.phase_perturbation_rms,
             self.phase_falloff_exponent
         ) \
-            if settings.has_phase_perturbations else np.zeros(
-            (self.beam_combination_scheme.number_of_inputs, len(settings.simulation_time_steps))) * u.um
+            if settings.has_phase_perturbations else torch.zeros(
+            (self.beam_combination_scheme.number_of_inputs, len(settings.simulation_time_steps)), dtype=torch.float32)
 
     def _calculate_polarization_perturbation_time_series(self, settings, observation) -> np.ndarray:
         """Return the polarization perturbation time series.
@@ -198,8 +208,8 @@ class Observatory(BaseComponent, BaseModel):
             self.polarization_perturbation_rms,
             self.polarization_falloff_exponent
         ) \
-            if settings.has_polarization_perturbations else np.zeros(
-            (self.beam_combination_scheme.number_of_inputs, len(settings.simulation_time_steps))) * u.rad
+            if settings.has_polarization_perturbations else torch.zeros(
+            (self.beam_combination_scheme.number_of_inputs, len(settings.simulation_time_steps)), dtype=torch.float32)
 
     def _calculate_wavelength_bins(self) -> Tuple[np.ndarray, np.ndarray]:
         """Return the wavelength bin centers and widths. The wavelength bin widths are calculated starting from the
@@ -207,24 +217,25 @@ class Observatory(BaseComponent, BaseModel):
 
         :return: A tuple containing the wavelength bin centers and widths
         """
-        current_minimum_wavelength = self.wavelength_range_lower_limit.value
+        current_minimum_wavelength = self.wavelength_range_lower_limit
         wavelength_bin_centers = []
         wavelength_bin_widths = []
 
-        while current_minimum_wavelength <= self.wavelength_range_upper_limit.value:
+        while current_minimum_wavelength <= self.wavelength_range_upper_limit:
             center_wavelength = current_minimum_wavelength / (1 - 1 / (2 * self.spectral_resolving_power))
             bin_width = 2 * (center_wavelength - current_minimum_wavelength)
-            if (center_wavelength + bin_width / 2 <= self.wavelength_range_upper_limit.value):
+            if (center_wavelength + bin_width / 2 <= self.wavelength_range_upper_limit):
                 wavelength_bin_centers.append(center_wavelength)
                 wavelength_bin_widths.append(bin_width)
                 current_minimum_wavelength = center_wavelength + bin_width / 2
             else:
-                last_bin_width = self.wavelength_range_upper_limit.value - current_minimum_wavelength
-                last_center_wavelength = self.wavelength_range_upper_limit.value - last_bin_width / 2
+                last_bin_width = self.wavelength_range_upper_limit - current_minimum_wavelength
+                last_center_wavelength = self.wavelength_range_upper_limit - last_bin_width / 2
                 wavelength_bin_centers.append(last_center_wavelength)
                 wavelength_bin_widths.append(last_bin_width)
                 break
-        return np.array(wavelength_bin_centers) * u.um, np.array(wavelength_bin_widths) * u.um,
+        return torch.asarray(wavelength_bin_centers, dtype=torch.float32), torch.asarray(wavelength_bin_widths,
+                                                                                         dtype=torch.float32)
 
     def _get_optimal_baseline(self,
                               optimized_differential_output: int,
@@ -269,8 +280,7 @@ class Observatory(BaseComponent, BaseModel):
                   BeamCombinationSchemeEnum.KERNEL_5.value):
                 factors = 1.04, 0.67
 
-        return factors[optimized_differential_output] * optimized_wavelength.to(u.m) / optimized_angular_distance.to(
-            u.rad) * u.rad
+        return factors[optimized_differential_output] * optimized_wavelength / optimized_angular_distance
 
     def _load_array_configuration(self, array_configuration_type) -> ArrayConfiguration:
         """Return the array configuration object from the dictionary.
@@ -342,11 +352,11 @@ class Observatory(BaseComponent, BaseModel):
             optimized_differential_output=optimized_differential_output,
             optimized_wavelength=optimized_wavelength,
             optimized_angular_distance=optimized_star_separation,
-        ).to(u.m)
+        )
 
         if (
-                baseline_minimum.to(u.m).value <= optimal_baseline.value
-                and optimal_baseline.value <= baseline_maximum.to(u.m).value
+                baseline_minimum <= optimal_baseline
+                and optimal_baseline <= baseline_maximum
         ):
             self.array_configuration.nulling_baseline_length = optimal_baseline
         else:
@@ -360,14 +370,16 @@ class Observatory(BaseComponent, BaseModel):
         :param settings: The settings object
         :param observation: The observation object
         """
-        self.field_of_view = settings.simulation_wavelength_steps.to(u.m) / self.aperture_diameter * u.rad
+        self.field_of_view = settings.simulation_wavelength_steps / self.aperture_diameter
 
         self.amplitude_perturbation_time_series = self._calculate_amplitude_perturbation_time_series(settings)
 
         self.phase_perturbation_time_series = self._calculate_phase_perturbation_time_series(settings, observation)
 
-        self.polarization_perturbation_time_series = self._calculate_polarization_perturbation_time_series(settings,
-                                                                                                           observation)
+        self.polarization_perturbation_time_series = self._calculate_polarization_perturbation_time_series(
+            settings,
+            observation
+        )
 
         self._set_optimal_baseline(
             scene.star,

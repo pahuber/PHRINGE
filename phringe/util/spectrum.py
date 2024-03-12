@@ -2,6 +2,7 @@ import time
 from typing import Union
 
 import numpy as np
+import torch
 from astropy import units as u
 from astropy.units import Quantity
 from scipy.constants import c, h, k
@@ -27,9 +28,9 @@ def crop_spectral_flux_density_to_wavelength_range(
 
 
 def create_blackbody_spectrum(
-        temperature: Quantity,
+        temperature: float,
         wavelength_steps: np.ndarray,
-        source_solid_angle: Union[Quantity, np.ndarray]
+        source_solid_angle: Union[float, np.ndarray]
 ) -> np.ndarray:
     """Return a blackbody spectrum for an astrophysical object. The spectrum is binned already to the wavelength bin
     centers of the mission.
@@ -40,12 +41,12 @@ def create_blackbody_spectrum(
     :return: Array containing the flux per bin in units of ph m-2 s-1 um-1
     """
 
-    wavelength_steps2 = wavelength_steps.to(u.m).value
-    temperature = temperature.to(u.K).value
+    wavelength_steps2 = wavelength_steps
+    temperature = temperature
 
     t0 = time.time_ns()
-    b = 2 * h * c ** 2 / wavelength_steps2 ** 5 / (np.exp(
-        h * c / (k * wavelength_steps2 * temperature)) - 1) * source_solid_angle / h / c * wavelength_steps2
+    b = 2 * h * c ** 2 / wavelength_steps2 ** 5 / (torch.exp(torch.tensor(
+        h * c / (k * wavelength_steps2 * temperature))) - 1) * source_solid_angle / h / c * wavelength_steps2
 
     t1 = time.time_ns()
 
@@ -59,7 +60,7 @@ def create_blackbody_spectrum(
     # # print(f"Time to create blackbody spectrum: {(t1 - t0) / 1e9} s")
     # print(f"Time to convert blackbody spectrum: {(t2 - t1) / 1e9} s")
 
-    return b.value * u.ph / u.s / u.m ** 3
+    return b  # .value * u.ph / u.s / u.m ** 3
 
 
 def _convert_spectrum_units(

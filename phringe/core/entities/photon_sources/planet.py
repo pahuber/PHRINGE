@@ -1,13 +1,11 @@
 import time
 from typing import Any, Tuple
 
-import astropy
 import numpy as np
 import spectres
 import torch
 from astropy import units as u
 from astropy.constants.codata2018 import G
-from astropy.units import Quantity
 from poliastro.bodies import Body
 from poliastro.twobody import Orbit
 from pydantic import BaseModel, field_validator
@@ -49,84 +47,84 @@ class Planet(BasePhotonSource, BaseModel):
     angular_separation_from_star_y: Any = None
 
     @field_validator('argument_of_periapsis')
-    def _validate_argument_of_periapsis(cls, value: Any, info: ValidationInfo) -> astropy.units.Quantity:
+    def _validate_argument_of_periapsis(cls, value: Any, info: ValidationInfo) -> float:
         """Validate the argument of periapsis input.
 
         :param value: Value given as input
         :param info: ValidationInfo object
         :return: The argument of periapsis in units of degrees
         """
-        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.deg,))
+        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.deg,)).si.value
 
     @field_validator('inclination')
-    def _validate_inclination(cls, value: Any, info: ValidationInfo) -> astropy.units.Quantity:
+    def _validate_inclination(cls, value: Any, info: ValidationInfo) -> float:
         """Validate the inclination input.
 
         :param value: Value given as input
         :param info: ValidationInfo object
         :return: The inclination in units of degrees
         """
-        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.deg,))
+        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.deg,)).si.value
 
     @field_validator('mass')
-    def _validate_mass(cls, value: Any, info: ValidationInfo) -> astropy.units.Quantity:
+    def _validate_mass(cls, value: Any, info: ValidationInfo) -> float:
         """Validate the mass input.
 
         :param value: Value given as input
         :param info: ValidationInfo object
         :return: The mass in units of weight
         """
-        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.kg,))
+        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.kg,)).si.value
 
     @field_validator('raan')
-    def _validate_raan(cls, value: Any, info: ValidationInfo) -> astropy.units.Quantity:
+    def _validate_raan(cls, value: Any, info: ValidationInfo) -> float:
         """Validate the raan input.
 
         :param value: Value given as input
         :param info: ValidationInfo object
         :return: The raan in units of degrees
         """
-        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.deg,))
+        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.deg,)).si.value
 
     @field_validator('radius')
-    def _validate_radius(cls, value: Any, info: ValidationInfo) -> astropy.units.Quantity:
+    def _validate_radius(cls, value: Any, info: ValidationInfo) -> float:
         """Validate the radius input.
 
         :param value: Value given as input
         :param info: ValidationInfo object
         :return: The radius in units of length
         """
-        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,))
+        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,)).si.value
 
     @field_validator('semi_major_axis')
-    def _validate_semi_major_axis(cls, value: Any, info: ValidationInfo) -> astropy.units.Quantity:
+    def _validate_semi_major_axis(cls, value: Any, info: ValidationInfo) -> float:
         """Validate the semi-major axis input.
 
         :param value: Value given as input
         :param info: ValidationInfo object
         :return: The semi-major axis in units of length
         """
-        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,))
+        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,)).si.value
 
     @field_validator('temperature')
-    def _validate_temperature(cls, value: Any, info: ValidationInfo) -> astropy.units.Quantity:
+    def _validate_temperature(cls, value: Any, info: ValidationInfo) -> float:
         """Validate the temperature input.
 
         :param value: Value given as input
         :param info: ValidationInfo object
         :return: The temperature in units of temperature
         """
-        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.K,))
+        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.K,)).si.value
 
     @field_validator('true_anomaly')
-    def _validate_true_anomaly(cls, value: Any, info: ValidationInfo) -> astropy.units.Quantity:
+    def _validate_true_anomaly(cls, value: Any, info: ValidationInfo) -> float:
         """Validate the true anomaly input.
 
         :param value: Value given as input
         :param info: ValidationInfo object
         :return: The true anomaly in units of degrees
         """
-        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.deg,))
+        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.deg,)).si.value
 
     def _calculate_mean_spectral_flux_density(self, wavelength_steps: np.ndarray, grid_size: int,
                                               **kwargs) -> np.ndarray:
@@ -140,15 +138,15 @@ class Planet(BasePhotonSource, BaseModel):
 
         t0 = time.time_ns()
         binned_mean_spectral_flux_density = spectres.spectres(
-            wavelength_steps.to(u.um).value,
-            maximum_wavelength_steps,
-            self.mean_spectral_flux_density.value,
+            wavelength_steps.numpy(),
+            maximum_wavelength_steps.numpy(),
+            self.mean_spectral_flux_density.numpy(),
             fill=0
-        ) * self.mean_spectral_flux_density.unit
+        )
 
         t1 = time.time_ns()
         print(f"Time to bin mean spectral flux density: {(t1 - t0) / 1e9} s")
-        return binned_mean_spectral_flux_density
+        return torch.asarray(binned_mean_spectral_flux_density, dtype=torch.float32)
 
     def _calculate_sky_brightness_distribution(self, grid_size: int, **kwargs) -> np.ndarray:
         """Calculate and return the sky brightness distribution.
@@ -160,28 +158,29 @@ class Planet(BasePhotonSource, BaseModel):
         number_of_wavelength_steps = kwargs.get('number_of_wavelength_steps')
 
         if has_planet_orbital_motion:
-            sky_brightness_distribution = np.zeros((len(self.sky_coordinates[1]), number_of_wavelength_steps, grid_size,
-                                                    grid_size)) * self.mean_spectral_flux_density[0].unit
+            sky_brightness_distribution = torch.zeros(
+                (len(self.sky_coordinates[1]), number_of_wavelength_steps, grid_size,
+                 grid_size))
             for index_time in range(len(self.sky_coordinates[1])):
                 sky_coordinates = self.sky_coordinates[:, index_time]
                 index_x = get_index_of_closest_value_numpy(
-                    sky_coordinates[0, 0, :].value,
-                    self.angular_separation_from_star_x[index_time].to(u.rad).value
+                    sky_coordinates[0, :, 0],
+                    self.angular_separation_from_star_x[index_time]
                 )
                 index_y = get_index_of_closest_value_numpy(
-                    sky_coordinates[1, :, 0].value,
-                    self.angular_separation_from_star_y[index_time].to(u.rad).value
+                    sky_coordinates[1, 0, :],
+                    self.angular_separation_from_star_y[index_time]
                 )
-                sky_brightness_distribution[index_time, :, index_y, index_x] = self.mean_spectral_flux_density
+                sky_brightness_distribution[index_time, :, index_x, index_y] = self.mean_spectral_flux_density
         else:
-            sky_brightness_distribution = np.zeros(
-                (number_of_wavelength_steps, grid_size, grid_size)) * self.mean_spectral_flux_density.unit
-            device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-            index_x = get_index_of_closest_value(torch.asarray(self.sky_coordinates[0, 0, :].value),
-                                                 self.angular_separation_from_star_x[0].value)
-            index_y = get_index_of_closest_value(torch.asarray(self.sky_coordinates[1, :, 0].value),
-                                                 self.angular_separation_from_star_y[0].value)
-            sky_brightness_distribution[:, index_y, index_x] = self.mean_spectral_flux_density
+            sky_brightness_distribution = torch.zeros(
+                (number_of_wavelength_steps, grid_size, grid_size))
+            # device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+            index_x = get_index_of_closest_value(torch.asarray(self.sky_coordinates[0, :, 0]),
+                                                 self.angular_separation_from_star_x[0])
+            index_y = get_index_of_closest_value(torch.asarray(self.sky_coordinates[1, 0, :]),
+                                                 self.angular_separation_from_star_y[0])
+            sky_brightness_distribution[:, index_x, index_y] = self.mean_spectral_flux_density
         return sky_brightness_distribution
 
     def _calculate_sky_coordinates(self, grid_size, **kwargs) -> np.ndarray:
@@ -197,13 +196,13 @@ class Planet(BasePhotonSource, BaseModel):
         has_planet_orbital_motion = kwargs.get('has_planet_orbital_motion')
         star_distance = kwargs.get('star_distance')
         star_mass = kwargs.get('star_mass')
-        self.angular_separation_from_star_x = np.zeros(len(time_steps)) * u.arcsec
-        self.angular_separation_from_star_y = np.zeros(len(time_steps)) * u.arcsec
+        self.angular_separation_from_star_x = torch.zeros(len(time_steps))
+        self.angular_separation_from_star_y = torch.zeros(len(time_steps))
 
         # If planet motion is being considered, then the sky coordinates may change with each time step and thus
         # coordinates are created for each time step, rather than just once
         if has_planet_orbital_motion:
-            sky_coordinates = np.zeros((2, len(time_steps), grid_size, grid_size))
+            sky_coordinates = torch.zeros((2, len(time_steps), grid_size, grid_size))
             for index_time, time_step in enumerate(time_steps):
                 sky_coordinates[:, index_time] = self._get_coordinates(
                     grid_size,
@@ -213,7 +212,7 @@ class Planet(BasePhotonSource, BaseModel):
                     star_distance,
                     star_mass
                 )
-            return sky_coordinates * u.rad
+            return sky_coordinates
         else:
             return self._get_coordinates(grid_size, time_steps[0], 0, has_planet_orbital_motion, star_distance,
                                          star_mass)
@@ -221,11 +220,11 @@ class Planet(BasePhotonSource, BaseModel):
     def _get_coordinates(
             self,
             grid_size: int,
-            time_step: Quantity,
+            time_step: float,
             index_time: int,
             has_planet_orbital_motion: bool,
-            star_distance: Quantity,
-            star_mass: Quantity
+            star_distance: float,
+            star_mass: float
     ) -> np.ndarray:
         """Return the sky coordinates of the planet.
 
@@ -241,13 +240,13 @@ class Planet(BasePhotonSource, BaseModel):
             self._get_x_y_angular_separation_from_star(time_step, has_planet_orbital_motion, star_distance,
                                                        star_mass))
 
-        angular_radius = np.sqrt(
+        angular_radius = torch.sqrt(
             self.angular_separation_from_star_x[index_time] ** 2 + self.angular_separation_from_star_y[
-                index_time] ** 2).to(u.rad)
+                index_time] ** 2)
 
         sky_coordinates_at_time_step = get_meshgrid(2 * (1.2 * angular_radius), grid_size)
 
-        return np.stack((sky_coordinates_at_time_step[0], sky_coordinates_at_time_step[1]))
+        return torch.stack((sky_coordinates_at_time_step[0], sky_coordinates_at_time_step[1]))
 
     def orbital_elements_to_sky_position(self, a, e, i, Omega, omega, nu):
         # Convert angles from degrees to radians
@@ -296,9 +295,9 @@ class Planet(BasePhotonSource, BaseModel):
 
     def _get_x_y_separation_from_star(
             self,
-            time_step: Quantity,
+            time_step: float,
             has_planet_orbital_motion: bool,
-            star_mass: Quantity
+            star_mass: float
     ) -> Tuple:
         """Return the separation of the planet from the star in x- and y-direction. If the planet orbital motion is
         considered, calculate the new position for each time step.
@@ -309,59 +308,41 @@ class Planet(BasePhotonSource, BaseModel):
         :return: A tuple containing the x- and y- coordinates
         """
         # t0 = time.time_ns()
-        star = Body(parent=None, k=G * (star_mass + self.mass), name='Star')
-        orbit = Orbit.from_classical(star, a=self.semi_major_axis, ecc=u.Quantity(self.eccentricity),
-                                     inc=self.inclination,
-                                     raan=self.raan,
-                                     argp=self.argument_of_periapsis, nu=self.true_anomaly)
+        star = Body(parent=None, k=G * (star_mass + self.mass) * u.kg, name='Star')
+        orbit = Orbit.from_classical(star, a=self.semi_major_axis * u.m, ecc=u.Quantity(self.eccentricity),
+                                     inc=self.inclination * u.rad,
+                                     raan=self.raan * u.rad,
+                                     argp=self.argument_of_periapsis * u.rad, nu=self.true_anomaly * u.rad)
         # t1 = time.time_ns()
         # print(f"Time to set up orbit: {(t1 - t0) / 1e9} s")
         if has_planet_orbital_motion:
-            # orbit_propagated = orbit.propagate(time_step)
+            orbit_propagated = orbit.propagate(time_step * u.s)
+            x, y = (orbit_propagated.r[0].to(u.m).value, orbit_propagated.r[1].to(u.m).value)
             pass
         else:
-            # orbit_propagated = orbit
-            # t0 = time.time_ns()
-            # a = (
-            #     (self.semi_major_axis * (1 - self.eccentricity ** 2)).to(u.km),
-            #     Quantity(self.eccentricity),
-            #     self.inclination.to(u.rad),
-            #     self.raan.to(u.rad),
-            #     self.argument_of_periapsis.to(u.rad),
-            #     self.true_anomaly.to(u.rad),
-            # )
-            # r, v = coe2rv(
-            #     (G * (star_mass + self.mass)).to(u.km ** 3 / u.s ** 2), *a
-            # )
-            # t1 = time.time_ns()
-            # print(f"Time to create orbit: {(t1 - t0) / 1e9} s")
-
-            # Example usage
-            a = self.semi_major_axis.to(u.m).value  # Semi-major axis
+            a = self.semi_major_axis  # Semi-major axis
             e = self.eccentricity  # Eccentricity
-            i = self.inclination.to(u.rad).value  # Inclination in degrees
-            Omega = self.raan.to(u.rad).value  # Longitude of the ascending node in degrees
-            omega = self.argument_of_periapsis.to(u.rad).value  # Argument of periapsis in degrees
-            M = self.true_anomaly.to(u.rad).value  # Mean anomaly in degrees
-            # t0 = time.time_ns()
+            i = self.inclination  # Inclination in degrees
+            Omega = self.raan  # Longitude of the ascending node in degrees
+            omega = self.argument_of_periapsis  # Argument of periapsis in degrees
+            M = self.true_anomaly  # Mean anomaly in degrees
 
-            x1, y1 = self.orbital_elements_to_sky_position(a, e, i, Omega, omega, M)
+            x, y = self.orbital_elements_to_sky_position(a, e, i, Omega, omega, M)
             # t1 = time.time_ns()
             # print(f"Time to create orbit 2: {(t1 - t0) / 1e9} s")
             #
-            # x = (orbit_propagated.r[0], orbit_propagated.r[1], orbit_propagated.r[2])
             # print(x)
             # print(x1, y1)
-        return x1 * u.m, y1 * u.m
+        return x, y
         # print(x)
         # return x
 
     def _get_x_y_angular_separation_from_star(
             self,
-            time_step: Quantity,
+            time_step: float,
             planet_orbital_motion: bool,
-            star_distance: Quantity,
-            star_mass: Quantity
+            star_distance: float,
+            star_mass: float
     ) -> Tuple:
         """Return the angular separation of the planet from the star in x- and y-direction.
 
@@ -374,10 +355,8 @@ class Planet(BasePhotonSource, BaseModel):
         separation_from_star_x, separation_from_star_y = self._get_x_y_separation_from_star(time_step,
                                                                                             planet_orbital_motion,
                                                                                             star_mass)
-        angular_separation_from_star_x = ((separation_from_star_x.to(u.m) / star_distance.to(u.m)) * u.rad).to(
-            u.arcsec)
-        angular_separation_from_star_y = ((separation_from_star_y.to(u.m) / star_distance.to(u.m)) * u.rad).to(
-            u.arcsec)
+        angular_separation_from_star_x = separation_from_star_x / star_distance
+        angular_separation_from_star_y = separation_from_star_y / star_distance
         return (angular_separation_from_star_x, angular_separation_from_star_y)
 
     def calculate_blackbody_spectrum(
@@ -386,7 +365,7 @@ class Planet(BasePhotonSource, BaseModel):
             **kwargs
     ) -> np.ndarray:
         star_distance = kwargs.get('star_distance')
-        solid_angle = np.pi * (self.radius.to(u.m) / (star_distance.to(u.m)) * u.rad) ** 2
+        solid_angle = torch.pi * (self.radius / star_distance) ** 2
 
         a = create_blackbody_spectrum(self.temperature, wavelength_steps, solid_angle)
 

@@ -3,6 +3,8 @@ from enum import Enum
 from typing import Any
 
 import numpy as np
+import torch
+from torch import sqrt, tensor, exp, pi
 
 
 class BeamCombinationSchemeEnum(Enum):
@@ -54,10 +56,12 @@ class DoubleBracewell(BeamCombinationScheme):
     type: Any = BeamCombinationSchemeEnum.DOUBLE_BRACEWELL.value
 
     def get_beam_combination_transfer_matrix(self) -> np.ndarray:
-        return 1 / np.sqrt(4) * np.array([[0, 0, np.sqrt(2), np.sqrt(2)],
-                                          [np.sqrt(2), np.sqrt(2), 0, 0],
-                                          [1, -1, -np.exp(1j * np.pi / 2), np.exp(1j * np.pi / 2)],
-                                          [1, -1, np.exp(1j * np.pi / 2), -np.exp(1j * np.pi / 2)]])
+        return 1 / sqrt(tensor(4)) * torch.tensor([[tensor(0), tensor(0), sqrt(tensor(2)), sqrt(tensor(2))],
+                                                   [sqrt(tensor(2)), sqrt(tensor(2)), tensor(0), tensor(0)],
+                                                   [tensor(1), tensor(-1), -exp(tensor(1j * pi / 2)),
+                                                    exp(tensor(1j * pi / 2))],
+                                                   [tensor(1), tensor(-1), exp(tensor(1j * pi / 2)),
+                                                    -exp(tensor(1j * pi / 2))]])
 
     def get_differential_output_pairs(self) -> list:
         return [(2, 3)]

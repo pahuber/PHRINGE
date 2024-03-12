@@ -2,7 +2,7 @@ from typing import Any
 
 import numpy as np
 import spectres
-from astropy import units as u
+import torch
 from pydantic import BaseModel
 
 from phringe.core.entities.base_component import BaseComponent
@@ -42,9 +42,9 @@ class Scene(BaseComponent, BaseModel):
         crop it to the observatory wavelength range. If no input spectrum has been provided, generate a blackbody
         spectrum.
         """
-        self.maximum_simulation_wavelength_steps = np.linspace(
-            self.wavelength_range_lower_limit.to(u.um).value,
-            self.wavelength_range_upper_limit.to(u.um).value,
+        self.maximum_simulation_wavelength_steps = torch.linspace(
+            self.wavelength_range_lower_limit,
+            self.wavelength_range_upper_limit,
             1000
         )
         planet_names_with_spectra = [spectrum_context.planet_name for spectrum_context in
@@ -55,22 +55,22 @@ class Scene(BaseComponent, BaseModel):
                     (spectrum_context for spectrum_context in self.spectrum_list if
                      spectrum_context.planet_name == planet.name),
                     None)
-                spectrum_unit = spectrum_context.spectral_flux_density.unit
+                # spectrum_unit = spectrum_context.spectral_flux_density.unit
                 new_spec = spectres.spectres(
                     self.maximum_simulation_wavelength_steps,
-                    spectrum_context.wavelengths.to(u.um).value,
-                    spectrum_context.spectral_flux_density.value,
-                    fill=0) * spectrum_unit
+                    spectrum_context.wavelengths,
+                    spectrum_context.spectral_flux_density,
+                    fill=0)
 
-                solid_angle = np.pi * (planet.radius.to(u.m) / (self.star.distance.to(u.m)) * u.rad) ** 2
+                solid_angle = np.pi * (planet.radius / self.star.distance) ** 2
                 planet.mean_spectral_flux_density = _convert_spectrum_units(
                     new_spec,
-                    self.maximum_simulation_wavelength_steps * u.um,
-                    solid_angle.to(u.sr)
+                    self.maximum_simulation_wavelength_steps,
+                    solid_angle
                 )
             else:
                 planet.mean_spectral_flux_density = planet.calculate_blackbody_spectrum(
-                    wavelength_steps=self.maximum_simulation_wavelength_steps * u.um,
+                    wavelength_steps=self.maximum_simulation_wavelength_steps,
                     star_distance=self.star.distance
                 )
 
