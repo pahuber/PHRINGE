@@ -327,7 +327,7 @@ class DataGenerator():
         print(torch.sum(total_photon_counts))
 
         # bin time
-        self.binned_photon_counts = torch.asarray(block_reduce(total_photon_counts.cpu(),
+        self.binned_photon_counts = torch.asarray(block_reduce(total_photon_counts.cpu().numpy(),
                                                                (1, 1,
                                                                 len(self.simulation_time_steps) // len(
                                                                     self.instrument_time_steps)),
