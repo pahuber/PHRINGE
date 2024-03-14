@@ -19,7 +19,7 @@
 # SOFTWARE.
 
 import numpy as np
-from astropy.units import Quantity
+import torch
 
 
 class NoiseGenerator:
@@ -198,9 +198,9 @@ class NoiseGenerator:
 
 
 def get_perturbation_time_series(number_of_input_beams: int,
-                                 sample_time: Quantity,
+                                 sample_time: float,
                                  number_of_samples: int,
-                                 rms: Quantity,
+                                 rms: float,
                                  color_exponent: int) -> np.ndarray:
     """Return a time series of perturbations. The shape of the underlying power spectrum is created using the power
     law 1/frequency^exponent.
@@ -213,7 +213,7 @@ def get_perturbation_time_series(number_of_input_beams: int,
     :return: The distribution
     """
     noise_generator = NoiseGenerator()
-    perturbation_distributions = np.zeros((number_of_input_beams, number_of_samples)) * rms.unit
+    perturbation_distributions = np.zeros((number_of_input_beams, number_of_samples))
     sample_time = 1 / 10000  # Corresponds to 10kHz
 
     # TODO: make perturbation distributions chromatic
@@ -221,18 +221,24 @@ def get_perturbation_time_series(number_of_input_beams: int,
     for i in range(number_of_input_beams):
         match color_exponent:
             case 0:
-                perturbation_distributions[i] = noise_generator.generate(dt=sample_time,
-                                                                         n=number_of_samples,
-                                                                         colour=noise_generator.white()) * rms.unit
+                perturbation_distributions[i] = noise_generator.generate(
+                    dt=sample_time,
+                    n=number_of_samples,
+                    colour=noise_generator.white()
+                )
             case 1:
-                perturbation_distributions[i] = noise_generator.generate(dt=sample_time,
-                                                                         n=number_of_samples,
-                                                                         colour=noise_generator.pink()) * rms.unit
+                perturbation_distributions[i] = noise_generator.generate(
+                    dt=sample_time,
+                    n=number_of_samples,
+                    colour=noise_generator.pink()
+                )
             case 2:
-                perturbation_distributions[i] = noise_generator.generate(dt=sample_time,
-                                                                         n=number_of_samples,
-                                                                         colour=noise_generator.brown()) * rms.unit
+                perturbation_distributions[i] = noise_generator.generate(
+                    dt=sample_time,
+                    n=number_of_samples,
+                    colour=noise_generator.brown()
+                )
 
-        perturbation_distributions[i] *= rms.value / np.sqrt(
-            np.mean(perturbation_distributions[i] ** 2)) * rms.unit
-    return perturbation_distributions
+        perturbation_distributions[i] *= rms / np.sqrt(
+            np.mean(perturbation_distributions[i] ** 2))
+    return torch.asarray(perturbation_distributions, dtype=torch.float32)

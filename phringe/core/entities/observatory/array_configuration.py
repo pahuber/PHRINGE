@@ -4,9 +4,11 @@ from typing import Any
 
 import astropy.units
 import numpy as np
+import torch
 from astropy import units as u
 from astropy.units import Quantity
 from pydantic import BaseModel
+from torch import tensor
 
 from phringe.util.helpers import Coordinates
 from phringe.util.matrix import get_2d_rotation_matrix
@@ -58,13 +60,10 @@ class EmmaXCircularRotation(ArrayConfiguration):
                                   modulation_period: Quantity,
                                   baseline_ratio: int) -> Coordinates:
         rotation_matrix = get_2d_rotation_matrix(time_steps, modulation_period)
-        emma_x_static = self.nulling_baseline_length / 2 * np.array(
-            [[baseline_ratio, baseline_ratio, -baseline_ratio, -baseline_ratio], [1, -1, -1, 1]])
-        collector_positions = np.einsum('ijl,jk->ikl', rotation_matrix, emma_x_static)
-        collector_coordinates = np.zeros(len(time_steps), dtype=object)
-        for i in range(len(time_steps)):
-            collector_coordinates[i] = Coordinates(collector_positions[0, :, i], collector_positions[1, :, i])
-        return collector_coordinates
+        emma_x_static = self.nulling_baseline_length / 2 * torch.asarray(
+            [[baseline_ratio, baseline_ratio, -baseline_ratio, -baseline_ratio], [1, -1, -1, 1]], dtype=torch.float32)
+        collector_positions = torch.einsum('ijl,jk->ikl', rotation_matrix, emma_x_static)
+        return collector_positions.swapaxes(0, 2)
 
 
 class EmmaXDoubleStretch(ArrayConfiguration):
@@ -80,8 +79,8 @@ class EmmaXDoubleStretch(ArrayConfiguration):
             [[baseline_ratio, baseline_ratio, -baseline_ratio, -baseline_ratio], [1, -1, -1, 1]])
         # TODO: fix calculations
         collector_positions = emma_x_static * (
-                    1 + (2 * self.nulling_baseline_length) / self.nulling_baseline_length * np.sin(
-                2 * np.pi * u.rad / modulation_period * time_steps))
+                1 + (2 * self.nulling_baseline_length) / self.nulling_baseline_length * np.sin(
+            2 * np.pi * u.rad / modulation_period * time_steps))
         return Coordinates(collector_positions[0], collector_positions[1])
 
 
@@ -94,19 +93,19 @@ class EquilateralTriangleCircularRotation(ArrayConfiguration):
                                   time_steps: np.ndarray,
                                   modulation_period: Quantity,
                                   baseline_ratio: int) -> np.ndarray:
-        height = np.sqrt(3) / 2 * self.nulling_baseline_length
+        height = torch.sqrt(torch.tensor(3)) / 2 * self.nulling_baseline_length
         height_to_center = height / 3
         rotation_matrix = get_2d_rotation_matrix(time_steps, modulation_period)
 
-        equilateral_triangle_static = np.array(
-            [[0, self.nulling_baseline_length.value / 2, -self.nulling_baseline_length.value / 2],
-             [height.value - height_to_center.value, -height_to_center.value, -height_to_center.value]])
-        collector_positions = np.einsum('ijl,jk->ikl', rotation_matrix,
-                                        equilateral_triangle_static) * self.nulling_baseline_length.unit
-        collector_coordinates = np.zeros(len(time_steps), dtype=object)
-        for i in range(len(time_steps)):
-            collector_coordinates[i] = Coordinates(collector_positions[0, :, i], collector_positions[1, :, i])
-        return collector_coordinates
+        equilateral_triangle_static = torch.asarray(
+            [[0, self.nulling_baseline_length / 2, -self.nulling_baseline_length / 2],
+             [height - height_to_center, -height_to_center, -height_to_center]], dtype=torch.float32)
+        collector_positions = torch.einsum('ijl,jk->ikl', rotation_matrix,
+                                           equilateral_triangle_static)
+        # collector_coordinates = torch.zeros(len(time_steps), dtype=object)
+        # for i in range(len(time_steps)):
+        #     collector_coordinates[i] = Coordinates(collector_positions[0, :, i], collector_positions[1, :, i])
+        return collector_positions.swapaxes(0, 2)
 
 
 class RegularPentagonCircularRotation(ArrayConfiguration):
@@ -120,7 +119,7 @@ class RegularPentagonCircularRotation(ArrayConfiguration):
         :param angle: The angle at which the collector is located
         :return: The x position
         """
-        return 0.851 * self.nulling_baseline_length.value * np.cos(angle)
+        return 0.851 * self.nulling_baseline_length * torch.cos(angle)
 
     def _get_y_position(self, angle) -> astropy.units.Quantity:
         """Return the y position.
@@ -128,22 +127,20 @@ class RegularPentagonCircularRotation(ArrayConfiguration):
         :param angle: The angle at which the collector is located
         :return: The y position
         """
-        return 0.851 * self.nulling_baseline_length.value * np.sin(angle)
+        return 0.851 * self.nulling_baseline_length * torch.sin(angle)
 
     def get_collector_coordinates(self,
                                   time_steps: np.ndarray,
                                   modulation_period: Quantity,
                                   baseline_ratio: int) -> np.ndarray:
-        angles = [0, 2 * np.pi / 5, 4 * np.pi / 5, 6 * np.pi / 5, 8 * np.pi / 5]
+        angles = [tensor(0), tensor(2 * torch.pi / 5), tensor(4 * np.pi / 5), tensor(6 * torch.pi / 5),
+                  tensor(8 * torch.pi / 5)]
         rotation_matrix = get_2d_rotation_matrix(time_steps, modulation_period)
-        pentagon_static = np.array([
+        pentagon_static = torch.asarray([
             [self._get_x_position(angles[0]), self._get_x_position(angles[1]), self._get_x_position(angles[2]),
              self._get_x_position(angles[3]), self._get_x_position(angles[4])],
             [self._get_y_position(angles[0]), self._get_y_position(angles[1]), self._get_y_position(angles[2]),
-             self._get_y_position(angles[3]), self._get_y_position(angles[4])]])
-        collector_positions = np.einsum('ijl,jk->ikl', rotation_matrix,
-                                        pentagon_static) * self.nulling_baseline_length.unit
-        collector_coordinates = np.zeros(len(time_steps), dtype=object)
-        for i in range(len(time_steps)):
-            collector_coordinates[i] = Coordinates(collector_positions[0, :, i], collector_positions[1, :, i])
-        return collector_coordinates
+             self._get_y_position(angles[3]), self._get_y_position(angles[4])]], dtype=torch.float32)
+        collector_positions = torch.einsum('ijl,jk->ikl', rotation_matrix,
+                                           pentagon_static)
+        return collector_positions.swapaxes(0, 2)

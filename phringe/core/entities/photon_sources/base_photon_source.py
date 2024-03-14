@@ -4,8 +4,6 @@ from typing import Any
 import numpy as np
 from pydantic import BaseModel
 
-from phringe.util.helpers import Coordinates
-
 
 class BasePhotonSource(ABC, BaseModel):
     """Class representation of a photon source.
@@ -47,7 +45,7 @@ class BasePhotonSource(ABC, BaseModel):
         pass
 
     @abstractmethod
-    def _calculate_sky_coordinates(self, grid_size: int, **kwargs) -> Coordinates:
+    def _calculate_sky_coordinates(self, grid_size: int, **kwargs) -> np.ndarray:
         """Calculate and return the sky coordinates of the source for a given time. For moving sources, such as planets,
          the sky coordinates might change over time.
 

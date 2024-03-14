@@ -1,9 +1,11 @@
+import time
 from typing import Union
 
 import numpy as np
+import torch
 from astropy import units as u
-from astropy.modeling.models import BlackBody
 from astropy.units import Quantity
+from scipy.constants import c, h, k
 
 
 def crop_spectral_flux_density_to_wavelength_range(
@@ -26,9 +28,9 @@ def crop_spectral_flux_density_to_wavelength_range(
 
 
 def create_blackbody_spectrum(
-        temperature: Quantity,
+        temperature: float,
         wavelength_steps: np.ndarray,
-        source_solid_angle: Union[Quantity, np.ndarray]
+        source_solid_angle: Union[float, np.ndarray]
 ) -> np.ndarray:
     """Return a blackbody spectrum for an astrophysical object. The spectrum is binned already to the wavelength bin
     centers of the mission.
@@ -38,9 +40,27 @@ def create_blackbody_spectrum(
     :param source_solid_angle: The solid angle of the source
     :return: Array containing the flux per bin in units of ph m-2 s-1 um-1
     """
-    blackbody_spectrum = BlackBody(temperature=temperature)(wavelength_steps)
 
-    return _convert_spectrum_units(blackbody_spectrum, wavelength_steps, source_solid_angle)
+    wavelength_steps2 = wavelength_steps
+    temperature = temperature
+
+    t0 = time.time_ns()
+    b = 2 * h * c ** 2 / wavelength_steps2 ** 5 / (torch.exp(torch.tensor(
+        h * c / (k * wavelength_steps2 * temperature))) - 1) * source_solid_angle / h / c * wavelength_steps2
+
+    t1 = time.time_ns()
+
+    print(f"Time to create blackbody spectrum: {(t1 - t0) / 1e9} s")
+
+    # blackbody_spectrum = BlackBody(temperature=temperature * u.K)(wavelength_steps.to(u.AA))
+    # a = _convert_spectrum_units(blackbody_spectrum, wavelength_steps, source_solid_angle)
+    #
+    # t2 = time.time_ns()
+    #
+    # # print(f"Time to create blackbody spectrum: {(t1 - t0) / 1e9} s")
+    # print(f"Time to convert blackbody spectrum: {(t2 - t1) / 1e9} s")
+
+    return b  # .value * u.ph / u.s / u.m ** 3
 
 
 def _convert_spectrum_units(
@@ -57,6 +77,13 @@ def _convert_spectrum_units(
     """
     spectral_flux_density = np.zeros(len(spectrum)) * u.ph / u.m ** 2 / u.s / u.um
 
+    solid_angle2 = source_solid_angle.to(u.sr).value
+    spectrum2 = spectrum.value
+    c1 = c
+    h1 = h
+
+    converted = spectrum2 * 1e-11 / h / c * solid_angle2
+
     for index in range(len(spectrum)):
         if source_solid_angle.size == 1:
             solid_angle = source_solid_angle
@@ -66,10 +93,12 @@ def _convert_spectrum_units(
         else:
             solid_angle = source_solid_angle[index]
 
+        # current_spectral_flux_density =
+
         current_spectral_flux_density = (spectrum[index] * (solid_angle).to(u.sr)).to(
-            u.ph / u.m ** 2 / u.s / u.um,
+            u.ph / u.m ** 3 / u.s,
             equivalencies=u.spectral_density(
-                wavelength_steps[index]))
+                wavelength_steps.to(u.m)[index]))
 
         spectral_flux_density[index] = current_spectral_flux_density
     return spectral_flux_density

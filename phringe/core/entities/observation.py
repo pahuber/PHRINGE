@@ -1,8 +1,6 @@
 from typing import Any
 
-import astropy
 from astropy import units as u
-from astropy.units import Quantity
 from pydantic import BaseModel, field_validator
 from pydantic_core.core_schema import ValidationInfo
 
@@ -36,50 +34,51 @@ class Observation(BaseComponent, BaseModel):
     optimized_wavelength: str
 
     @field_validator('baseline_minimum')
-    def _validate_baseline_minimum(cls, value: Any, info: ValidationInfo) -> astropy.units.Quantity:
+    def _validate_baseline_minimum(cls, value: Any, info: ValidationInfo) -> float:
         """Validate the baseline minimum input.
 
         :param value: Value given as input
         :param info: ValidationInfo object
         :return: The minimum baseline in units of length
         """
-        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,))
+        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,)).si.value
 
     @field_validator('baseline_maximum')
-    def _validate_baseline_maximum(cls, value: Any, info: ValidationInfo) -> astropy.units.Quantity:
+    def _validate_baseline_maximum(cls, value: Any, info: ValidationInfo) -> float:
         """Validate the baseline maximum input.
 
         :param value: Value given as input
         :param info: ValidationInfo object
         :return: The maximum baseline in units of length
         """
-        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,))
+        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,)).si.value
 
     @field_validator('detector_integration_time')
-    def _validate_detector_integration_time(cls, value: Any, info: ValidationInfo) -> astropy.units.Quantity:
+    def _validate_detector_integration_time(cls, value: Any, info: ValidationInfo) -> float:
         """Validate the detector integration time input.
 
         :param value: Value given as input
         :param info: ValidationInfo object
         :return: The detector integration time in units of time
         """
-        dit = validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.s,))
-        if dit >= 1 * u.min:
+        dit = validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.s,)).si.value
+        # TODO: link this to simulation time step in settings
+        if dit >= 60:
             return dit
         raise ValueError(f'{info.field_name} can not be smaller than 1 minute')
 
     @field_validator('modulation_period')
-    def _validate_modulation_period(cls, value: Any, info: ValidationInfo) -> astropy.units.Quantity:
+    def _validate_modulation_period(cls, value: Any, info: ValidationInfo) -> float:
         """Validate the modulation period input.
 
         :param value: Value given as input
         :param info: ValidationInfo object
         :return: The modulation period in units of time
         """
-        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.s,))
+        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.s,)).si.value
 
     @field_validator('optimized_star_separation')
-    def _validate_optimized_star_separation(cls, value: Any, info: ValidationInfo) -> astropy.units.Quantity:
+    def _validate_optimized_star_separation(cls, value: Any, info: ValidationInfo) -> float:
         """Validate the optimized star separation input.
 
         :param value: Value given as input
@@ -88,37 +87,38 @@ class Observation(BaseComponent, BaseModel):
         """
         if value == 'habitable-zone':
             return value
-        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m, u.arcsec))
+        return validate_quantity_units(value=value, field_name=info.field_name,
+                                       unit_equivalency=(u.m, u.arcsec)).si.value
 
     @field_validator('optimized_wavelength')
-    def _validate_optimized_wavelength(cls, value: Any, info: ValidationInfo) -> astropy.units.Quantity:
+    def _validate_optimized_wavelength(cls, value: Any, info: ValidationInfo) -> float:
         """Validate the optimized wavelength input.
 
         :param value: Value given as input
         :param info: ValidationInfo object
         :return: The optimized wavelength in units of length
         """
-        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,))
+        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,)).si.value
 
     @field_validator('solar_ecliptic_latitude')
-    def _validate_solar_ecliptic_latitude(cls, value: Any, info: ValidationInfo) -> astropy.units.Quantity:
+    def _validate_solar_ecliptic_latitude(cls, value: Any, info: ValidationInfo) -> float:
         """Validate the solar ecliptic latitude input.
 
         :param value: Value given as input
         :param info: ValidationInfo object
         :return: The solar ecliptic latitude in units of degrees
         """
-        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.deg,))
+        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.deg,)).si.value
 
     @field_validator('total_integration_time')
-    def _validate_total_integration_time(cls, value: Any, info: ValidationInfo) -> astropy.units.Quantity:
+    def _validate_total_integration_time(cls, value: Any, info: ValidationInfo) -> float:
         """Validate the total integration time input.
 
         :param value: Value given as input
         :param info: ValidationInfo object
         :return: The total integration time in units of time
         """
-        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.s,))
+        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.s,)).si.value
 
     def prepare(self):
         """Prepare the observation for the simulation."""
