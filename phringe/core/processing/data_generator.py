@@ -13,61 +13,6 @@ from phringe.core.processing.processing import calculate_photon_counts_gpu
 from phringe.util.grid import get_index_of_closest_value_numpy
 
 
-# from astropy.nddata import block_reduce
-
-
-# @jit(complex128[:, :, :, :, :](float64, float64, float64[:, :], float64[:, :], float64[:, :], float64[:, :],
-#                                float64[:, :], float64[:, :], float64[:], uint64), nopython=True, nogil=True,
-#      fastmath=True)
-# @jit(complex128[:, :, :, :, :](float64, float64, float64[:, :], float64[:, :], float64[:, :], float64[:, :],
-#                                float64[:, :], float64[:, :], float64[:], uint64), nopython=True, nogil=True,
-#      fastmath=True)
-# def _calculate_complex_amplitude_base(
-#         aperture_radius: float,
-#         unperturbed_instrument_throughput: float,
-#         amplitude_perturbation_time_series: np.ndarray,
-#         phase_perturbation_time_series: np.ndarray,
-#         observatory_coordinates_x: np.ndarray,
-#         observatory_coordinates_y: np.ndarray,
-#         source_sky_coordinates_x: np.ndarray,
-#         source_sky_coordinates_y: np.ndarray,
-#         wavelength_steps: np.ndarray,
-#         grid_size: int
-# ) -> np.ndarray:
-#     """Calculate the complex amplitude element for a single polarization.
-#
-#     :param unperturbed_instrument_throughput: The unperturbed instrument throughput
-#     :param amplitude_perturbation_time_series: The amplitude perturbation time series
-#     :param phase_perturbation_time_series: The phase perturbation time series
-#     :param observatory_coordinates_x: The observatory x coordinates
-#     :param observatory_coordinates_y: The observatory y coordinates
-#     :param source_sky_coordinates_x: The source sky x coordinates
-#     :param source_sky_coordinates_y: The source sky y coordinates
-#     :return: The complex amplitude element
-#     """
-#     const = aperture_radius * torch.sqrt(unperturbed_instrument_throughput)
-#     exp_const = 2j * torch.pi
-#
-#     obs_x_source_x = (
-#             observatory_coordinates_x[..., None, None] *
-#             source_sky_coordinates_x[None, None, ...])
-#
-#     obs_y_source_y = (
-#             observatory_coordinates_y[..., None, None] *
-#             source_sky_coordinates_y[None, None, ...])
-#
-#     phase_pert = phase_perturbation_time_series[..., None, None]
-#
-#     sum = obs_x_source_x + obs_y_source_y + phase_pert
-#
-#     exp = (exp_const * (1 / wavelength_steps)[..., None, None, None, None] *
-#            (obs_x_source_x + obs_y_source_y + phase_pert)[None, ...])
-#
-#     a = const * amplitude_perturbation_time_series[None, ..., None, None] * torch.exp(exp)
-#
-#     return a
-
-
 class DataGenerator():
     """Class representation of the data generator. This class is responsible for generating the synthetic photometry
      data for space-based nulling interferometers.
@@ -143,7 +88,7 @@ class DataGenerator():
         )
         self.star = scene.star
         self.simulation_time_step_duration = settings.simulation_time_step_duration
-        self.device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
+        self.device = torch.device("cuda:4" if torch.cuda.is_available() else "cpu")
         print(f'Using device: {self.device}')
         # torch.set_num_threads(1)
 
@@ -164,9 +109,6 @@ class DataGenerator():
         self.simulation_wavelength_bin_widths = settings.simulation_wavelength_bin_widths
         self.binned_photon_counts = self._initialize_binned_photon_counts()
         self.differential_photon_counts = self._initialize_differential_photon_counts()
-        # self._remove_units_from_source_sky_coordinates()
-        # self._remove_units_from_source_sky_brightness_distribution()
-        # self._remove_units_from_collector_coordinates()
 
     def _get_binning_indices(self, time, wavelength) -> tuple:
         """Get the binning indices.
@@ -218,41 +160,6 @@ class DataGenerator():
         differential_photon_counts = {source.name: differential_photon_counts.detach().clone() for source in
                                       self.sources} if self.generate_separate else differential_photon_counts
         return differential_photon_counts
-
-    # def _remove_units_from_source_sky_coordinates(self):
-    #     for index_source, source in enumerate(self.sources):
-    #         # if self.has_planet_orbital_motion and isinstance(source, Planet):
-    #         #     for index_time, time in enumerate(self.simulation_time_steps):
-    #         #         self.sources[index_source].sky_coordinates[index_time] = Coordinates(
-    #         #             source.sky_coordinates[index_time].x.to(u.rad).value,
-    #         #             source.sky_coordinates[index_time].y.to(u.rad).value
-    #         #         )
-    #         # elif isinstance(source, LocalZodi) or isinstance(source, Exozodi):
-    #         #     for index_wavelength, wavelength in enumerate(self.simulation_wavelength_steps):
-    #         #         self.sources[index_source].sky_coordinates[index_wavelength] = Coordinates(
-    #         #             source.sky_coordinates[index_wavelength].x.to(u.rad).value,
-    #         #             source.sky_coordinates[index_wavelength].y.to(u.rad).value
-    #         #         )
-    #         # else:
-    #         self.sources[index_source].sky_coordinates = self.sources[index_source].sky_coordinates.to(u.rad).value
-    #         # self.sources[index_source].sky_coordinates = Coordinates(
-    #         #     source.sky_coordinates.x.to(u.rad).value,
-    #         #     source.sky_coordinates.y.to(u.rad).value
-    #         # )
-
-    # def _remove_units_from_source_sky_brightness_distribution(self):
-    #     for index_source, source in enumerate(self.sources):
-    #         self.sources[index_source].sky_brightness_distribution = source.sky_brightness_distribution.to(
-    #             u.ph / (u.m ** 3 * u.s)).value
-
-    # def _remove_units_from_collector_coordinates(self):
-    #     self.observatory.array_configuration.collector_coordinates = self.observatory.array_configuration.collector_coordinates.to(
-    #         u.m).value
-    #     # for index_time, time in enumerate(self.simulation_time_steps):
-    #     #     self.observatory.array_configuration.collector_coordinates[index_time] = Coordinates(
-    #     #         self.observatory.array_configuration.collector_coordinates[index_time].x.to(u.m).value,
-    #     #         self.observatory.array_configuration.collector_coordinates[index_time].y.to(u.m).value
-    #     #     )
 
     def run(self) -> np.ndarray:
         """Run the data generator.
@@ -335,10 +242,6 @@ class DataGenerator():
 
         print(torch.sum(self.binned_photon_counts))
         t0 = time.time_ns()
-
-        # plt.imshow(self.binned_photon_counts.cpu()[2] - self.binned_photon_counts[3].cpu())
-        # plt.colorbar()
-        # plt.show()
 
         # bin wl
         self.binned_photon_counts_wl = torch.zeros(
