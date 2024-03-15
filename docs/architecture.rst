@@ -7,6 +7,6 @@ A simplified UML diagram of the architecture of PHRINGE is shown below. The key 
 ``Settings``, ``Observation``, ``Observatory`` and ``Scene``, whose properties are specified in the input files and the
 ``DataGenerator`` class, which uses the four components to generate the synthetic data.
 
-.. image:: _static/architecture_simple.jpg
+.. image:: _static/architecture_simple.png
     :alt: Simplified Architecture
     :width: 100%
