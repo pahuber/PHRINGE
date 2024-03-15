@@ -175,7 +175,7 @@ class Director():
         # Move all tensors to the device (i.e. GPU, if available)
         self._aperture_diameter = self._aperture_diameter.to(self._device)
         self._beam_combination_transfer_matrix = self._beam_combination_transfer_matrix.to(self._device)
-        observatory_time_steps = observatory_time_steps.to(self._device)
+        observatory_time_steps = self._observatory_time_steps.to(self._device)
         self._observatory_wavelength_bin_centers = self._observatory_wavelength_bin_centers.to(self._device)
         self._observatory_wavelength_bin_widths = self._observatory_wavelength_bin_widths.to(self._device)
         self._observatory_wavelength_bin_edges = self._observatory_wavelength_bin_edges.to(self._device)
