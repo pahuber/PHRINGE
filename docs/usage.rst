@@ -78,8 +78,6 @@ Flags
      - Save the generated data to a FITS file; default is true
    * - ``--copy``/``--no-copy``
      - Create a copy of the configuration and exoplanetary system files in the output directory; default is true
-   * - ``--sep``/``--no-sep``
-     - Generate separate data for each individual photon source; default is false
 
 Usage From Python Module
 ------------------------
@@ -87,7 +85,7 @@ Usage From Python Module
 
 
 Using Input Files
-~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~
 PHRINGE can also be used from within another Python module in the following way:
 
 .. code-block:: python
@@ -95,55 +93,54 @@ PHRINGE can also be used from within another Python module in the following way:
     from phringe.phringe import PHRINGE
     from pathlib import Path
 
-    tuple_of_spectra_tuples = (('Planet Name', Path('path_to_planet_name_spectrum_file')),)
+    spectrum_files = (('Planet Name', Path('path_to_planet_name_spectrum_file')),)
 
     phringe = PHRINGE()
     phringe.run(
         config_file_path=Path('path_to_config_file'),
         exoplanetary_system_file_path=Path('path_to_exoplanetary_system_file'),
-        spectrum_tuple=tuple_of_spectra_tuples,
+        spectrum_files=spectrum_files,
         output_dir=Path('path_to_output_directory'),
         write_fits=True,
-        create_copy=True,
-        generate_separate=False
+        create_copy=True
     )
 
 .. hint::
-    The ``tuple_of_spectra_tuples`` **must** be a tuple of planet name/spectrum file path tuples. If only for one planet
+    The ``spectrum_files`` **must** be a tuple of planet name/spectrum file path tuples. If only for one planet
     a spectrum file should be provided, then the trailing comma after that planet name/spectrum tuple is essential to
     still make the input a tuple of tuples, i.e. ``(('Planet Name', Path('path_to_planet_name_spectrum_file')),)`` and
     not ``(('Planet Name', Path('path_to_planet_name_spectrum_file')))``.
 
-Using Dictionaries
-~~~~~~~~~~~~~~~~~~
-Alternatively, instead of passing the configuration and exoplanetary system file paths, the configuration and
-exoplanetary system information can also be passed directly as dictionaries:
+Using Manually Created Objects
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Alternatively, instead of using input files to define the `Settings`, `Observatory`, `Observation` and `Scene` objects,
+these objects can also be manually created and then passed to `PHRINGE.run(...)`. For example, defining the `Settings`
+manually:
 
 .. code-block:: python
 
+    from phringe.core.entities.settings import Settings
     from phringe.phringe import PHRINGE
     from pathlib import Path
 
-    config_dict = {
-        'settings': {
-        'grid_size: 60,
-        ...},
-        ...
-    }
+    settings = Settings(
+        grid_size=20,
+        has_planet_orbital_motion=False,
+        has_stellar_leakage=False,
+        has_local_zodi_leakage=False,
+        has_exozodi_leakage=False,
+        has_amplitude_perturbations=False,
+        has_phase_perturbations=False,
+        has_polarization_perturbations=False
+    )
 
-    exoplanetary_system_dict = {
-        'star': {
-        'name: 'Sun',
-        ...},
-        ...
-    }
-
-    tuple_of_spectra_tuples = (('Planet Name', Path('path_to_planet_name_spectrum_file')),)
+    spectrum_files = (('Planet Name', Path('path_to_planet_name_spectrum_file')),)
 
     phringe = PHRINGE()
-    phringe.run_with_dict(
-        config_dict=config_dict,
-        exoplanetary_system_dict=exoplanetary_system_dict,
+    phringe.run(
+        config_file_path=Path('path_to_config_file'),
+        exoplanetary_system_file_path=Path('path_to_exoplanetary_system_file'),
+        settings=settings,
         spectrum_tuple=tuple_of_spectra_tuples,
         output_dir=Path('path_to_output_directory'),
         write_fits=True,
@@ -151,5 +148,5 @@ exoplanetary system information can also be passed directly as dictionaries:
         generate_separate=False
     )
 
-This skips the file reading step and might be especially useful when generating data within loops, where for each loop
-e.g. the planet radius should be updated.
+.. note::
+    Note that the `settings` object will overwrite the settings defined in the configuration file, if the settings are configured there.
