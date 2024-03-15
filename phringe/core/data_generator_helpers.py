@@ -202,7 +202,7 @@ def _calculate_photon_counts_from_intensity_response(
     return torch.poisson(mean_photon_counts)
 
 
-def calculate_photon_counts_gpu(
+def calculate_photon_counts(
         device: torch.device,
         aperture_radius: Tensor,
         unperturbed_instrument_throughput: Tensor,

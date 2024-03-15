@@ -13,7 +13,15 @@ from phringe.util.helpers import InputSpectrum
 
 
 class Director():
-    """Class representation of the director."""
+    """Class representation of the director.
+
+    :param device: The device
+    :param aperture_diameter: The aperture diameter
+    :param array_configuration: The array configuration
+    :param baseline_maximum: The maximum baseline
+
+
+    """
     _simulation_time_step_length = tensor(60, dtype=torch.uint8)
     _maximum_simulation_wavelength_sampling = 1000
 
@@ -35,46 +43,45 @@ class Director():
         """
         self._device = torch.device('cuda:4' if torch.cuda.is_available() else 'cpu')
 
-        self._total_integration_time = observation.total_integration_time
-        self._detector_integration_time = observation.detector_integration_time
-        self._observatory_wavelength_range_lower_limit = observatory.wavelength_range_lower_limit
-        self._observatory_wavelength_range_upper_limit = observatory.wavelength_range_upper_limit
         self._aperture_diameter = observatory.aperture_diameter
-        self._star = scene.star
-        self._planets = scene.planets
-        self._grid_size = settings.grid_size
-        self._solar_ecliptic_latitude = observation.solar_ecliptic_latitude
-        self._has_planet_orbital_motion = settings.has_planet_orbital_motion
-        self._has_stellar_leakage = settings.has_stellar_leakage
-        self._has_local_zodi_leakage = settings.has_local_zodi_leakage
-        self._has_exozodi_leakage = settings.has_exozodi_leakage
         self._array_configuration = observatory.array_configuration
-        self._beam_combination_scheme = observatory.beam_combination_scheme
-        self._modulation_period = observation.modulation_period
-        self._baseline_ratio = observation.baseline_ratio
         self._baseline_maximum = observation.baseline_maximum
         self._baseline_minimum = observation.baseline_minimum
-        self._optimized_star_separation = observation.optimized_star_separation
-        self._optimized_differential_output = observation.optimized_differential_output
-        self._optimized_wavelength = observation.optimized_wavelength
+        self._baseline_ratio = observation.baseline_ratio
+        self._beam_combination_scheme = observatory.beam_combination_scheme
+        self._beam_combination_transfer_matrix = self._beam_combination_scheme.get_beam_combination_transfer_matrix()
+        self._detector_integration_time = observation.detector_integration_time
+        self._differential_output_pairs = self._beam_combination_scheme.get_differential_output_pairs()
+        self._grid_size = settings.grid_size
         self._has_amplitude_perturbations = settings.has_amplitude_perturbations
-        self._phase_perturbation_rms = observatory.phase_perturbation_rms
-        self._phase_falloff_exponent = observatory.phase_falloff_exponent
+        self._has_exozodi_leakage = settings.has_exozodi_leakage
+        self._has_local_zodi_leakage = settings.has_local_zodi_leakage
         self._has_phase_perturbations = settings.has_phase_perturbations
-        self._polarization_perturbation_rms = observatory.polarization_perturbation_rms
-        self._polarization_falloff_exponent = observatory.polarization_falloff_exponent
+        self._has_planet_orbital_motion = settings.has_planet_orbital_motion
         self._has_polarization_perturbations = settings.has_polarization_perturbations
-
-        self._observatory_wavelength_bin_centers = observatory.wavelength_bin_centers
-        self._observatory_wavelength_bin_widths = observatory.wavelength_bin_widths
-        self._observatory_wavelength_bin_edges = observatory.wavelength_bin_edges
-        self._unperturbed_instrument_throughput = observatory.unperturbed_instrument_throughput
+        self._has_stellar_leakage = settings.has_stellar_leakage
         self._input_spectra = input_spectra
-        self._sources = scene.get_all_sources()
+        self._modulation_period = observation.modulation_period
         self._number_of_inputs = self._beam_combination_scheme.number_of_inputs
         self._number_of_outputs = self._beam_combination_scheme.number_of_outputs
-        self._beam_combination_transfer_matrix = self._beam_combination_scheme.get_beam_combination_transfer_matrix()
-        self._differential_output_pairs = self._beam_combination_scheme.get_differential_output_pairs()
+        self._observatory_wavelength_bin_centers = observatory.wavelength_bin_centers
+        self._observatory_wavelength_bin_edges = observatory.wavelength_bin_edges
+        self._observatory_wavelength_bin_widths = observatory.wavelength_bin_widths
+        self._observatory_wavelength_range_lower_limit = observatory.wavelength_range_lower_limit
+        self._observatory_wavelength_range_upper_limit = observatory.wavelength_range_upper_limit
+        self._optimized_differential_output = observation.optimized_differential_output
+        self._optimized_star_separation = observation.optimized_star_separation
+        self._optimized_wavelength = observation.optimized_wavelength
+        self._phase_falloff_exponent = observatory.phase_falloff_exponent
+        self._phase_perturbation_rms = observatory.phase_perturbation_rms
+        self._planets = scene.planets
+        self._polarization_falloff_exponent = observatory.polarization_falloff_exponent
+        self._polarization_perturbation_rms = observatory.polarization_perturbation_rms
+        self._solar_ecliptic_latitude = observation.solar_ecliptic_latitude
+        self._sources = scene.get_all_sources()
+        self._star = scene.star
+        self._total_integration_time = observation.total_integration_time
+        self._unperturbed_instrument_throughput = observatory.unperturbed_instrument_throughput
 
     def run(self):
         # Calculate simulation and instrument time steps
@@ -165,7 +172,7 @@ class Director():
             self._has_exozodi_leakage
         )
 
-        # Move all tensors to the device
+        # Move all tensors to the device (i.e. GPU, if available)
         self._aperture_diameter = self._aperture_diameter.to(self._device)
         self._beam_combination_transfer_matrix = self._beam_combination_transfer_matrix.to(self._device)
         observatory_time_steps = observatory_time_steps.to(self._device)
@@ -215,4 +222,4 @@ class Director():
             self._sources,
             self._unperturbed_instrument_throughput
         )
-        self._data = data_generator.run()
+        self._data = data_generator.run().cpu()

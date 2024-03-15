@@ -1,3 +1,4 @@
+import time
 from pathlib import Path
 from typing import Union
 
@@ -87,6 +88,8 @@ class PHRINGE():
         :param generate_separate: Whether to generate separate data sets for all individual sources
         :return: The data as an array or a dictionary of arrays if enable_stats is True
         """
+        t0 = time.time_ns()
+
         config_dict = get_dict_from_path(config_file_path)
         system_dict = get_dict_from_path(exoplanetary_system_file_path)
 
@@ -98,6 +101,9 @@ class PHRINGE():
 
         self._director = Director(settings, observatory, observation, scene, input_spectra)
         self._director.run()
+
+        t1 = time.time_ns()
+        print(f'PHRINGE run time: {(t1 - t0) / 1e9} seconds')
 
     # @overload
     # def run(
