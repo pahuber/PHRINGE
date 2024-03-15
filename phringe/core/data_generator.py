@@ -103,9 +103,6 @@ class DataGenerator():
         self.simulation_wavelength_bin_widths = simulation_wavelength_bin_widths
         self.differential_output_pairs = differential_output_pairs
 
-        # self.binned_photon_counts = self._initialize_binned_photon_counts()
-        # self.differential_photon_counts = self._initialize_differential_photon_counts()
-
     def _get_binning_indices(self, time, wavelength) -> tuple:
         """Get the binning indices.
 
@@ -132,27 +129,6 @@ class DataGenerator():
         else:
             index_time = index_closest_time_edge
         return index_wavelength_bin, index_time
-
-    #
-    # def _initialize_binned_photon_counts(self):
-    #     binned_photon_counts = torch.zeros(
-    #         (self.number_of_outputs, len(self.instrument_wavelength_bin_centers), len(self.instrument_time_steps)),
-    #         dtype=torch.float32,
-    #         device='cpu'
-    #     )
-    #     return binned_photon_counts
-    #
-    # def _initialize_differential_photon_counts(self):
-    #     differential_photon_counts = torch.zeros(
-    #         (
-    #             len(self.differential_output_pairs),
-    #             len(self.instrument_wavelength_bin_centers),
-    #             len(self.instrument_time_steps)
-    #         ),
-    #         dtype=torch.float32,
-    #         device='cpu'
-    #     )
-    #     return differential_photon_counts
 
     def run(self) -> np.ndarray:
         """Run the data generator."""
