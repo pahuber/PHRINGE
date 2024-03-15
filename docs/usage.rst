@@ -141,7 +141,7 @@ manually:
         config_file_path=Path('path_to_config_file'),
         exoplanetary_system_file_path=Path('path_to_exoplanetary_system_file'),
         settings=settings,
-        spectrum_tuple=tuple_of_spectra_tuples,
+        spectrum_files=spectrum_files,
         output_dir=Path('path_to_output_directory'),
         write_fits=True,
         create_copy=True,
