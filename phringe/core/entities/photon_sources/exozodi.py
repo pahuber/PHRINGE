@@ -1,7 +1,7 @@
 from typing import Any
 
 import numpy as np
-from astropy import units as u
+import torch
 from astropy.constants.codata2018 import h, c, k_B
 from astropy.units import Quantity
 from pydantic import BaseModel
@@ -21,7 +21,7 @@ class Exozodi(BasePhotonSource, BaseModel):
     inclination: Any
     field_of_view_in_au_radial_maps: Any = None
 
-    def _calculate_mean_spectral_flux_density(
+    def _calculate_spectral_flux_density(
             self,
             wavelength_steps: np.ndarray,
             grid_size: int,
@@ -30,11 +30,11 @@ class Exozodi(BasePhotonSource, BaseModel):
         field_of_view = kwargs['field_of_view']
         star_distance = kwargs['star_distance']
         star_luminosity = kwargs['star_luminosity']
-        field_of_view_in_au = (field_of_view.to(u.rad) / u.rad * star_distance).to(u.au)
+        field_of_view_in_au = field_of_view * star_distance * 6.68459e-12
 
-        temperature_map = np.zeros((len(field_of_view_in_au), grid_size, grid_size)) * u.K
-        self.field_of_view_in_au_radial_maps = np.zeros(temperature_map.shape) * u.au
-        mean_spectral_flux_density = np.zeros(temperature_map.shape) * u.ph / (u.m ** 2 * u.um * u.s)
+        temperature_map = torch.zeros((len(field_of_view_in_au), grid_size, grid_size), dtype=torch.float32)
+        self.field_of_view_in_au_radial_maps = torch.zeros(temperature_map.shape, dtype=torch.float32)
+        mean_spectral_flux_density = torch.zeros(temperature_map.shape, dtype=torch.float32)
 
         for index_fov, fov_in_au in enumerate(tqdm(field_of_view_in_au)):
             self.field_of_view_in_au_radial_maps[index_fov] = get_radial_map(fov_in_au, grid_size)
@@ -51,9 +51,9 @@ class Exozodi(BasePhotonSource, BaseModel):
             # used per point in the grid, so a lot of unnecessary calculations would be performed.
             spectrum_at_0_0 = create_blackbody_spectrum(
                 temperature_map[index_fov][0][0],
-                wavelength_steps,
-                field_of_view[index_fov] ** 2
-            )
+                wavelength_steps
+            ) * self.solid_angle[index_fov] ** 2
+
             mean_spectral_flux_density[index_fov][0][0] = spectrum_at_0_0[index_fov]
             for index_x in range(1, grid_size):
                 for index_y in range(1, grid_size):
@@ -73,21 +73,30 @@ class Exozodi(BasePhotonSource, BaseModel):
 
     def _calculate_sky_brightness_distribution(self, grid_size: int, **kwargs) -> np.ndarray:
         star_luminosity = kwargs['star_luminosity']
-        reference_radius = np.sqrt(star_luminosity.to(u.Lsun)).value * u.au
-        surface_maps = self.level * 7.12e-8 * (self.field_of_view_in_au_radial_maps / reference_radius) ** (-0.34)
-        return surface_maps * self.mean_spectral_flux_density
+        reference_radius_in_au = torch.sqrt(torch.tensor(star_luminosity))
+        surface_maps = self.level * 7.12e-8 * (self.field_of_view_in_au_radial_maps / reference_radius_in_au) ** (-0.34)
+        return surface_maps * self.spectral_flux_density
 
     def _calculate_sky_coordinates(self, grid_size: int, **kwargs) -> Coordinates:
         field_of_view = kwargs['field_of_view']
-        sky_coordinates = np.zeros(len(field_of_view), dtype=object)
+        sky_coordinates = torch.zeros((2, len(field_of_view), grid_size, grid_size), dtype=torch.float32)
 
         # The sky coordinates have a different extent for each field of view, i.e. for each wavelength
         for index_fov in range(len(field_of_view)):
             sky_coordinates_at_fov = get_meshgrid(
-                field_of_view[index_fov].to(u.rad),
+                field_of_view[index_fov],
                 grid_size)
-            sky_coordinates[index_fov] = Coordinates(sky_coordinates_at_fov[0], sky_coordinates_at_fov[1])
+            sky_coordinates[:, index_fov] = torch.stack(
+                (sky_coordinates_at_fov[0], sky_coordinates_at_fov[1]))
         return sky_coordinates
+
+    def _calculate_solid_angle(self, **kwargs) -> float:
+        """Calculate and return the solid angle of the exozodi.
+
+        :param kwargs: Additional keyword arguments
+        :return: The solid angle
+        """
+        return kwargs['field_of_view'] ** 2
 
     def _calculate_temperature_profile(
             self,
@@ -101,8 +110,8 @@ class Exozodi(BasePhotonSource, BaseModel):
         :param star_luminosity: The luminosity of the star
         :return: The temperature distribution map
         """
-        return (278.3 * star_luminosity.to(u.Lsun) ** 0.25 * maximum_stellar_separations_radial_map ** (
-            -0.5)).value * u.K
+        return (278.3 * star_luminosity ** 0.25 * maximum_stellar_separations_radial_map ** (
+            -0.5))
 
     def _calculate_planck_law_denominator(self, temperature: Quantity, wavelength: Quantity) -> Quantity:
         """Return the denominator of the Planck law.
@@ -111,4 +120,4 @@ class Exozodi(BasePhotonSource, BaseModel):
         :param wavelength: The wavelength
         :return: The denominator of the Planck law
         """
-        return np.exp(h * c / wavelength / k_B / temperature) - 1
+        return torch.exp(torch.tensor(h * c / wavelength / k_B / temperature)) - 1

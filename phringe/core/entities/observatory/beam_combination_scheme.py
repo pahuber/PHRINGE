@@ -3,6 +3,8 @@ from enum import Enum
 from typing import Any
 
 import numpy as np
+import torch
+from torch import sqrt, tensor, exp, pi
 
 
 class BeamCombinationSchemeEnum(Enum):
@@ -54,10 +56,12 @@ class DoubleBracewell(BeamCombinationScheme):
     type: Any = BeamCombinationSchemeEnum.DOUBLE_BRACEWELL.value
 
     def get_beam_combination_transfer_matrix(self) -> np.ndarray:
-        return 1 / np.sqrt(4) * np.array([[0, 0, np.sqrt(2), np.sqrt(2)],
-                                          [np.sqrt(2), np.sqrt(2), 0, 0],
-                                          [1, -1, -np.exp(1j * np.pi / 2), np.exp(1j * np.pi / 2)],
-                                          [1, -1, np.exp(1j * np.pi / 2), -np.exp(1j * np.pi / 2)]])
+        return 1 / sqrt(tensor(4)) * torch.tensor([[tensor(0), tensor(0), sqrt(tensor(2)), sqrt(tensor(2))],
+                                                   [sqrt(tensor(2)), sqrt(tensor(2)), tensor(0), tensor(0)],
+                                                   [tensor(1), tensor(-1), -exp(tensor(1j * pi / 2)),
+                                                    exp(tensor(1j * pi / 2))],
+                                                   [tensor(1), tensor(-1), exp(tensor(1j * pi / 2)),
+                                                    -exp(tensor(1j * pi / 2))]], dtype=torch.complex64)
 
     def get_differential_output_pairs(self) -> list:
         return [(2, 3)]
@@ -71,9 +75,10 @@ class Kernel3(BeamCombinationScheme):
     type: Any = BeamCombinationSchemeEnum.KERNEL_3.value
 
     def get_beam_combination_transfer_matrix(self) -> np.ndarray:
-        return 1 / np.sqrt(3) * np.array([[1, 1, 1],
-                                          [1, np.exp(2j * np.pi / 3), np.exp(4j * np.pi / 3)],
-                                          [1, np.exp(4j * np.pi / 3), np.exp(2j * np.pi / 3)]])
+        return 1 / sqrt(tensor(3)) * tensor([[1, 1, 1],
+                                             [1, exp(tensor(2j * pi / 3)), exp(tensor(4j * pi / 3))],
+                                             [1, exp(tensor(4j * pi / 3)), exp(tensor(2j * pi / 3))]],
+                                            dtype=torch.complex64)
 
     def get_differential_output_pairs(self) -> list:
         return [(1, 2)]
@@ -87,15 +92,16 @@ class Kernel4(BeamCombinationScheme):
     type: Any = BeamCombinationSchemeEnum.KERNEL_4.value
 
     def get_beam_combination_transfer_matrix(self) -> np.ndarray:
-        exp_plus = np.exp(1j * np.pi / 2)
-        exp_minus = np.exp(-1j * np.pi / 2)
-        return 1 / 4 * np.array([[2, 2, 2, 2],
-                                 [1 + exp_plus, 1 - exp_plus, -1 + exp_plus, -1 - exp_plus],
-                                 [1 - exp_minus, -1 - exp_minus, 1 + exp_minus, -1 + exp_minus],
-                                 [1 + exp_plus, 1 - exp_plus, -1 - exp_plus, -1 + exp_plus],
-                                 [1 - exp_minus, -1 - exp_minus, -1 + exp_minus, 1 + exp_minus],
-                                 [1 + exp_plus, -1 - exp_plus, 1 - exp_plus, -1 + exp_plus],
-                                 [1 - exp_minus, -1 + exp_minus, -1 - exp_minus, 1 + exp_minus]])
+        exp_plus = exp(tensor(1j * pi / 2))
+        exp_minus = exp(tensor(-1j * pi / 2))
+        return 1 / 4 * torch.asarray([[2, 2, 2, 2],
+                                      [1 + exp_plus, 1 - exp_plus, -1 + exp_plus, -1 - exp_plus],
+                                      [1 - exp_minus, -1 - exp_minus, 1 + exp_minus, -1 + exp_minus],
+                                      [1 + exp_plus, 1 - exp_plus, -1 - exp_plus, -1 + exp_plus],
+                                      [1 - exp_minus, -1 - exp_minus, -1 + exp_minus, 1 + exp_minus],
+                                      [1 + exp_plus, -1 - exp_plus, 1 - exp_plus, -1 + exp_plus],
+                                      [1 - exp_minus, -1 + exp_minus, -1 - exp_minus, 1 + exp_minus]],
+                                     dtype=torch.complex64)
 
     def get_differential_output_pairs(self) -> list:
         return [(1, 2), (3, 4), (5, 6)]
@@ -114,18 +120,19 @@ class Kernel5(BeamCombinationScheme):
         :param number: The number in the numerator
         :return: The exponent
         """
-        return np.exp(1j * number * np.pi / 5)
+        return exp(tensor(1j * number * pi / 5))
 
     def get_beam_combination_transfer_matrix(self) -> np.ndarray:
-        return 1 / np.sqrt(5) * np.array([[1, 1, 1, 1, 1],
-                                          [1, self._get_exp_function(2), self._get_exp_function(4),
-                                           self._get_exp_function(6), self._get_exp_function(8)],
-                                          [1, self._get_exp_function(4), self._get_exp_function(8),
-                                           self._get_exp_function(2), self._get_exp_function(6)],
-                                          [1, self._get_exp_function(6), self._get_exp_function(2),
-                                           self._get_exp_function(8), self._get_exp_function(4)],
-                                          [1, self._get_exp_function(8), self._get_exp_function(6),
-                                           self._get_exp_function(4), self._get_exp_function(2)]])
+        return 1 / sqrt(tensor(5)) * torch.asarray([[1, 1, 1, 1, 1],
+                                                    [1, self._get_exp_function(2), self._get_exp_function(4),
+                                                     self._get_exp_function(6), self._get_exp_function(8)],
+                                                    [1, self._get_exp_function(4), self._get_exp_function(8),
+                                                     self._get_exp_function(2), self._get_exp_function(6)],
+                                                    [1, self._get_exp_function(6), self._get_exp_function(2),
+                                                     self._get_exp_function(8), self._get_exp_function(4)],
+                                                    [1, self._get_exp_function(8), self._get_exp_function(6),
+                                                     self._get_exp_function(4), self._get_exp_function(2)]],
+                                                   dtype=torch.complex64)
 
     def get_differential_output_pairs(self) -> list:
         return [(1, 4), (2, 3)]
