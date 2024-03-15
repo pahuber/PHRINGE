@@ -89,7 +89,7 @@ class Director():
             self._total_integration_time,
             self._simulation_time_step_length
         )
-        observatory_time_steps = torch.linspace(
+        self._observatory_time_steps = torch.linspace(
             0,
             self._total_integration_time,
             int(self._total_integration_time / self._detector_integration_time)
