@@ -38,8 +38,6 @@ from phringe.phringe import PHRINGE
 )
 @click.option('--fits/--no-fits', default=True, help="Write data to FITS file.")
 @click.option('--copy/--no-copy', default=True, help="Write copy of input files to output directory.")
-@click.option('--sep/--no-sep', default=False,
-              help="Generate separate data for the individual sources.")
 def main(
         config: Path,
         exoplanetary_system: Path,
@@ -61,6 +59,5 @@ def main(
         spectrum_files=spectrum_tuples,
         output_dir=output_dir,
         write_fits=fits,
-        create_copy=copy,
-        generate_separate=sep
+        create_copy=copy
     )

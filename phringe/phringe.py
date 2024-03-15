@@ -3,7 +3,6 @@ from pathlib import Path
 from typing import Union
 
 import numpy as np
-from astropy import units as u
 
 from phringe.core.director import Director
 from phringe.core.entities.observation import Observation
@@ -59,11 +58,7 @@ class PHRINGE():
 
         :return: The observation time steps
         """
-        return np.linspace(
-            0,
-            self._observation.total_integration_time,
-            int(self._observation.total_integration_time / self._observation.detector_integration_time)
-        ).to(u.s).value
+        return self._director._observatory_time_steps
 
     def run(
             self,
@@ -73,7 +68,6 @@ class PHRINGE():
             output_dir: Path = Path('.'),
             write_fits: bool = True,
             create_copy: bool = True,
-            generate_separate: bool = False
     ) -> Union[np.ndarray, dict[str, np.ndarray]]:
         """Generate synthetic photometry data and return the total data as an array of shape N_differential_outputs x
         N_spectral_channels x N_time_steps or the data for each source separately in a dictionary of such arrays if
@@ -85,7 +79,6 @@ class PHRINGE():
         :param output_dir: The output directory
         :param write_fits: Whether to write the data to a FITS file
         :param create_copy: Whether to copy the input files to the output directory
-        :param generate_separate: Whether to generate separate data sets for all individual sources
         :return: The data as an array or a dictionary of arrays if enable_stats is True
         """
         t0 = time.time_ns()
