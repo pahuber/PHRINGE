@@ -1,16 +1,13 @@
 from functools import cached_property
-from typing import Tuple, Union, Any
+from typing import Tuple, Any
 
-import astropy
 import numpy as np
 import torch
 from astropy import units as u
-from astropy.units import Quantity
 from pydantic import BaseModel, field_validator
 from pydantic_core.core_schema import ValidationInfo
 from torch import Tensor
 
-from phringe.core.entities.base_component import BaseComponent
 from phringe.core.entities.observatory.array_configuration import (
     ArrayConfiguration,
     ArrayConfigurationEnum,
@@ -27,12 +24,10 @@ from phringe.core.entities.observatory.beam_combination_scheme import (
     Kernel4,
     Kernel5,
 )
-from phringe.core.entities.photon_sources.star import Star
 from phringe.io.validators import validate_quantity_units
-from phringe.util.noise_generator import get_perturbation_time_series
 
 
-class Observatory(BaseComponent, BaseModel):
+class Observatory(BaseModel):
     """Class representing the observatory.
 
     :param array_configuration: The array configuration
@@ -165,52 +160,6 @@ class Observatory(BaseComponent, BaseModel):
         return np.concatenate((self.wavelength_bin_centers - self.wavelength_bin_widths / 2,
                                self.wavelength_bin_centers[-1:] + self.wavelength_bin_widths[-1:] / 2))
 
-    def _calculate_amplitude_perturbation_time_series(self, settings) -> np.ndarray:
-        """Return the amplitude perturbation time series.
-
-        :param settings: The settings object
-        :return: The amplitude perturbation time series
-        """
-        return 0.7 + (0.9 - 0.7) * torch.rand((
-            self.beam_combination_scheme.number_of_inputs,
-            len(settings.simulation_time_steps)), dtype=torch.float32) \
-            if settings.has_amplitude_perturbations else torch.ones(
-            (self.beam_combination_scheme.number_of_inputs, len(settings.simulation_time_steps)))
-
-    def _calculate_phase_perturbation_time_series(self, settings, observation) -> np.ndarray:
-        """Return the phase perturbation time series.
-
-        :param settings: The settings object
-        :param observation: The observation object
-        :return: The phase perturbation time series
-        """
-        return get_perturbation_time_series(
-            self.beam_combination_scheme.number_of_inputs,
-            observation.detector_integration_time,
-            len(settings.simulation_time_steps),
-            self.phase_perturbation_rms,
-            self.phase_falloff_exponent
-        ) \
-            if settings.has_phase_perturbations else torch.zeros(
-            (self.beam_combination_scheme.number_of_inputs, len(settings.simulation_time_steps)), dtype=torch.float32)
-
-    def _calculate_polarization_perturbation_time_series(self, settings, observation) -> np.ndarray:
-        """Return the polarization perturbation time series.
-
-        :param settings: The settings object
-        :param observation: The observation object
-        :return: The polarization perturbation time series
-        """
-        return get_perturbation_time_series(
-            self.beam_combination_scheme.number_of_inputs,
-            observation.detector_integration_time,
-            len(settings.simulation_time_steps),
-            self.polarization_perturbation_rms,
-            self.polarization_falloff_exponent
-        ) \
-            if settings.has_polarization_perturbations else torch.zeros(
-            (self.beam_combination_scheme.number_of_inputs, len(settings.simulation_time_steps)), dtype=torch.float32)
-
     def _calculate_wavelength_bins(self) -> Tuple[np.ndarray, np.ndarray]:
         """Return the wavelength bin centers and widths. The wavelength bin widths are calculated starting from the
         wavelength lower range. As a consequence, the uppermost wavelength bin might be smaller than anticipated.
@@ -236,51 +185,6 @@ class Observatory(BaseComponent, BaseModel):
                 break
         return torch.asarray(wavelength_bin_centers, dtype=torch.float32), torch.asarray(wavelength_bin_widths,
                                                                                          dtype=torch.float32)
-
-    def _get_optimal_baseline(self,
-                              optimized_differential_output: int,
-                              optimized_wavelength: astropy.units.Quantity,
-                              optimized_angular_distance: astropy.units.Quantity) -> Quantity:
-        """Return the optimal baseline for the given parameters.
-
-        :param optimized_differential_output: The optimized differential output index
-        :param optimized_wavelength: The optimized wavelength
-        :param optimized_angular_distance: The optimized angular distance
-        :return: The optimal baseline
-        """
-        # TODO: Check all factors again
-        factors = (1,)
-        match (self.array_configuration.type.value, self.beam_combination_scheme.type):
-
-            # 3 collector arrays
-            case (ArrayConfigurationEnum.EQUILATERAL_TRIANGLE_CIRCULAR_ROTATION.value,
-                  BeamCombinationSchemeEnum.KERNEL_3.value, ):
-                factors = (0.67,)
-
-            # 4 collector arrays
-            case (ArrayConfigurationEnum.EMMA_X_CIRCULAR_ROTATION.value,
-                  BeamCombinationSchemeEnum.DOUBLE_BRACEWELL.value, ):
-                factors = (0.6,)
-            case (ArrayConfigurationEnum.EMMA_X_CIRCULAR_ROTATION.value,
-                  BeamCombinationSchemeEnum.KERNEL_4.value, ):
-                factors = 0.31, 1, 0.6
-                print(
-                    "The optimal baseline for Emma-X with kernel nulling is ill-defined for second differential output.")
-            case (ArrayConfigurationEnum.EMMA_X_DOUBLE_STRETCH.value,
-                  BeamCombinationSchemeEnum.DOUBLE_BRACEWELL.value):
-                factors = (1,)
-                raise Warning("The optimal baseline for Emma-X with double stretching is not yet implemented.")
-            case (ArrayConfigurationEnum.EMMA_X_DOUBLE_STRETCH.value,
-                  BeamCombinationSchemeEnum.KERNEL_4.value):
-                factors = 1, 1, 1
-                raise Warning("The optimal baseline for Emma-X with double stretching is not yet implemented."
-                              )
-            # 5 collector arrays
-            case (ArrayConfigurationEnum.REGULAR_PENTAGON_CIRCULAR_ROTATION.value,
-                  BeamCombinationSchemeEnum.KERNEL_5.value):
-                factors = 1.04, 0.67
-
-        return factors[optimized_differential_output] * optimized_wavelength / optimized_angular_distance
 
     def _load_array_configuration(self, array_configuration_type) -> ArrayConfiguration:
         """Return the array configuration object from the dictionary.
@@ -321,77 +225,3 @@ class Observatory(BaseComponent, BaseModel):
 
             case BeamCombinationSchemeEnum.KERNEL_5.value:
                 return Kernel5()
-
-    def _set_optimal_baseline(self,
-                              star: Star,
-                              optimized_differential_output: int,
-                              optimized_wavelength: astropy.units.Quantity,
-                              optimized_star_separation: Union[str, astropy.units.Quantity],
-                              baseline_minimum: astropy.units.Quantity,
-                              baseline_maximum: astropy.units.Quantity):
-        """Set the baseline to optimize for the habitable zone, if it is between the minimum and maximum allowed
-        baselines.
-
-        :param star: The star object
-        :param optimized_differential_output: The optimized differential output index
-        :param optimized_wavelength: The optimized wavelength
-        :param optimzied_star_separation: The angular radius of the habitable zone
-        :param baseline_minimum: The minimum baseline
-        :param baseline_maximum: The maximum baseline
-        """
-        # Get the optimized separation in angular units, if it is not yet in angular units
-        if optimized_star_separation == "habitable-zone":
-            optimized_star_separation = star.habitable_zone_central_angular_radius
-        elif optimized_star_separation.unit.is_equivalent(u.m):
-            optimized_star_separation = (
-                    optimized_star_separation.to(u.m) / star.distance.to(u.m) * u.rad
-            )
-
-        # Get the optimal baseline and check if it is within the allowed range
-        optimal_baseline = self._get_optimal_baseline(
-            optimized_differential_output=optimized_differential_output,
-            optimized_wavelength=optimized_wavelength,
-            optimized_angular_distance=optimized_star_separation,
-        )
-
-        if (
-                baseline_minimum <= optimal_baseline
-                and optimal_baseline <= baseline_maximum
-        ):
-            self.array_configuration.nulling_baseline_length = optimal_baseline
-        else:
-            raise ValueError(
-                f"Optimal baseline of {optimal_baseline} is not within allowed ranges of baselines {self.array_configuration.baseline_minimum}-{self.array_configuration.baseline_maximum}"
-            )
-
-    def prepare(self, settings, observation, scene):
-        """Prepare the observatory for the simulation.
-
-        :param settings: The settings object
-        :param observation: The observation object
-        """
-        self.field_of_view = settings.simulation_wavelength_steps / self.aperture_diameter
-
-        self.amplitude_perturbation_time_series = self._calculate_amplitude_perturbation_time_series(settings)
-
-        self.phase_perturbation_time_series = self._calculate_phase_perturbation_time_series(settings, observation)
-
-        self.polarization_perturbation_time_series = self._calculate_polarization_perturbation_time_series(
-            settings,
-            observation
-        )
-
-        self._set_optimal_baseline(
-            scene.star,
-            observation.optimized_differential_output,
-            observation.optimized_wavelength,
-            observation.optimized_star_separation,
-            observation.baseline_minimum,
-            observation.baseline_maximum
-        )
-
-        self.array_configuration.collector_coordinates = self.array_configuration.get_collector_coordinates(
-            settings.simulation_time_steps,
-            observation.modulation_period,
-            observation.baseline_ratio
-        )

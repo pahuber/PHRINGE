@@ -8,7 +8,7 @@ import torch
 from astropy import units as u
 from astropy.units import Quantity
 from pydantic import BaseModel
-from torch import tensor
+from torch import tensor, Tensor
 
 from phringe.util.helpers import Coordinates
 from phringe.util.matrix import get_2d_rotation_matrix
@@ -29,17 +29,18 @@ class ArrayConfiguration(ABC, BaseModel):
     :param nulling_baseline_length: The length of the nulling baseline
     :param type: The type of the array configuration
     """
-    nulling_baseline_length: Any = None
+    # nulling_baseline_length: Any = None
     type: Any = None
     collector_coordinates: Any = None
 
     @abstractmethod
     def get_collector_coordinates(
             self,
-            time_steps: np.ndarray,
-            modulation_period: Quantity,
+            time_steps: Tensor,
+            nulling_baseline: float,
+            modulation_period: float,
             baseline_ratio: int
-    ) -> np.ndarray:
+    ) -> Tensor:
         """Return time-dependent x- and y-coordinates of the collectors.
 
         :param time_steps: The time steps for which the collector positions are calculated
@@ -55,12 +56,15 @@ class EmmaXCircularRotation(ArrayConfiguration):
     """
     type: Any = ArrayConfigurationEnum.EMMA_X_CIRCULAR_ROTATION
 
-    def get_collector_coordinates(self,
-                                  time_steps: np.ndarray,
-                                  modulation_period: Quantity,
-                                  baseline_ratio: int) -> Coordinates:
+    def get_collector_coordinates(
+            self,
+            time_steps: Tensor,
+            nulling_baseline: float,
+            modulation_period: float,
+            baseline_ratio: int
+    ) -> Tensor:
         rotation_matrix = get_2d_rotation_matrix(time_steps, modulation_period)
-        emma_x_static = self.nulling_baseline_length / 2 * torch.asarray(
+        emma_x_static = nulling_baseline / 2 * torch.asarray(
             [[baseline_ratio, baseline_ratio, -baseline_ratio, -baseline_ratio], [1, -1, -1, 1]], dtype=torch.float32)
         collector_positions = torch.einsum('ijl,jk->ikl', rotation_matrix, emma_x_static)
         return collector_positions.swapaxes(0, 2)

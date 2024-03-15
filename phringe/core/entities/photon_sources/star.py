@@ -6,6 +6,7 @@ import torch
 from astropy import units as u
 from pydantic import BaseModel, field_validator
 from pydantic_core.core_schema import ValidationInfo
+from torch import Tensor
 
 from phringe.core.entities.photon_sources.base_photon_source import BasePhotonSource
 from phringe.io.validators import validate_quantity_units
@@ -125,29 +126,21 @@ class Star(BasePhotonSource, BaseModel):
         radius_outer = np.sqrt(self.luminosity / incident_stellar_flux_outer)
         return ((radius_outer + radius_inner) / 2 * u.au).si.value
 
-    @cached_property
-    def solid_angle(self) -> float:
-        """Return the solid angle that the source object covers on the sky.
-
-        :return: The solid angle
-        """
-        return np.pi * (self.radius / self.distance) ** 2
-
-    def _calculate_mean_spectral_flux_density(
+    def _calculate_spectral_flux_density(
             self,
-            wavelength_steps: np.ndarray,
+            wavelength_steps: Tensor,
             grid_size: int,
             **kwargs
-    ) -> np.ndarray:
-        return create_blackbody_spectrum(self.temperature, wavelength_steps, self.solid_angle)
+    ) -> Tensor:
+        return create_blackbody_spectrum(self.temperature, wavelength_steps) * self.solid_angle
 
     def _calculate_sky_brightness_distribution(self, grid_size: int, **kwargs) -> np.ndarray:
         number_of_wavelength_steps = kwargs['number_of_wavelength_steps']
         sky_brightness_distribution = torch.zeros((number_of_wavelength_steps, grid_size, grid_size))
         radius_map = (torch.sqrt(self.sky_coordinates[0] ** 2 + self.sky_coordinates[1] ** 2) <= self.angular_radius)
 
-        for index_wavelength in range(len(self.mean_spectral_flux_density)):
-            sky_brightness_distribution[index_wavelength] = radius_map * self.mean_spectral_flux_density[
+        for index_wavelength in range(len(self.spectral_flux_density)):
+            sky_brightness_distribution[index_wavelength] = radius_map * self.spectral_flux_density[
                 index_wavelength]
 
         return sky_brightness_distribution
@@ -162,3 +155,10 @@ class Star(BasePhotonSource, BaseModel):
         """
         sky_coordinates = get_meshgrid(2 * (1.05 * self.angular_radius), grid_size)
         return torch.stack((sky_coordinates[0], sky_coordinates[1]))
+
+    def _calculate_solid_angle(self, **kwargs) -> float:
+        """Return the solid angle of the source object.
+
+        :return: The solid angle
+        """
+        return np.pi * (self.radius / self.distance) ** 2

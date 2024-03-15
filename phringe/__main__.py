@@ -58,7 +58,7 @@ def main(
     phringe.run(
         config_file_path=config,
         exoplanetary_system_file_path=exoplanetary_system,
-        spectrum_tuple=spectrum_tuples,
+        spectrum_files=spectrum_tuples,
         output_dir=output_dir,
         write_fits=fits,
         create_copy=copy,

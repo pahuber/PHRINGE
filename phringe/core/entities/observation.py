@@ -4,11 +4,10 @@ from astropy import units as u
 from pydantic import BaseModel, field_validator
 from pydantic_core.core_schema import ValidationInfo
 
-from phringe.core.entities.base_component import BaseComponent
 from phringe.io.validators import validate_quantity_units
 
 
-class Observation(BaseComponent, BaseModel):
+class Observation(BaseModel):
     """Class representing the observation.
 
     :param solar_ecliptic_latitude: The solar ecliptic latitude
@@ -87,8 +86,7 @@ class Observation(BaseComponent, BaseModel):
         """
         if value == 'habitable-zone':
             return value
-        return validate_quantity_units(value=value, field_name=info.field_name,
-                                       unit_equivalency=(u.m, u.arcsec)).si.value
+        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.rad,)).si.value
 
     @field_validator('optimized_wavelength')
     def _validate_optimized_wavelength(cls, value: Any, info: ValidationInfo) -> float:
@@ -119,7 +117,3 @@ class Observation(BaseComponent, BaseModel):
         :return: The total integration time in units of time
         """
         return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.s,)).si.value
-
-    def prepare(self):
-        """Prepare the observation for the simulation."""
-        pass

@@ -16,7 +16,7 @@ class LocalZodi(BasePhotonSource, BaseModel):
     """Class representation of a local zodi."""
     name: str = 'LocalZodi'
 
-    def _calculate_mean_spectral_flux_density(
+    def _calculate_spectral_flux_density(
             self,
             wavelength_steps: np.ndarray,
             grid_size: int,
@@ -26,7 +26,6 @@ class LocalZodi(BasePhotonSource, BaseModel):
 
         :param wavelength_steps: The wavelength steps
         """
-        field_of_view = kwargs['field_of_view']
         star_right_ascension = kwargs['star_right_ascension']
         star_declination = kwargs['star_declination']
         solar_ecliptic_latitude = kwargs['solar_ecliptic_latitude']
@@ -38,23 +37,22 @@ class LocalZodi(BasePhotonSource, BaseModel):
             solar_ecliptic_latitude
         )
         mean_spectral_flux_density = (
-                variable_tau
-                * (create_blackbody_spectrum(265, wavelength_steps, field_of_view ** 2)
-                   + variable_a * create_blackbody_spectrum(5778, wavelength_steps, field_of_view ** 2)
-                   * ((1 * u.Rsun).to(u.au) / (1.5 * u.au)).value ** 2)
-                * (
-                        (torch.pi / torch.arccos(
-                            torch.cos(torch.tensor(relative_ecliptic_longitude)) * torch.cos(
-                                torch.tensor(ecliptic_latitude)))) / (
-                                torch.sin(torch.tensor(ecliptic_latitude)) ** 2 + 0.6 * (
-                                wavelength_steps / (
-                            11)) ** (
-                                    -0.4) * torch.cos(torch.tensor(ecliptic_latitude)) ** 2)) ** 0.5)
+                variable_tau *
+                (
+                        create_blackbody_spectrum(265, wavelength_steps) * self.solid_angle
+                        + variable_a
+                        * create_blackbody_spectrum(5778, wavelength_steps) * self.solid_angle
+                        * ((1 * u.Rsun).to(u.au) / (1.5 * u.au)).value ** 2
+                ) *
+                ((torch.pi / torch.arccos(torch.cos(torch.tensor(relative_ecliptic_longitude)) * torch.cos(
+                    torch.tensor(ecliptic_latitude))))
+                 / (torch.sin(torch.tensor(ecliptic_latitude)) ** 2 + 0.6 * (wavelength_steps / (11)) ** (
+                            -0.4) * torch.cos(torch.tensor(ecliptic_latitude)) ** 2)) ** 0.5)
         return mean_spectral_flux_density
 
     def _calculate_sky_brightness_distribution(self, grid_size: int, **kwargs) -> np.ndarray:
         grid = torch.ones((grid_size, grid_size), dtype=torch.float32)
-        return torch.einsum('i, jk ->ijk', self.mean_spectral_flux_density, grid)
+        return torch.einsum('i, jk ->ijk', self.spectral_flux_density, grid)
 
     def _calculate_sky_coordinates(self, grid_size, **kwargs) -> Coordinates:
         number_of_wavelength_steps = kwargs['number_of_wavelength_steps']
@@ -67,6 +65,14 @@ class LocalZodi(BasePhotonSource, BaseModel):
             sky_coordinates[:, index_fov] = torch.stack(
                 (sky_coordinates_at_fov[0], sky_coordinates_at_fov[1]))
         return sky_coordinates
+
+    def _calculate_solid_angle(self, **kwargs) -> float:
+        """Calculate and return the solid angle of the local zodi.
+
+        :param kwargs: Additional keyword arguments
+        :return: The solid angle
+        """
+        return kwargs['field_of_view'] ** 2
 
     def _get_ecliptic_coordinates(self, star_right_ascension, star_declination, solar_ecliptic_latitude) -> Tuple:
         """Return the ecliptic latitude and relative ecliptic longitude that correspond to the star position in the sky.

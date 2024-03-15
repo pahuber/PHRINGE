@@ -1,8 +1,9 @@
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, Union
 
 import numpy as np
 from pydantic import BaseModel
+from torch import Tensor
 
 
 class BasePhotonSource(ABC, BaseModel):
@@ -18,13 +19,14 @@ class BasePhotonSource(ABC, BaseModel):
         If the sky coordinates are constant over time and/or wavelength, the time/wavelength axes are omitted
     """
     name: str = None
-    mean_spectral_flux_density: Any = None
+    spectral_flux_density: Any = None
     sky_brightness_distribution: Any = None
     sky_coordinates: Any = None
+    solid_angle: Any = None
 
     @abstractmethod
-    def _calculate_mean_spectral_flux_density(self, wavelength_steps: np.ndarray, grid_size: int,
-                                              **kwargs) -> np.ndarray:
+    def _calculate_spectral_flux_density(self, wavelength_steps: np.ndarray, grid_size: int,
+                                         **kwargs) -> np.ndarray:
         """Return the mean spectral flux density of the source object for each wavelength.
 
         :param wavelength_steps: The wavelength steps
@@ -55,16 +57,26 @@ class BasePhotonSource(ABC, BaseModel):
         """
         pass
 
-    def prepare(self, wavelength_steps, grid_size, **kwargs):
+    @abstractmethod
+    def _calculate_solid_angle(self, **kwargs) -> Union[float, Tensor]:
+        """Calculate and return the solid angle of the source object.
+
+        :param kwargs: Additional keyword arguments
+        :return: The solid angle
+        """
+        pass
+
+    def prepare(self, wavelength_bin_centers, grid_size, **kwargs):
         """Prepare the photon source for the simulation. This method is called before the simulation starts and can be
         used to pre-calculate values that are constant over time and/or wavelength.
 
-        :param wavelength_steps: The wavelength steps
+        :param wavelength_bin_centers: The wavelength steps
         :param grid_size: The grid size
         :param kwargs: Additional keyword arguments
         """
-        self.mean_spectral_flux_density = self._calculate_mean_spectral_flux_density(
-            wavelength_steps,
+        self.solid_angle = self._calculate_solid_angle(**kwargs)
+        self.spectral_flux_density = self._calculate_spectral_flux_density(
+            wavelength_bin_centers,
             grid_size,
             **kwargs
         )

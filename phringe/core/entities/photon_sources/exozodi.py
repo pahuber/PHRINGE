@@ -21,7 +21,7 @@ class Exozodi(BasePhotonSource, BaseModel):
     inclination: Any
     field_of_view_in_au_radial_maps: Any = None
 
-    def _calculate_mean_spectral_flux_density(
+    def _calculate_spectral_flux_density(
             self,
             wavelength_steps: np.ndarray,
             grid_size: int,
@@ -51,9 +51,9 @@ class Exozodi(BasePhotonSource, BaseModel):
             # used per point in the grid, so a lot of unnecessary calculations would be performed.
             spectrum_at_0_0 = create_blackbody_spectrum(
                 temperature_map[index_fov][0][0],
-                wavelength_steps,
-                field_of_view[index_fov] ** 2
-            )
+                wavelength_steps
+            ) * self.solid_angle[index_fov] ** 2
+
             mean_spectral_flux_density[index_fov][0][0] = spectrum_at_0_0[index_fov]
             for index_x in range(1, grid_size):
                 for index_y in range(1, grid_size):
@@ -75,7 +75,7 @@ class Exozodi(BasePhotonSource, BaseModel):
         star_luminosity = kwargs['star_luminosity']
         reference_radius_in_au = torch.sqrt(torch.tensor(star_luminosity))
         surface_maps = self.level * 7.12e-8 * (self.field_of_view_in_au_radial_maps / reference_radius_in_au) ** (-0.34)
-        return surface_maps * self.mean_spectral_flux_density
+        return surface_maps * self.spectral_flux_density
 
     def _calculate_sky_coordinates(self, grid_size: int, **kwargs) -> Coordinates:
         field_of_view = kwargs['field_of_view']
@@ -89,6 +89,14 @@ class Exozodi(BasePhotonSource, BaseModel):
             sky_coordinates[:, index_fov] = torch.stack(
                 (sky_coordinates_at_fov[0], sky_coordinates_at_fov[1]))
         return sky_coordinates
+
+    def _calculate_solid_angle(self, **kwargs) -> float:
+        """Calculate and return the solid angle of the exozodi.
+
+        :param kwargs: Additional keyword arguments
+        :return: The solid angle
+        """
+        return kwargs['field_of_view'] ** 2
 
     def _calculate_temperature_profile(
             self,

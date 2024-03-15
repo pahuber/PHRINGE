@@ -10,11 +10,11 @@ from poliastro.bodies import Body
 from poliastro.twobody import Orbit
 from pydantic import BaseModel, field_validator
 from pydantic_core.core_schema import ValidationInfo
+from torch import Tensor
 
 from phringe.core.entities.photon_sources.base_photon_source import BasePhotonSource
 from phringe.io.validators import validate_quantity_units
 from phringe.util.grid import get_index_of_closest_value, get_meshgrid, get_index_of_closest_value_numpy
-from phringe.util.spectrum import create_blackbody_spectrum
 
 
 class Planet(BasePhotonSource, BaseModel):
@@ -126,27 +126,30 @@ class Planet(BasePhotonSource, BaseModel):
         """
         return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.deg,)).si.value
 
-    def _calculate_mean_spectral_flux_density(self, wavelength_steps: np.ndarray, grid_size: int,
-                                              **kwargs) -> np.ndarray:
-        """Bin the already generated blackbody spectra / loaded input spectra of the planet to the wavelength steps of
-        the simulation.
+    def _calculate_spectral_flux_density(self, wavelength_bin_centers: Tensor, grid_size: int, **kwargs) -> Tensor:
+        """Calculate the spectral flux density of the planet in units of ph s-1 m-3. Use the previously generated
+        reference spectrum in units of ph s-1 m-3 sr-1 and the solid angle to calculate it and bin it to the
+        simulation wavelength bin centers.
 
-        :param wavelength_steps: The wavelength steps
-        :return: The binned mean spectral flux density
+        :param wavelength_bin_centers: The wavelength bin centers
+        :param grid_size: The grid size
+        :param kwargs: The keyword arguments
+        :return: The binned mean spectral flux density in units of ph s-1 m-3
         """
-        maximum_wavelength_steps = kwargs.get('maximum_wavelength_steps')
+        reference_wavelength_bin_centers = kwargs.get('reference_wavelength_bin_centers')
+        reference_spectrum = kwargs.get('reference_spectrum')
 
         t0 = time.time_ns()
-        binned_mean_spectral_flux_density = spectres.spectres(
-            wavelength_steps.numpy(),
-            maximum_wavelength_steps.numpy(),
-            self.mean_spectral_flux_density.numpy(),
+        binned_spectral_flux_density = spectres.spectres(
+            wavelength_bin_centers.numpy(),
+            reference_wavelength_bin_centers.numpy(),
+            reference_spectrum.numpy(),
             fill=0
-        )
+        ) * self.solid_angle
 
         t1 = time.time_ns()
-        print(f"Time to bin mean spectral flux density: {(t1 - t0) / 1e9} s")
-        return torch.asarray(binned_mean_spectral_flux_density, dtype=torch.float32)
+        print(f"Time to bin spectral flux density: {(t1 - t0) / 1e9} s")
+        return torch.asarray(binned_spectral_flux_density, dtype=torch.float32)
 
     def _calculate_sky_brightness_distribution(self, grid_size: int, **kwargs) -> np.ndarray:
         """Calculate and return the sky brightness distribution.
@@ -171,7 +174,7 @@ class Planet(BasePhotonSource, BaseModel):
                     sky_coordinates[1, 0, :],
                     self.angular_separation_from_star_y[index_time]
                 )
-                sky_brightness_distribution[index_time, :, index_x, index_y] = self.mean_spectral_flux_density
+                sky_brightness_distribution[index_time, :, index_x, index_y] = self.spectral_flux_density
         else:
             sky_brightness_distribution = torch.zeros(
                 (number_of_wavelength_steps, grid_size, grid_size))
@@ -180,7 +183,7 @@ class Planet(BasePhotonSource, BaseModel):
                                                  self.angular_separation_from_star_x[0])
             index_y = get_index_of_closest_value(torch.asarray(self.sky_coordinates[1, 0, :]),
                                                  self.angular_separation_from_star_y[0])
-            sky_brightness_distribution[:, index_x, index_y] = self.mean_spectral_flux_density
+            sky_brightness_distribution[:, index_x, index_y] = self.spectral_flux_density
         return sky_brightness_distribution
 
     def _calculate_sky_coordinates(self, grid_size, **kwargs) -> np.ndarray:
@@ -216,6 +219,15 @@ class Planet(BasePhotonSource, BaseModel):
         else:
             return self._get_coordinates(grid_size, time_steps[0], 0, has_planet_orbital_motion, star_distance,
                                          star_mass)
+
+    def _calculate_solid_angle(self, **kwargs) -> float:
+        """Calculate and return the solid angle of the planet.
+
+        :param kwargs: The keyword arguments
+        :return: The solid angle
+        """
+        star_distance = kwargs.get('star_distance')
+        return torch.pi * (self.radius / star_distance) ** 2
 
     def _get_coordinates(
             self,
@@ -359,14 +371,14 @@ class Planet(BasePhotonSource, BaseModel):
         angular_separation_from_star_y = separation_from_star_y / star_distance
         return (angular_separation_from_star_x, angular_separation_from_star_y)
 
-    def calculate_blackbody_spectrum(
-            self,
-            wavelength_steps: np.ndarray,
-            **kwargs
-    ) -> np.ndarray:
-        star_distance = kwargs.get('star_distance')
-        solid_angle = torch.pi * (self.radius / star_distance) ** 2
-
-        a = create_blackbody_spectrum(self.temperature, wavelength_steps, solid_angle)
-
-        return a
+    # def calculate_blackbody_spectrum(
+    #         self,
+    #         wavelength_steps: np.ndarray,
+    #         **kwargs
+    # ) -> np.ndarray:
+    #     star_distance = kwargs.get('star_distance')
+    #     solid_angle = torch.pi * (self.radius / star_distance) ** 2
+    #
+    #     a = create_blackbody_spectrum(self.temperature, wavelength_steps, solid_angle)
+    #
+    #     return a
