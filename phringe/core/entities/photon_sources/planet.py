@@ -144,7 +144,8 @@ class Planet(BasePhotonSource, BaseModel):
             wavelength_bin_centers.numpy(),
             reference_wavelength_bin_centers.numpy(),
             reference_spectrum.numpy(),
-            fill=0
+            fill=0,
+            verbose=False
         ) * self.solid_angle
 
         t1 = time.time_ns()

@@ -157,8 +157,8 @@ class Observatory(BaseModel):
 
         :return: An array containing the wavelength bin edges
         """
-        return np.concatenate((self.wavelength_bin_centers - self.wavelength_bin_widths / 2,
-                               self.wavelength_bin_centers[-1:] + self.wavelength_bin_widths[-1:] / 2))
+        return torch.concatenate((self.wavelength_bin_centers - self.wavelength_bin_widths / 2,
+                                  self.wavelength_bin_centers[-1:] + self.wavelength_bin_widths[-1:] / 2))
 
     def _calculate_wavelength_bins(self) -> Tuple[np.ndarray, np.ndarray]:
         """Return the wavelength bin centers and widths. The wavelength bin widths are calculated starting from the

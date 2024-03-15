@@ -11,7 +11,7 @@ def get_2d_rotation_matrix(time: Quantity, rotation_period: Quantity) -> np.ndar
     :param rotation_period: Rotation period for a full rotation in seconds
     :return: An array containing the matrix
     """
-    argument = torch.tensor(2 * pi / rotation_period * time, dtype=torch.float32).unsqueeze(0).squeeze()
+    argument = torch.asarray(2 * pi / rotation_period * time, dtype=torch.float32).unsqueeze(0).squeeze()
     return torch.stack([
         cos(argument), -sin(argument),
         sin(argument), cos(argument)

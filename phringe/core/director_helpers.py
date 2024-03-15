@@ -6,8 +6,11 @@ from torch import Tensor
 
 from phringe.core.entities.observatory.array_configuration import ArrayConfigurationEnum
 from phringe.core.entities.observatory.beam_combination_scheme import BeamCombinationSchemeEnum
+from phringe.core.entities.photon_sources.base_photon_source import BasePhotonSource
+from phringe.core.entities.photon_sources.exozodi import Exozodi
+from phringe.core.entities.photon_sources.local_zodi import LocalZodi
 from phringe.core.entities.photon_sources.planet import Planet
-from phringe.core.entities.scene import Scene
+from phringe.core.entities.photon_sources.star import Star
 from phringe.util.helpers import InputSpectrum
 from phringe.util.noise_generator import get_perturbation_time_series
 from phringe.util.spectrum import create_blackbody_spectrum
@@ -318,7 +321,8 @@ def generate_reference_spectra(
                 wavelength_range.numpy(),
                 input_spectrum.wavelengths.numpy(),
                 input_spectrum.spectral_flux_density.numpy(),
-                fill=0)
+                fill=0,
+                verbose=False)
             reference_spectra.append(torch.asarray(reference_spectrum, dtype=torch.float32))
         else:
             reference_spectra.append(
@@ -332,8 +336,8 @@ def generate_reference_spectra(
     return reference_spectra
 
 
-def prepare_sources(
-        scene: Scene,
+def prepare_modeled_sources(
+        sources: list[BasePhotonSource],
         simulation_time_steps: Tensor,
         simulation_wavelength_bin_centers: Tensor,
         wavelength_range_lower_limit: float,
@@ -347,45 +351,56 @@ def prepare_sources(
         has_stellar_leakage: bool,
         has_local_zodi_leakage: bool,
         has_exozodi_leakage: bool
-) -> Scene:
+) -> list[BasePhotonSource]:
     wavelength_range = torch.linspace(
         wavelength_range_lower_limit,
         wavelength_range_upper_limit,
         maximum_simulation_wavelength_sampling
     )
-    for index_planet, planet in enumerate(scene.planets):
+    star = [star for star in sources if isinstance(star, Star)][0]
+    planets = [planet for planet in sources if isinstance(planet, Planet)]
+    local_zodi = [local_zodi for local_zodi in sources if isinstance(local_zodi, LocalZodi)][0]
+    exozodi = [exozodi for exozodi in sources if isinstance(exozodi, Exozodi)][0]
+    prepared_sources = []
+
+    for index_planet, planet in enumerate(planets):
         planet.prepare(
             simulation_wavelength_bin_centers,
             grid_size,
-            star_distance=scene.star.distance,
+            star_distance=star.distance,
             reference_spectrum=reference_spectra[index_planet],
             reference_wavelength_bin_centers=wavelength_range,
             time_steps=simulation_time_steps,
             has_planet_orbital_motion=has_planet_orbital_motion,
-            star_mass=scene.star.mass,
-            number_of_wavelength_steps=len(simulation_wavelength_bin_centers),
+            star_mass=star.mass,
+            number_of_wavelength_steps=len(simulation_wavelength_bin_centers)
         )
+        prepared_sources.append(planet)
     if has_stellar_leakage:
-        scene.star.prepare(
+        star.prepare(
             simulation_wavelength_bin_centers,
             grid_size,
             number_of_wavelength_steps=len(simulation_wavelength_bin_centers)
         )
+        prepared_sources.append(star)
     if has_local_zodi_leakage:
-        scene.local_zodi.prepare(
+        local_zodi.prepare(
             simulation_wavelength_bin_centers,
             grid_size,
             field_of_view=field_of_view,
-            star_right_ascension=scene.star.right_ascension,
-            star_declination=scene.star.declination,
+            star_right_ascension=star.right_ascension,
+            star_declination=star.declination,
             solar_ecliptic_latitude=solar_ecliptic_latitude,
             number_of_wavelength_steps=len(simulation_wavelength_bin_centers)
         )
+        prepared_sources.append(local_zodi)
     if has_exozodi_leakage:
-        scene.exozodi.prepare(simulation_wavelength_bin_centers,
-                              grid_size,
-                              field_of_view=field_of_view,
-                              star_distance=scene.star.distance,
-                              star_luminosity=scene.star.luminosity)
+        exozodi.prepare(
+            simulation_wavelength_bin_centers,
+            grid_size,
+            field_of_view=field_of_view,
+            star_distance=star.distance,
+            star_luminosity=star.luminosity)
+        prepared_sources.append(exozodi)
 
-    return scene
+    return prepared_sources

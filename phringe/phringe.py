@@ -44,7 +44,7 @@ class PHRINGE():
 
         :return: The generated data
         """
-        return self._data
+        return self._director._data
 
     def get_wavelength_bin_centers(self) -> np.ndarray:
         """Return the wavelength bin centers.
@@ -96,8 +96,8 @@ class PHRINGE():
         scene = Scene(**system_dict)
         input_spectra = PHRINGE._get_spectra_from_paths(spectrum_files) if spectrum_files else None
 
-        self.director = Director(settings, observatory, observation, scene, input_spectra)
-        self.director.run()
+        self._director = Director(settings, observatory, observation, scene, input_spectra)
+        self._director.run()
 
     # @overload
     # def run(
