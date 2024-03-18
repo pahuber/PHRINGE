@@ -88,6 +88,7 @@ class DataGenerator():
         self.grid_size = grid_size
         self.has_planet_orbital_motion = has_planet_orbital_motion
         self.modulation_period = modulation_period
+        self.number_of_differential_outputs = len(differential_output_pairs)
         self.number_of_inputs = number_of_inputs
         self.number_of_outputs = number_of_outputs
         self.observatory_coordinates = observatory_coordinates
@@ -186,7 +187,11 @@ class DataGenerator():
 
         # Calculate differential photon counts
         self.differential_photon_counts = torch.zeros(
-            binned_photon_counts.shape,
+            (
+                self.number_of_differential_outputs,
+                len(self.instrument_wavelength_bin_centers),
+                time_binned_photon_counts.shape[2]
+            ),
             dtype=torch.float32,
             device=self.device
         )

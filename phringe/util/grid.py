@@ -56,13 +56,3 @@ def get_number_of_instances_in_list(list: list, instance_type: Any) -> int:
     :return: The number of objects
     """
     return len([value for value in list if isinstance(value, instance_type)])
-
-
-def get_indices_of_maximum_of_2d_array(array: np.ndarray) -> Tuple[int, int]:
-    """Return the indices of the maximum of a 2D array.
-
-    :param array: The array
-    :return: The indices of the maximum
-    """
-    index = np.where(array == np.max(array))
-    return index[0][0], index[1][0]
