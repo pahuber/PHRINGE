@@ -45,6 +45,7 @@ class Planet(BasePhotonSource, BaseModel):
     true_anomaly: str
     angular_separation_from_star_x: Any = None
     angular_separation_from_star_y: Any = None
+    grid_position: Tuple = None
 
     @field_validator('argument_of_periapsis')
     def _validate_argument_of_periapsis(cls, value: Any, info: ValidationInfo) -> float:
@@ -176,6 +177,10 @@ class Planet(BasePhotonSource, BaseModel):
                     self.angular_separation_from_star_y[index_time]
                 )
                 sky_brightness_distribution[index_time, :, index_x, index_y] = self.spectral_flux_density
+        elif self.grid_position:
+            sky_brightness_distribution = torch.zeros(
+                (number_of_wavelength_steps, grid_size, grid_size))
+            sky_brightness_distribution[:, self.grid_position[1], self.grid_position[0]] = self.spectral_flux_density
         else:
             sky_brightness_distribution = torch.zeros(
                 (number_of_wavelength_steps, grid_size, grid_size))
@@ -371,15 +376,3 @@ class Planet(BasePhotonSource, BaseModel):
         angular_separation_from_star_x = separation_from_star_x / star_distance
         angular_separation_from_star_y = separation_from_star_y / star_distance
         return (angular_separation_from_star_x, angular_separation_from_star_y)
-
-    # def calculate_blackbody_spectrum(
-    #         self,
-    #         wavelength_steps: np.ndarray,
-    #         **kwargs
-    # ) -> np.ndarray:
-    #     star_distance = kwargs.get('star_distance')
-    #     solid_angle = torch.pi * (self.radius / star_distance) ** 2
-    #
-    #     a = create_blackbody_spectrum(self.temperature, wavelength_steps, solid_angle)
-    #
-    #     return a
