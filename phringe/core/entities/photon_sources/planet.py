@@ -1,4 +1,3 @@
-import time
 from typing import Any, Tuple
 
 import numpy as np
@@ -140,7 +139,6 @@ class Planet(BasePhotonSource, BaseModel):
         reference_wavelength_bin_centers = kwargs.get('reference_wavelength_bin_centers')
         reference_spectrum = kwargs.get('reference_spectrum')
 
-        t0 = time.time_ns()
         binned_spectral_flux_density = spectres.spectres(
             wavelength_bin_centers.numpy(),
             reference_wavelength_bin_centers.numpy(),
@@ -149,8 +147,6 @@ class Planet(BasePhotonSource, BaseModel):
             verbose=False
         ) * self.solid_angle
 
-        t1 = time.time_ns()
-        print(f"Time to bin spectral flux density: {(t1 - t0) / 1e9} s")
         return torch.asarray(binned_spectral_flux_density, dtype=torch.float32)
 
     def _calculate_sky_brightness_distribution(self, grid_size: int, **kwargs) -> np.ndarray:
@@ -325,14 +321,11 @@ class Planet(BasePhotonSource, BaseModel):
         :param star_mass: The mass of the star
         :return: A tuple containing the x- and y- coordinates
         """
-        # t0 = time.time_ns()
         star = Body(parent=None, k=G * (star_mass + self.mass) * u.kg, name='Star')
         orbit = Orbit.from_classical(star, a=self.semi_major_axis * u.m, ecc=u.Quantity(self.eccentricity),
                                      inc=self.inclination * u.rad,
                                      raan=self.raan * u.rad,
                                      argp=self.argument_of_periapsis * u.rad, nu=self.true_anomaly * u.rad)
-        # t1 = time.time_ns()
-        # print(f"Time to set up orbit: {(t1 - t0) / 1e9} s")
         if has_planet_orbital_motion:
             orbit_propagated = orbit.propagate(time_step * u.s)
             x, y = (orbit_propagated.r[0].to(u.m).value, orbit_propagated.r[1].to(u.m).value)
@@ -346,14 +339,7 @@ class Planet(BasePhotonSource, BaseModel):
             M = self.true_anomaly  # Mean anomaly in degrees
 
             x, y = self.orbital_elements_to_sky_position(a, e, i, Omega, omega, M)
-            # t1 = time.time_ns()
-            # print(f"Time to create orbit 2: {(t1 - t0) / 1e9} s")
-            #
-            # print(x)
-            # print(x1, y1)
         return x, y
-        # print(x)
-        # return x
 
     def _get_x_y_angular_separation_from_star(
             self,
