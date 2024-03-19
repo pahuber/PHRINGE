@@ -1,5 +1,4 @@
 import shutil
-import time
 from datetime import datetime
 from pathlib import Path
 from typing import overload
@@ -70,6 +69,7 @@ class PHRINGE():
             config_file_path: Path,
             exoplanetary_system_file_path: Path,
             spectrum_files: tuple[tuple[str, Path]] = None,
+            gpus: tuple[int] = None,
             output_dir: Path = Path('.'),
             write_fits: bool = True,
             create_copy: bool = True
@@ -84,6 +84,7 @@ class PHRINGE():
             observation: Observation,
             scene: Scene,
             spectrum_files: tuple[tuple[str, Path]] = None,
+            gpus: tuple[int] = None,
             output_dir: Path = Path('.'),
             write_fits: bool = True,
             create_copy: bool = True
@@ -99,6 +100,7 @@ class PHRINGE():
             observation: Observation = None,
             scene: Scene = None,
             spectrum_files: tuple[tuple[str, Path]] = None,
+            gpus: tuple[int] = None,
             output_dir: Path = Path('.'),
             write_fits: bool = True,
             create_copy: bool = True,
@@ -110,13 +112,12 @@ class PHRINGE():
         :param config_file_path: The path to the configuration file
         :param exoplanetary_system_file_path: The path to the exoplanetary system file
         :param spectrum_files: List of tuples containing the planet name and the path to the corresponding spectrum text file
+        :param gpus: Indices of the GPUs to use
         :param output_dir: The output directory
         :param write_fits: Whether to write the data to a FITS file
         :param create_copy: Whether to copy the input files to the output directory
         :return: The data as an array or a dictionary of arrays if enable_stats is True
         """
-        t0 = time.time_ns()
-
         config_dict = get_dict_from_path(config_file_path) if config_file_path else None
         system_dict = get_dict_from_path(exoplanetary_system_file_path) if exoplanetary_system_file_path else None
 
@@ -126,7 +127,7 @@ class PHRINGE():
         scene = Scene(**system_dict) if not scene else scene
         input_spectra = PHRINGE._get_spectra_from_paths(spectrum_files) if spectrum_files else None
 
-        self._director = Director(settings, observatory, observation, scene, input_spectra)
+        self._director = Director(settings, observatory, observation, scene, input_spectra, gpus)
         self._director.run()
 
         if write_fits or create_copy:
@@ -148,6 +149,3 @@ class PHRINGE():
                 )
             else:
                 YAMLHandler().write(exoplanetary_system_file_path, output_dir.joinpath('system.yaml'))
-
-        t1 = time.time_ns()
-        print(f'PHRINGE run time: {(t1 - t0) / 1e9} seconds')

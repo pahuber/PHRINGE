@@ -28,6 +28,15 @@ from phringe.phringe import PHRINGE
     required=False
 )
 @click.option(
+    '-g',
+    '--gpus',
+    'gpus',
+    type=int,
+    help="Indices of the GPUs to use.",
+    multiple=True,
+    required=False
+)
+@click.option(
     '-o',
     '--output-dir',
     'output_dir',
@@ -41,11 +50,11 @@ from phringe.phringe import PHRINGE
 def main(
         config: Path,
         exoplanetary_system: Path,
-        spectrum_tuples=None,
-        output_dir=Path('.'),
-        fits=True,
-        copy=True,
-        sep=False
+        spectrum_tuples: tuple = None,
+        gpus: tuple = None,
+        output_dir: Path = Path('.'),
+        fits: bool = True,
+        copy: bool = True
 ):
     """PHRINGE. synthetic PHotometRy data generator for nullING intErferometers.
 

@@ -52,6 +52,9 @@ Options
    * - ``-s``, ``--spectrum``
      - <TEXT PATH>
      - Tuple of the planet name as specified in the exoplanetary system file and the path to the corresponding spectrum file; option can be used multiple times for multiplanetary systems
+   * - ``-g``, ``--gpus``
+     - INTEGER
+     - Indices if the GPUs to use; option can be used multiple times for usage of multiple GPUs
    * - ``-o``, ``--output-dir``
      - PATH
      - Path to the output directory
@@ -100,6 +103,7 @@ PHRINGE can also be used from within another Python module in the following way:
         config_file_path=Path('path_to_config_file'),
         exoplanetary_system_file_path=Path('path_to_exoplanetary_system_file'),
         spectrum_files=spectrum_files,
+        gpus=None,
         output_dir=Path('path_to_output_directory'),
         write_fits=True,
         create_copy=True
@@ -113,9 +117,9 @@ PHRINGE can also be used from within another Python module in the following way:
 
 Using Manually Created Objects
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Alternatively, instead of using input files to define the `Settings`, `Observatory`, `Observation` and `Scene` objects,
-these objects can also be manually created and then passed to `PHRINGE.run(...)`. For example, defining the `Settings`
-manually:
+Alternatively, instead of using input files to define the ``Settings``, ``Observatory``, ``Observation`` and ``Scene``
+objects, these objects can also be manually created and then passed to ``PHRINGE.run(...)``. For example, defining the
+``Settings`` manually:
 
 .. code-block:: python
 
@@ -142,11 +146,11 @@ manually:
         exoplanetary_system_file_path=Path('path_to_exoplanetary_system_file'),
         settings=settings,
         spectrum_files=spectrum_files,
+        gpus=None,
         output_dir=Path('path_to_output_directory'),
         write_fits=True,
-        create_copy=True,
-        generate_separate=False
+        create_copy=True
     )
 
 .. note::
-    Note that the `settings` object will overwrite the settings defined in the configuration file, if the settings are configured there.
+    Note that the ``Settings`` object will overwrite the settings defined in the configuration file, if the settings are configured there.
