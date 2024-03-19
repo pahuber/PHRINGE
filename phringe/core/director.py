@@ -31,7 +31,8 @@ class Director():
             observatory: Observatory,
             observation: Observation,
             scene: Scene,
-            input_spectra: list[InputSpectrum]
+            input_spectra: list[InputSpectrum],
+            gpus: tuple[int] = None
     ):
         """Constructor method.
 
@@ -40,9 +41,8 @@ class Director():
         :param observation: The observation
         :param scene: The scene
         :param input_spectra: The input spectra
+        :param gpus: The GPUs
         """
-        self._device = torch.device('cuda:4' if torch.cuda.is_available() else 'cpu')
-
         self._aperture_diameter = observatory.aperture_diameter
         self._array_configuration = observatory.array_configuration
         self._baseline_maximum = observation.baseline_maximum
@@ -51,6 +51,7 @@ class Director():
         self._beam_combination_scheme = observatory.beam_combination_scheme
         self._beam_combination_transfer_matrix = self._beam_combination_scheme.get_beam_combination_transfer_matrix()
         self._detector_integration_time = observation.detector_integration_time
+        self._devices = self._get_devices(gpus)
         self._differential_output_pairs = self._beam_combination_scheme.get_differential_output_pairs()
         self._grid_size = settings.grid_size
         self._has_amplitude_perturbations = settings.has_amplitude_perturbations
@@ -83,9 +84,25 @@ class Director():
         self._total_integration_time = observation.total_integration_time
         self._unperturbed_instrument_throughput = observatory.unperturbed_instrument_throughput
 
+    def _get_devices(self, gpus: tuple[int]) -> list[str]:
+        """Get the devices.
+
+        :param gpus: The GPUs
+        :return: The devices
+        """
+        devices = []
+        if gpus and torch.cuda.is_available() and torch.cuda.device_count():
+            if torch.max(torch.asarray(gpus)) > torch.cuda.device_count():
+                raise ValueError(f'GPU number {torch.max(torch.asarray(gpus))} is not available on this machine.')
+            for gpu in gpus:
+                devices.append(torch.device(f'cuda:{gpu}'))
+        else:
+            devices.append(torch.device('cpu'))
+        return devices
+
     def run(self):
         # Calculate simulation and instrument time steps
-        simulation_time_steps = calculate_simulation_time_steps(
+        self.simulation_time_steps = calculate_simulation_time_steps(
             self._total_integration_time,
             self._simulation_time_step_length
         )
@@ -96,7 +113,7 @@ class Director():
         )
 
         # Calculate the simulation wavelength bins
-        simulation_wavelength_bin_centers, simulation_wavelength_bin_widths, reference_spectra = (
+        self.simulation_wavelength_bin_centers, self.simulation_wavelength_bin_widths, self.reference_spectra = (
             calculate_simulation_wavelength_bins(
                 self._observatory_wavelength_range_lower_limit,
                 self._observatory_wavelength_range_upper_limit,
@@ -108,10 +125,10 @@ class Director():
         )
 
         # Calculate field of view
-        field_of_view = simulation_wavelength_bin_centers / self._aperture_diameter
+        self.field_of_view = self.simulation_wavelength_bin_centers / self._aperture_diameter
 
         # Calculate the nulling baseline
-        nulling_baseline = calculate_nulling_baseline(
+        self.nulling_baseline = calculate_nulling_baseline(
             self._star.habitable_zone_central_angular_radius,
             self._star.distance,
             self._optimized_star_separation,
@@ -124,32 +141,32 @@ class Director():
         )
 
         # Calculate the instrument perturbations
-        amplitude_perturbations = calculate_amplitude_perturbations(
+        self.amplitude_perturbations = calculate_amplitude_perturbations(
             self._number_of_inputs,
-            simulation_time_steps,
+            self.simulation_time_steps,
             self._has_amplitude_perturbations
         )
-        phase_perturbations = calculate_phase_perturbations(
+        self.phase_perturbations = calculate_phase_perturbations(
             self._number_of_inputs,
             self._detector_integration_time,
-            simulation_time_steps,
+            self.simulation_time_steps,
             self._phase_perturbation_rms,
             self._phase_falloff_exponent,
             self._has_phase_perturbations
         )
-        polarization_perturbations = calculate_polarization_perturbations(
+        self.polarization_perturbations = calculate_polarization_perturbations(
             self._number_of_inputs,
             self._detector_integration_time,
-            simulation_time_steps,
+            self.simulation_time_steps,
             self._polarization_perturbation_rms,
             self._polarization_falloff_exponent,
             self._has_polarization_perturbations
         )
 
         # Calculate the observatory coordinates
-        observatory_coordinates = self._array_configuration.get_collector_coordinates(
-            simulation_time_steps,
-            nulling_baseline,
+        self.observatory_coordinates = self._array_configuration.get_collector_coordinates(
+            self.simulation_time_steps,
+            self.nulling_baseline,
             self._modulation_period,
             self._baseline_ratio
         )
@@ -157,14 +174,14 @@ class Director():
         # Calculate the spectral flux densities, coordinates and brightness distributions of all sources in the scene
         self._sources = prepare_modeled_sources(
             self._sources,
-            simulation_time_steps,
-            simulation_wavelength_bin_centers,
+            self.simulation_time_steps,
+            self.simulation_wavelength_bin_centers,
             self._observatory_wavelength_range_lower_limit,
             self._observatory_wavelength_range_upper_limit,
             self._maximum_simulation_wavelength_sampling,
-            reference_spectra,
+            self.reference_spectra,
             self._grid_size,
-            field_of_view,
+            self.field_of_view,
             self._solar_ecliptic_latitude,
             self._has_planet_orbital_motion,
             self._has_stellar_leakage,
@@ -172,29 +189,40 @@ class Director():
             self._has_exozodi_leakage
         )
 
+        # TODO: Estimate data size and start for loop, if memory is not sufficient
+        # def _get_memory_size(a: Tensor) -> int:
+        #     return a.element_size() * a.nelement()
+        #
+        # all_tensors = [element for element in vars(self).values() if isinstance(element, Tensor)]
+        # memory_size = sum(_get_memory_size(a) for a in all_tensors)
+        #
+        # for index_source, source in enumerate(self._sources):
+        #     memory_size += _get_memory_size(source.spectral_flux_density)
+        #     memory_size += _get_memory_size(source.sky_coordinates)
+        #     memory_size += _get_memory_size(source.sky_brightness_distribution)
+        self._device = self._devices[0]
+
         # Move all tensors to the device (i.e. GPU, if available)
         self._aperture_diameter = self._aperture_diameter.to(self._device)
         self._beam_combination_transfer_matrix = self._beam_combination_transfer_matrix.to(self._device)
-        observatory_time_steps = self._observatory_time_steps.to(self._device)
+        self.observatory_time_steps = self._observatory_time_steps.to(self._device)
         self._observatory_wavelength_bin_centers = self._observatory_wavelength_bin_centers.to(self._device)
         self._observatory_wavelength_bin_widths = self._observatory_wavelength_bin_widths.to(self._device)
         self._observatory_wavelength_bin_edges = self._observatory_wavelength_bin_edges.to(self._device)
-        observatory_coordinates = observatory_coordinates.to(self._device)
-        amplitude_perturbations = amplitude_perturbations.to(self._device)
-        phase_perturbations = phase_perturbations.to(self._device)
-        polarization_perturbations = polarization_perturbations.to(self._device)
+        self.observatory_coordinates = self.observatory_coordinates.to(self._device)
+        self.amplitude_perturbations = self.amplitude_perturbations.to(self._device)
+        self.phase_perturbations = self.phase_perturbations.to(self._device)
+        self.polarization_perturbations = self.polarization_perturbations.to(self._device)
         self._simulation_time_step_length = self._simulation_time_step_length.to(self._device)
-        simulation_time_steps = simulation_time_steps.to(self._device)
-        simulation_wavelength_bin_centers = simulation_wavelength_bin_centers.to(self._device)
-        simulation_wavelength_bin_widths = simulation_wavelength_bin_widths.to(self._device)
+        self.simulation_time_steps = self.simulation_time_steps.to(self._device)
+        self.simulation_wavelength_bin_centers = self.simulation_wavelength_bin_centers.to(self._device)
+        self.simulation_wavelength_bin_widths = self.simulation_wavelength_bin_widths.to(self._device)
         for index_source, source in enumerate(self._sources):
             self._sources[index_source].spectral_flux_density = source.spectral_flux_density.to(self._device)
             self._sources[index_source].sky_coordinates = source.sky_coordinates.to(self._device)
             self._sources[index_source].sky_brightness_distribution = source.sky_brightness_distribution.to(
                 self._device)
         self._unperturbed_instrument_throughput = self._unperturbed_instrument_throughput.to(self._device)
-
-        # TODO: Estimate data size and start for loop, if memory is not sufficient
 
         # Generate the data
         data_generator = DataGenerator(
@@ -204,21 +232,21 @@ class Director():
             self._device,
             self._grid_size,
             self._has_planet_orbital_motion,
-            observatory_time_steps,
+            self.observatory_time_steps,
             self._observatory_wavelength_bin_centers,
             self._observatory_wavelength_bin_widths,
             self._observatory_wavelength_bin_edges,
             self._modulation_period,
             self._number_of_inputs,
             self._number_of_outputs,
-            observatory_coordinates,
-            amplitude_perturbations,
-            phase_perturbations,
-            polarization_perturbations,
+            self.observatory_coordinates,
+            self.amplitude_perturbations,
+            self.phase_perturbations,
+            self.polarization_perturbations,
             self._simulation_time_step_length,
-            simulation_time_steps,
-            simulation_wavelength_bin_centers,
-            simulation_wavelength_bin_widths,
+            self.simulation_time_steps,
+            self.simulation_wavelength_bin_centers,
+            self.simulation_wavelength_bin_widths,
             self._sources,
             self._unperturbed_instrument_throughput
         )
