@@ -1,3 +1,5 @@
+import gc
+
 import torch
 from torch import Tensor
 
@@ -85,28 +87,29 @@ def _calculate_complex_amplitude(
     return complex_amplitude_x, complex_amplitude_y
 
 
-def _calculate_intensity_response(
-        complex_amplitude_x: Tensor,
-        complex_amplitude_y: Tensor,
-        beam_combination_matrix: Tensor
-) -> Tensor:
-    """Calculate the intensity response.
-
-    :param complex_amplitude_x: The complex amplitude x
-    :param complex_amplitude_y: The complex amplitude y
-    :param beam_combination_matrix: The beam combination matrix
-    :return: The intensity response
-    """
-    # i_x = torch.abs(torch.einsum('nj, ijklm->inklm', beam_combination_matrix, complex_amplitude_x)) ** 2
-    # i_y = torch.abs(torch.einsum('nj, ijklm->inklm', beam_combination_matrix, complex_amplitude_y)) ** 2
-
-    dot_product_x = beam_combination_matrix[None, ..., None, None, None] * complex_amplitude_x.unsqueeze(1)
-    result_x = torch.abs(torch.sum(dot_product_x, dim=2)) ** 2
-
-    dot_product_y = beam_combination_matrix[None, ..., None, None, None] * complex_amplitude_y.unsqueeze(1)
-    result_y = torch.abs(torch.sum(dot_product_y, dim=2)) ** 2
-
-    return result_x + result_y
+#
+# def _calculate_intensity_response(
+#         complex_amplitude_x: Tensor,
+#         complex_amplitude_y: Tensor,
+#         beam_combination_matrix: Tensor
+# ) -> Tensor:
+#     """Calculate the intensity response.
+#
+#     :param complex_amplitude_x: The complex amplitude x
+#     :param complex_amplitude_y: The complex amplitude y
+#     :param beam_combination_matrix: The beam combination matrix
+#     :return: The intensity response
+#     """
+#     # i_x = torch.abs(torch.einsum('nj, ijklm->inklm', beam_combination_matrix, complex_amplitude_x)) ** 2
+#     # i_y = torch.abs(torch.einsum('nj, ijklm->inklm', beam_combination_matrix, complex_amplitude_y)) ** 2
+#
+#     dot_product_x = beam_combination_matrix[None, ..., None, None, None] * complex_amplitude_x.unsqueeze(1)
+#     result_x = torch.abs(torch.sum(dot_product_x, dim=2)) ** 2
+#
+#     dot_product_y = beam_combination_matrix[None, ..., None, None, None] * complex_amplitude_y.unsqueeze(1)
+#     result_y = torch.abs(torch.sum(dot_product_y, dim=2)) ** 2
+#
+#     return result_x + result_y
 
 
 def _calculate_normalization(
@@ -254,11 +257,17 @@ def calculate_photon_counts(
         polarization_perturbation_time_series
     )
 
+    del base_complex_amplitude
+    del observatory_coordinates_x
+    del observatory_coordinates_y
+    gc.collect()
+
     intensity_response = _calculate_intensity_response(
         complex_amplitude_x,
         complex_amplitude_y,
         beam_combination_matrix
     )
+    print('here')
 
     photon_counts = _calculate_photon_counts_from_intensity_response(
         device,

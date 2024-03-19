@@ -3,7 +3,8 @@ import torch
 from skimage.measure import block_reduce
 from torch import Tensor
 
-from phringe.core.data_generator_helpers import calculate_photon_counts
+from phringe.core.data_generator_helpers import _calculate_complex_amplitude_base, \
+    _calculate_complex_amplitude, _calculate_photon_counts_from_intensity_response
 from phringe.core.entities.photon_sources.base_photon_source import BasePhotonSource
 from phringe.util.grid import get_index_of_closest_value_numpy
 
@@ -140,24 +141,54 @@ class DataGenerator():
         )
 
         for source in self.sources:
-            total_photon_counts += calculate_photon_counts(
-                self.device,
-                self.aperture_radius,
-                self.unperturbed_instrument_throughput,
+            # Calculate the complex amplitude
+            base_complex_amplitude = _calculate_complex_amplitude_base(
                 self.amplitude_perturbations,
                 self.phase_perturbations,
-                self.polarization_perturbations,
                 self.observatory_coordinates[0],
                 self.observatory_coordinates[1],
                 source.sky_coordinates[0],
                 source.sky_coordinates[1],
+                self.simulation_wavelength_bin_centers
+            ) * self.aperture_radius * torch.sqrt(self.unperturbed_instrument_throughput)
+
+            complex_amplitude_x, complex_amplitude_y = _calculate_complex_amplitude(
+                base_complex_amplitude,
+                self.polarization_perturbations
+            )
+            del base_complex_amplitude
+
+            # Calculate the intensity response
+            dot_product_x = (
+                    self.beam_combination_matrix[None, ..., None, None, None] * complex_amplitude_x.unsqueeze(1)
+            )
+            del complex_amplitude_x
+
+            result_x = torch.abs(torch.sum(dot_product_x, dim=2)) ** 2
+            del dot_product_x
+
+            dot_product_y = (
+                    self.beam_combination_matrix[None, ..., None, None, None] * complex_amplitude_y.unsqueeze(1)
+            )
+            del complex_amplitude_y
+
+            result_y = torch.abs(torch.sum(dot_product_y, dim=2)) ** 2
+            del dot_product_y
+
+            intensity_response = result_x + result_y
+
+            # Calculate photon counts
+            photon_counts = _calculate_photon_counts_from_intensity_response(
+                self.device,
+                intensity_response,
                 source.sky_brightness_distribution,
                 self.simulation_wavelength_bin_centers,
                 self.simulation_wavelength_bin_widths,
                 self.simulation_time_step_length,
-                self.beam_combination_matrix,
                 torch.empty(len(source.sky_brightness_distribution), device=self.device)
             )
+
+            total_photon_counts += photon_counts
 
         # Bin photon counts to observatory time and wavelengths
         time_binned_photon_counts = torch.asarray(
@@ -167,9 +198,11 @@ class DataGenerator():
                 np.sum
             )
         ).to(self.device)
+        # del total_photon_counts
 
         binned_photon_counts = torch.zeros(
-            (self.number_of_outputs, len(self.instrument_wavelength_bin_centers), time_binned_photon_counts.shape[2]),
+            (self.number_of_outputs, len(self.instrument_wavelength_bin_centers),
+             time_binned_photon_counts.shape[2]),
             dtype=torch.float32,
             device=self.device
         )
@@ -185,12 +218,15 @@ class DataGenerator():
 
             binned_photon_counts[:, index_wavelength_bin, :] += time_binned_photon_counts[:, index_wl, :]
 
+        shape = time_binned_photon_counts.shape[2]
+        # del time_binned_photon_counts
+
         # Calculate differential photon counts
         self.differential_photon_counts = torch.zeros(
             (
                 self.number_of_differential_outputs,
                 len(self.instrument_wavelength_bin_centers),
-                time_binned_photon_counts.shape[2]
+                shape
             ),
             dtype=torch.float32,
             device=self.device
