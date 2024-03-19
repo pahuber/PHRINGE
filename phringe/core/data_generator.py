@@ -137,6 +137,7 @@ class DataGenerator():
 
         total_photon_counts = torch.zeros(
             (self.number_of_outputs, len(self.simulation_wavelength_bin_centers), len(self.simulation_time_steps)),
+            dtype=torch.float32,
             device=self.device
         )
 
