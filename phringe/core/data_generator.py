@@ -1,12 +1,10 @@
 import numpy as np
 import torch
-from skimage.measure import block_reduce
 from torch import Tensor
 
 from phringe.core.data_generator_helpers import _calculate_complex_amplitude_base, \
     _calculate_complex_amplitude, _calculate_photon_counts_from_intensity_response
 from phringe.core.entities.photon_sources.base_photon_source import BasePhotonSource
-from phringe.util.grid import get_index_of_closest_value_numpy
 
 
 class DataGenerator():
@@ -54,7 +52,7 @@ class DataGenerator():
             device: str,
             grid_size: int,
             has_planet_orbital_motion: bool,
-            observatory_time_steps: Tensor,
+            number_of_instrument_time_steps: float,
             observatory_wavelength_bin_centers: Tensor,
             observatory_wavelength_bin_widths: Tensor,
             observatory_wavelength_bin_edges: Tensor,
@@ -96,7 +94,7 @@ class DataGenerator():
         self.sources = sources
         self.simulation_time_step_length = simulation_time_step_length
         self.unperturbed_instrument_throughput = unperturbed_instrument_throughput
-        self.instrument_time_steps = observatory_time_steps
+        self.number_of_instrument_time_steps = number_of_instrument_time_steps
         self.amplitude_perturbations = amplitude_perturbations
         self.phase_perturbations = phase_perturbations
         self.polarization_perturbations = polarization_perturbations
@@ -104,33 +102,6 @@ class DataGenerator():
         self.simulation_wavelength_bin_centers = simulation_wavelength_bin_centers
         self.simulation_wavelength_bin_widths = simulation_wavelength_bin_widths
         self.differential_output_pairs = differential_output_pairs
-
-    def _get_binning_indices(self, time, wavelength) -> tuple:
-        """Get the binning indices.
-
-        :param time: The time
-        :param wavelength: The wavelength
-        :return: The binning indices
-        """
-        index_closest_wavelength_edge = get_index_of_closest_value_numpy(
-            self.instrument_wavelength_bin_edges,
-            wavelength
-        )
-        if index_closest_wavelength_edge == 0:
-            index_wavelength_bin = 0
-        elif wavelength <= self.instrument_wavelength_bin_edges[index_closest_wavelength_edge]:
-            index_wavelength_bin = index_closest_wavelength_edge - 1
-        else:
-            index_wavelength_bin = index_closest_wavelength_edge
-
-        index_closest_time_edge = get_index_of_closest_value_numpy(self.instrument_time_steps, time)
-        if index_closest_time_edge == 0:
-            index_time = 0
-        elif time <= self.instrument_time_steps[index_closest_time_edge]:
-            index_time = index_closest_time_edge - 1
-        else:
-            index_time = index_closest_time_edge
-        return index_wavelength_bin, index_time
 
     def run(self) -> np.ndarray:
         """Run the data generator."""
@@ -192,18 +163,18 @@ class DataGenerator():
             total_photon_counts += photon_counts
 
         # Bin photon counts to observatory time and wavelengths
-        time_binned_photon_counts = torch.asarray(
-            block_reduce(
-                total_photon_counts.cpu().numpy(),
-                (1, 1, len(self.simulation_time_steps) // len(self.instrument_time_steps)),
-                np.sum
-            )
-        ).to(self.device)
+        # time_binned_photon_counts = torch.asarray(
+        #     block_reduce(
+        #         total_photon_counts.cpu().numpy(),
+        #         (1, 1, int(round(len(self.simulation_time_steps) / self.number_of_instrument_time_steps, 0))),
+        #         np.sum
+        #     )
+        # ).to(self.device)
         # del total_photon_counts
 
         binned_photon_counts = torch.zeros(
             (self.number_of_outputs, len(self.instrument_wavelength_bin_centers),
-             time_binned_photon_counts.shape[2]),
+             len(self.simulation_time_steps)),
             dtype=torch.float32,
             device=self.device
         )
@@ -217,9 +188,9 @@ class DataGenerator():
             else:
                 index_wavelength_bin = index_closest_wavelength_edge
 
-            binned_photon_counts[:, index_wavelength_bin, :] += time_binned_photon_counts[:, index_wl, :]
+            binned_photon_counts[:, index_wavelength_bin, :] += total_photon_counts[:, index_wl, :]
 
-        shape = time_binned_photon_counts.shape[2]
+        # shape = time_binned_photon_counts.shape[2]
         # del time_binned_photon_counts
 
         # Calculate differential photon counts
@@ -227,7 +198,7 @@ class DataGenerator():
             (
                 self.number_of_differential_outputs,
                 len(self.instrument_wavelength_bin_centers),
-                shape
+                len(self.simulation_time_steps)
             ),
             dtype=torch.float32,
             device=self.device
