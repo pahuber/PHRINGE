@@ -54,7 +54,7 @@ class PHRINGE():
 
         :return: The wavelength bin centers
         """
-        return self._observatory.wavelength_bin_centers
+        return self._director._instrument_wavelength_bin_centers.cpu()
 
     def get_time_steps(self) -> Tensor:
         """Return the observation time steps.
