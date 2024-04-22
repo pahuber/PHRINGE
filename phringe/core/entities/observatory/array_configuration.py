@@ -93,16 +93,19 @@ class EquilateralTriangleCircularRotation(ArrayConfiguration):
     """
     type: Any = ArrayConfigurationEnum.EQUILATERAL_TRIANGLE_CIRCULAR_ROTATION
 
-    def get_collector_coordinates(self,
-                                  time_steps: np.ndarray,
-                                  modulation_period: Quantity,
-                                  baseline_ratio: int) -> np.ndarray:
-        height = torch.sqrt(torch.tensor(3)) / 2 * self.nulling_baseline_length
+    def get_collector_coordinates(
+            self,
+            time_steps: Tensor,
+            nulling_baseline: float,
+            modulation_period: float,
+            baseline_ratio: int
+    ) -> Tensor:
+        height = torch.sqrt(torch.tensor(3)) / 2 * nulling_baseline
         height_to_center = height / 3
         rotation_matrix = get_2d_rotation_matrix(time_steps, modulation_period)
 
         equilateral_triangle_static = torch.asarray(
-            [[0, self.nulling_baseline_length / 2, -self.nulling_baseline_length / 2],
+            [[0, nulling_baseline / 2, -nulling_baseline / 2],
              [height - height_to_center, -height_to_center, -height_to_center]], dtype=torch.float32)
         collector_positions = torch.einsum('ijl,jk->ikl', rotation_matrix,
                                            equilateral_triangle_static)
@@ -117,34 +120,40 @@ class RegularPentagonCircularRotation(ArrayConfiguration):
     """
     type: Any = ArrayConfigurationEnum.REGULAR_PENTAGON_CIRCULAR_ROTATION
 
-    def _get_x_position(self, angle) -> astropy.units.Quantity:
+    def _get_x_position(self, angle, nulling_baseline) -> astropy.units.Quantity:
         """Return the x position.
 
         :param angle: The angle at which the collector is located
         :return: The x position
         """
-        return 0.851 * self.nulling_baseline_length * torch.cos(angle)
+        return 0.851 * nulling_baseline * torch.cos(angle)
 
-    def _get_y_position(self, angle) -> astropy.units.Quantity:
+    def _get_y_position(self, angle, nulling_baseline) -> astropy.units.Quantity:
         """Return the y position.
 
         :param angle: The angle at which the collector is located
         :return: The y position
         """
-        return 0.851 * self.nulling_baseline_length * torch.sin(angle)
+        return 0.851 * nulling_baseline * torch.sin(angle)
 
-    def get_collector_coordinates(self,
-                                  time_steps: np.ndarray,
-                                  modulation_period: Quantity,
-                                  baseline_ratio: int) -> np.ndarray:
+    def get_collector_coordinates(
+            self,
+            time_steps: Tensor,
+            nulling_baseline: float,
+            modulation_period: float,
+            baseline_ratio: int
+    ) -> Tensor:
         angles = [tensor(0), tensor(2 * torch.pi / 5), tensor(4 * np.pi / 5), tensor(6 * torch.pi / 5),
                   tensor(8 * torch.pi / 5)]
         rotation_matrix = get_2d_rotation_matrix(time_steps, modulation_period)
         pentagon_static = torch.asarray([
-            [self._get_x_position(angles[0]), self._get_x_position(angles[1]), self._get_x_position(angles[2]),
-             self._get_x_position(angles[3]), self._get_x_position(angles[4])],
-            [self._get_y_position(angles[0]), self._get_y_position(angles[1]), self._get_y_position(angles[2]),
-             self._get_y_position(angles[3]), self._get_y_position(angles[4])]], dtype=torch.float32)
+            [self._get_x_position(angles[0], nulling_baseline), self._get_x_position(angles[1], nulling_baseline),
+             self._get_x_position(angles[2], nulling_baseline),
+             self._get_x_position(angles[3], nulling_baseline), self._get_x_position(angles[4], nulling_baseline)],
+            [self._get_y_position(angles[0], nulling_baseline), self._get_y_position(angles[1], nulling_baseline),
+             self._get_y_position(angles[2], nulling_baseline),
+             self._get_y_position(angles[3], nulling_baseline), self._get_y_position(angles[4], nulling_baseline)]],
+            dtype=torch.float32)
         collector_positions = torch.einsum('ijl,jk->ikl', rotation_matrix,
                                            pentagon_static)
         return collector_positions.swapaxes(0, 2)
