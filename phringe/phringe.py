@@ -61,7 +61,7 @@ class PHRINGE():
 
         :return: The observation time steps
         """
-        return self._director._observatory_time_steps
+        return self._director._instrument_time_steps.cpu()
 
     @overload
     def run(
