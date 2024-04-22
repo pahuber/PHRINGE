@@ -1,5 +1,8 @@
+import numpy as np
 import torch
+from skimage.measure import block_reduce
 from torch import tensor
+from torch.cuda import OutOfMemoryError
 
 from phringe.core.data_generator import DataGenerator
 from phringe.core.director_helpers import calculate_simulation_time_steps, calculate_nulling_baseline, \
@@ -7,6 +10,7 @@ from phringe.core.director_helpers import calculate_simulation_time_steps, calcu
     calculate_polarization_perturbations, prepare_modeled_sources
 from phringe.core.entities.observation import Observation
 from phringe.core.entities.observatory.observatory import Observatory
+from phringe.core.entities.photon_sources.planet import Planet
 from phringe.core.entities.scene import Scene
 from phringe.core.entities.settings import Settings
 from phringe.util.helpers import InputSpectrum
@@ -106,7 +110,7 @@ class Director():
             self._total_integration_time,
             self._simulation_time_step_length
         )
-        self._observatory_time_steps = torch.linspace(
+        self._instrument_time_steps = torch.linspace(
             0,
             self._total_integration_time,
             int(self._total_integration_time / self._detector_integration_time)
@@ -205,7 +209,7 @@ class Director():
         # Move all tensors to the device (i.e. GPU, if available)
         self._aperture_diameter = self._aperture_diameter.to(self._device)
         self._beam_combination_transfer_matrix = self._beam_combination_transfer_matrix.to(self._device)
-        self.instrument_time_steps = self._observatory_time_steps.to(self._device)
+        self._instrument_time_steps = self._instrument_time_steps.to(self._device)
         self._instrument_wavelength_bin_centers = self._instrument_wavelength_bin_centers.to(self._device)
         self._instrument_wavelength_bin_widths = self._instrument_wavelength_bin_widths.to(self._device)
         self._instrument_wavelength_bin_edges = self._instrument_wavelength_bin_edges.to(self._device)
@@ -224,7 +228,57 @@ class Director():
                 self._device)
         self._unperturbed_instrument_throughput = self._unperturbed_instrument_throughput.to(self._device)
 
-        # Generate the data
+        div = 1
+        worked = True
+        while worked:
+            data_parts = []
+            indices = self._generate_indices(div)
+            # print(indices)
+            for i in range(len(indices)):
+                while i <= len(indices) - 2:
+                    lower_index = indices[i]
+                    upper_index = indices[i + 1] - 1
+
+                    try:
+                        # Generate the data
+                        data = self._run_data_generator(lower_index, upper_index, div)
+                        # print(data.shape)
+                        data_parts.append(data)
+                        # print(f'appending: {lower_index} - {upper_index}')
+                        worked = False
+                        break
+                    except OutOfMemoryError:
+                        # print(f'{div} out of memory')
+                        div += 1
+                        break
+        concatenated_data = torch.cat(data_parts, dim=2).cpu()
+        # Bin photon counts to observatory time and wavelengths
+        self._data = torch.asarray(
+            block_reduce(
+                concatenated_data.numpy(),
+                (1, 1, len(self.simulation_time_steps) // len(self._instrument_time_steps)),
+                np.sum
+            )
+        )
+        print(self._data.shape)
+
+    def _run_data_generator(self, lower_index: int, upper_index: int, div):
+        # TODO: If planet motion handle planet source maps
+        if self._has_planet_orbital_motion:
+            planets_copy = self._planets.copy()
+            for planet in planets_copy:
+                planet.sky_coordinates = planet.sky_coordinates[:, lower_index:upper_index]
+                planet.sky_brightness_distribution = planet.sky_brightness_distribution[lower_index:upper_index]
+            # remove all planets from sources and add new ones
+            self._sources = [source for source in self._sources if not isinstance(source, Planet)]
+            self._sources.extend(planets_copy)
+
+        # sources_copy = self._sources.copy()
+        # for source in sources_copy:
+        #     source.spectral_flux_density = source.spectral_flux_density[:, lower_index:upper_index]
+        #     source.sky_coordinates = source.sky_coordinates[:, lower_index:upper_index]
+        #     source.sky_brightness_distribution = source.sky_brightness_distribution[:, lower_index:upper_index]
+
         data_generator = DataGenerator(
             self._aperture_diameter / 2,
             self._beam_combination_transfer_matrix,
@@ -232,22 +286,32 @@ class Director():
             self._device,
             self._grid_size,
             self._has_planet_orbital_motion,
-            self.instrument_time_steps,
+            len(self._instrument_time_steps) / div,
             self._instrument_wavelength_bin_centers,
             self._instrument_wavelength_bin_widths,
             self._instrument_wavelength_bin_edges,
             self._modulation_period,
             self._number_of_inputs,
             self._number_of_outputs,
-            self.observatory_coordinates,
-            self.amplitude_perturbations,
-            self.phase_perturbations,
-            self.polarization_perturbations,
+            self.observatory_coordinates[:, :, lower_index:upper_index],
+            self.amplitude_perturbations[:, lower_index:upper_index],
+            self.phase_perturbations[:, lower_index:upper_index],
+            self.polarization_perturbations[:, lower_index:upper_index],
             self._simulation_time_step_length,
-            self.simulation_time_steps,
+            self.simulation_time_steps[lower_index:upper_index],
             self.simulation_wavelength_bin_centers,
             self.simulation_wavelength_bin_widths,
             self._sources,
             self._unperturbed_instrument_throughput
         )
-        self._data = data_generator.run().cpu()
+        return data_generator.run().cpu()
+
+    def _generate_indices(self, div):
+        number_of_time_steps = len(self.simulation_time_steps)
+        time_steps_per_iteration = number_of_time_steps // div
+
+        indices = []
+        for i in range(0, div + 1):
+            indices.append(i * time_steps_per_iteration)
+
+        return indices
