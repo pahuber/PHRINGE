@@ -1,3 +1,5 @@
+from copy import copy
+
 import numpy as np
 import torch
 from skimage.measure import block_reduce
@@ -193,20 +195,8 @@ class Director():
             self._has_exozodi_leakage
         )
 
-        # TODO: Estimate data size and start for loop, if memory is not sufficient
-        # def _get_memory_size(a: Tensor) -> int:
-        #     return a.element_size() * a.nelement()
-        #
-        # all_tensors = [element for element in vars(self).values() if isinstance(element, Tensor)]
-        # memory_size = sum(_get_memory_size(a) for a in all_tensors)
-        #
-        # for index_source, source in enumerate(self._sources):
-        #     memory_size += _get_memory_size(source.spectral_flux_density)
-        #     memory_size += _get_memory_size(source.sky_coordinates)
-        #     memory_size += _get_memory_size(source.sky_brightness_distribution)
-        self._device = self._devices[0]
-
         # Move all tensors to the device (i.e. GPU, if available)
+        self._device = self._devices[0]
         self._aperture_diameter = self._aperture_diameter.to(self._device)
         self._beam_combination_transfer_matrix = self._beam_combination_transfer_matrix.to(self._device)
         self._instrument_time_steps = self._instrument_time_steps.to(self._device)
@@ -260,15 +250,21 @@ class Director():
                 np.sum
             )
         )
-        print(self._data.shape)
+        # print(self._data.shape)
 
     def _run_data_generator(self, lower_index: int, upper_index: int, div):
-        # TODO: If planet motion handle planet source maps
         if self._has_planet_orbital_motion:
-            planets_copy = self._planets.copy()
-            for planet in planets_copy:
-                planet.sky_coordinates = planet.sky_coordinates[:, lower_index:upper_index]
-                planet.sky_brightness_distribution = planet.sky_brightness_distribution[lower_index:upper_index]
+            planets_copy = []
+
+            for index_planet, planet in enumerate(self._planets):
+                planet_copy = copy(planet)
+                planet_copy.sky_coordinates = copy(planet.sky_coordinates[:, lower_index:upper_index])
+                planet_copy.sky_brightness_distribution = copy(
+                    planet.sky_brightness_distribution[lower_index:upper_index])
+                planets_copy.append(planet_copy)
+
+                # print(planet.sky_coordinates.shape)
+                # print(planet_copy.sky_coordinates.shape)
             # remove all planets from sources and add new ones
             self._sources = [source for source in self._sources if not isinstance(source, Planet)]
             self._sources.extend(planets_copy)
