@@ -69,7 +69,7 @@ phringe.run(
 data = phringe.get_data()
 wavelengths = phringe.get_wavelength_bin_centers().numpy()
 wavelengths = [round(wavelength * 1e6, 1) for wavelength in wavelengths]
-time_steps = [int(round(time, 0)) for time in phringe.get_time_steps().numpy()]
+time_steps = [int(round(time, 0)) // 60 for time in phringe.get_time_steps().numpy()]
 # print(time_steps)
 
 plt.figure()
@@ -79,12 +79,12 @@ plt.title('Synthetic Photometry Data')
 # plt.suptitle('Differential Photon Counts', y=0.75, fontsize=14)
 # plt.title('Planet + Astrophysical Noise + Instrumental Noise', fontsize=12)
 plt.ylabel('Wavelength ($\mu$m)')
-plt.xlabel('Time (s)')
-# ax.set_yticks([0, 10, 20, 30, 40])
-# ax.set_yticklabels([wavelengths[0], wavelengths[10], wavelengths[20], wavelengths[30], wavelengths[40]])
-# ax.set_xticks([0, 20, 40, 60, 80, 100, 120, 140, 160])
-# ax.set_xticklabels([time_steps[0], time_steps[20], time_steps[40], time_steps[60], time_steps[80],
-#                     time_steps[100], time_steps[120], time_steps[140], time_steps[160]])
+plt.xlabel('Time (min)')
+ax.set_yticks([0, 10, 20, 30, 40])
+ax.set_yticklabels([wavelengths[0], wavelengths[10], wavelengths[20], wavelengths[30], wavelengths[40]])
+ax.set_xticks([0, 20, 40, 60, 80, 100, 120, 140, 160])
+ax.set_xticklabels([time_steps[0], time_steps[20], time_steps[40], time_steps[60], time_steps[80],
+                    time_steps[100], time_steps[120], time_steps[140], time_steps[160]])
 divider = make_axes_locatable(ax)
 cax = divider.append_axes("right", size="5%", pad=0.05)
 plt.colorbar(im, cax=cax, label='Differential Photon\n Counts')
