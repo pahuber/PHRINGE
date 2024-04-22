@@ -135,7 +135,7 @@ class PHRINGE():
             output_dir.mkdir(parents=True, exist_ok=True)
 
         if write_fits:
-            fits_writer = FITSWriter().write(self._data, output_dir)
+            fits_writer = FITSWriter().write(self._director._data, output_dir)
 
         if create_copy:
             if config_file_path:
