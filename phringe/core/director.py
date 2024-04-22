@@ -22,7 +22,7 @@ class Director():
 
 
     """
-    _simulation_time_step_length = tensor(60, dtype=torch.uint8)
+    _simulation_time_step_length = tensor(0.5, dtype=torch.float32)
     _maximum_simulation_wavelength_sampling = 1000
 
     def __init__(
@@ -65,9 +65,9 @@ class Director():
         self._modulation_period = observation.modulation_period
         self._number_of_inputs = self._beam_combination_scheme.number_of_inputs
         self._number_of_outputs = self._beam_combination_scheme.number_of_outputs
-        self._observatory_wavelength_bin_centers = observatory.wavelength_bin_centers
-        self._observatory_wavelength_bin_edges = observatory.wavelength_bin_edges
-        self._observatory_wavelength_bin_widths = observatory.wavelength_bin_widths
+        self._instrument_wavelength_bin_centers = observatory.wavelength_bin_centers
+        self._instrument_wavelength_bin_edges = observatory.wavelength_bin_edges
+        self._instrument_wavelength_bin_widths = observatory.wavelength_bin_widths
         self._observatory_wavelength_range_lower_limit = observatory.wavelength_range_lower_limit
         self._observatory_wavelength_range_upper_limit = observatory.wavelength_range_upper_limit
         self._optimized_differential_output = observation.optimized_differential_output
@@ -118,14 +118,14 @@ class Director():
                 self._observatory_wavelength_range_lower_limit,
                 self._observatory_wavelength_range_upper_limit,
                 self._maximum_simulation_wavelength_sampling,
-                self._observatory_wavelength_bin_centers,
+                self._instrument_wavelength_bin_centers,
                 self._planets,
                 self._input_spectra
             )
         )
 
         # Calculate field of view
-        self.field_of_view = self.simulation_wavelength_bin_centers / self._aperture_diameter
+        self.field_of_view = self.simulation_wavelength_bin_centers / self._aperture_diameter / 40
 
         # Calculate the nulling baseline
         self.nulling_baseline = calculate_nulling_baseline(
@@ -205,10 +205,10 @@ class Director():
         # Move all tensors to the device (i.e. GPU, if available)
         self._aperture_diameter = self._aperture_diameter.to(self._device)
         self._beam_combination_transfer_matrix = self._beam_combination_transfer_matrix.to(self._device)
-        self.observatory_time_steps = self._observatory_time_steps.to(self._device)
-        self._observatory_wavelength_bin_centers = self._observatory_wavelength_bin_centers.to(self._device)
-        self._observatory_wavelength_bin_widths = self._observatory_wavelength_bin_widths.to(self._device)
-        self._observatory_wavelength_bin_edges = self._observatory_wavelength_bin_edges.to(self._device)
+        self.instrument_time_steps = self._observatory_time_steps.to(self._device)
+        self._instrument_wavelength_bin_centers = self._instrument_wavelength_bin_centers.to(self._device)
+        self._instrument_wavelength_bin_widths = self._instrument_wavelength_bin_widths.to(self._device)
+        self._instrument_wavelength_bin_edges = self._instrument_wavelength_bin_edges.to(self._device)
         self.observatory_coordinates = self.observatory_coordinates.to(self._device)
         self.amplitude_perturbations = self.amplitude_perturbations.to(self._device)
         self.phase_perturbations = self.phase_perturbations.to(self._device)
@@ -232,10 +232,10 @@ class Director():
             self._device,
             self._grid_size,
             self._has_planet_orbital_motion,
-            self.observatory_time_steps,
-            self._observatory_wavelength_bin_centers,
-            self._observatory_wavelength_bin_widths,
-            self._observatory_wavelength_bin_edges,
+            self.instrument_time_steps,
+            self._instrument_wavelength_bin_centers,
+            self._instrument_wavelength_bin_widths,
+            self._instrument_wavelength_bin_edges,
             self._modulation_period,
             self._number_of_inputs,
             self._number_of_outputs,
