@@ -6,11 +6,12 @@
 # Simulation Settings
 # -------------------------------------------
 settings:
-  grid_size: 30
+  grid_size: 20
+  time_step_size: 100 s
   has_planet_orbital_motion: false
   has_stellar_leakage: true
-  has_local_zodi_leakage: true
-  has_exozodi_leakage: true
+  has_local_zodi_leakage: false
+  has_exozodi_leakage: false
   has_amplitude_perturbations: true
   has_phase_perturbations: true
   has_polarization_perturbations: true
@@ -20,7 +21,7 @@ settings:
 observation:
   solar_ecliptic_latitude: 0 deg
   total_integration_time: 1 d
-  detector_integration_time: 0.01 d
+  detector_integration_time: 1000 s
   modulation_period: 1 d
   baseline_ratio: 6
   baseline_maximum: 600 m
@@ -34,14 +35,14 @@ observation:
 observatory:
   array_configuration: emma-x-circular-rotation
   beam_combination_scheme: double-bracewell
-  aperture_diameter: 4 m
+  aperture_diameter: 2 m
   spectral_resolving_power: 20
   wavelength_range_lower_limit: 4 um
   wavelength_range_upper_limit: 18 um
-  unperturbed_instrument_throughput: 0.1
+  unperturbed_instrument_throughput: 0.05
   amplitude_perturbation_rms: 0.7
   amplitude_falloff_exponent: 1
-  phase_perturbation_rms: 1 nm
+  phase_perturbation_rms: 20 nm
   phase_falloff_exponent: 1
   polarization_perturbation_rms: 0.1 rad
   polarization_falloff_exponent: 1

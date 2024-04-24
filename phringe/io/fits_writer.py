@@ -22,4 +22,4 @@ class FITSWriter():
             hdu = fits.ImageHDU(data_per_output)
             hdu_list.append(hdu)
         hdul = fits.HDUList(hdu_list)
-        hdul.writeto(output_dir.joinpath(f'data_{fits_suffix}.fits'))
+        hdul.writeto(output_dir.joinpath(f'data{fits_suffix}.fits'))

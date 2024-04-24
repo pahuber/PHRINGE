@@ -1,12 +1,19 @@
 from typing import Any
 
-from pydantic import BaseModel
+import torch
+from astropy import units as u
+from pydantic import BaseModel, field_validator
+from pydantic_core.core_schema import ValidationInfo
+from torch import tensor
+
+from phringe.io.validators import validate_quantity_units
 
 
 class Settings(BaseModel):
     """Class representing the simulation settings.
 
     :param grid_size: The size of the grid
+    :param time_step_size: The time step size
     :param has_planet_orbital_motion: Whether the planet has orbital motion
     :param has_stellar_leakage: Whether the stellar leakage is present
     :param has_local_zodi_leakage: Whether the local zodiacal light leakage is present
@@ -18,6 +25,7 @@ class Settings(BaseModel):
     :param simulation_wavelength_steps: The wavelength steps
     """
     grid_size: int
+    time_step_size: str
     has_planet_orbital_motion: bool
     has_stellar_leakage: bool
     has_local_zodi_leakage: bool
@@ -28,3 +36,16 @@ class Settings(BaseModel):
     simulation_time_steps: Any = None
     simulation_wavelength_steps: Any = None
     simulation_wavelength_bin_widths: Any = None
+
+    @field_validator('time_step_size')
+    def _validate_time_step_size(cls, value: Any, info: ValidationInfo) -> float:
+        """Validate the time step size input.
+
+        :param value: Value given as input
+        :param info: ValidationInfo object
+        :return: The time step size in units of seconds
+        """
+        return tensor(
+            validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.s,)).si.value,
+            dtype=torch.float32
+        )

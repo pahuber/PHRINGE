@@ -60,11 +60,7 @@ class Observation(BaseModel):
         :param info: ValidationInfo object
         :return: The detector integration time in units of time
         """
-        dit = validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.s,)).si.value
-        # TODO: link this to simulation time step in settings
-        if dit >= 0.5:
-            return dit
-        raise ValueError(f'{info.field_name} can not be smaller than 0.5 seconds')
+        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.s,)).si.value
 
     @field_validator('modulation_period')
     def _validate_modulation_period(cls, value: Any, info: ValidationInfo) -> float:

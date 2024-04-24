@@ -37,6 +37,11 @@ accepted values and meanings are given in the table below:
      - e.g. 60
      - 1
      - Grid size used for the calculations
+   * - time_step_size
+     - str*
+     - e.g. 1 s
+     - Time
+     - Time step size used for the calculations
    * - has_planet_orbital_motion
      - bool
      - true, false
@@ -73,6 +78,7 @@ accepted values and meanings are given in the table below:
      - \-
      - Whether polarization perturbations are modeled
 
+\* String consisting of a number and a unit that can be parsed by astropy.units
 
 Observation
 ~~~~~~~~~~~~~~~~~~~

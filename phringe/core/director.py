@@ -3,7 +3,6 @@ from copy import copy
 import numpy as np
 import torch
 from skimage.measure import block_reduce
-from torch import tensor
 from torch.cuda import OutOfMemoryError
 
 from phringe.core.data_generator import DataGenerator
@@ -28,7 +27,7 @@ class Director():
 
 
     """
-    _simulation_time_step_length = tensor(0.5, dtype=torch.float32)
+    # _simulation_time_step_length = tensor(0.5, dtype=torch.float32)
     _maximum_simulation_wavelength_sampling = 1000
 
     def __init__(
@@ -87,6 +86,7 @@ class Director():
         self._solar_ecliptic_latitude = observation.solar_ecliptic_latitude
         self._sources = scene.get_all_sources()
         self._star = scene.star
+        self._time_step_size = settings.time_step_size
         self._total_integration_time = observation.total_integration_time
         self._unperturbed_instrument_throughput = observatory.unperturbed_instrument_throughput
 
@@ -107,10 +107,14 @@ class Director():
         return devices
 
     def run(self):
+        # Check simulation time step is smaller than detector integration time
+        if self._time_step_size > self._detector_integration_time:
+            raise ValueError('The simulation time step size must be smaller than the detector integration time.')
+
         # Calculate simulation and instrument time steps
         self.simulation_time_steps = calculate_simulation_time_steps(
             self._total_integration_time,
-            self._simulation_time_step_length
+            self._time_step_size
         )
         self._instrument_time_steps = torch.linspace(
             0,
@@ -207,7 +211,7 @@ class Director():
         self.amplitude_perturbations = self.amplitude_perturbations.to(self._device)
         self.phase_perturbations = self.phase_perturbations.to(self._device)
         self.polarization_perturbations = self.polarization_perturbations.to(self._device)
-        self._simulation_time_step_length = self._simulation_time_step_length.to(self._device)
+        self._time_step_size = self._time_step_size.to(self._device)
         self.simulation_time_steps = self.simulation_time_steps.to(self._device)
         self.simulation_wavelength_bin_centers = self.simulation_wavelength_bin_centers.to(self._device)
         self.simulation_wavelength_bin_widths = self.simulation_wavelength_bin_widths.to(self._device)
@@ -293,7 +297,7 @@ class Director():
             self.amplitude_perturbations[:, lower_index:upper_index],
             self.phase_perturbations[:, lower_index:upper_index],
             self.polarization_perturbations[:, lower_index:upper_index],
-            self._simulation_time_step_length,
+            self._time_step_size,
             self.simulation_time_steps[lower_index:upper_index],
             self.simulation_wavelength_bin_centers,
             self.simulation_wavelength_bin_widths,
