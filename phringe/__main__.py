@@ -45,8 +45,18 @@ from phringe.phringe import PHRINGE
     default=Path('.'),
     required=False
 )
+@click.option(
+    '-f',
+    '--fits-suffix',
+    'fitssuffix',
+    type=str,
+    help="Suffix of the FITS file name.",
+    default='',
+    required=False
+)
 @click.option('--fits/--no-fits', default=True, help="Write data to FITS file.")
 @click.option('--copy/--no-copy', default=True, help="Write copy of input files to output directory.")
+@click.option('--dir/--no-dir', default=True, help="Create a new directory in the output directory for each run.")
 def main(
         config: Path,
         exoplanetary_system: Path,
@@ -54,7 +64,8 @@ def main(
         gpus: tuple = None,
         output_dir: Path = Path('.'),
         fits: bool = True,
-        copy: bool = True
+        copy: bool = True,
+        dir: bool = True
 ):
     """PHRINGE. synthetic PHotometRy data generator for nullING intErferometers.
 
@@ -68,5 +79,6 @@ def main(
         spectrum_files=spectrum_tuples,
         output_dir=output_dir,
         write_fits=fits,
-        create_copy=copy
+        create_copy=copy,
+        create_directory=dir
     )

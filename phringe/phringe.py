@@ -72,7 +72,8 @@ class PHRINGE():
             gpus: tuple[int] = None,
             output_dir: Path = Path('.'),
             write_fits: bool = True,
-            create_copy: bool = True
+            create_copy: bool = True,
+            create_directory: bool = True
     ):
         ...
 
@@ -87,7 +88,8 @@ class PHRINGE():
             gpus: tuple[int] = None,
             output_dir: Path = Path('.'),
             write_fits: bool = True,
-            create_copy: bool = True
+            create_copy: bool = True,
+            create_directory: bool = True
     ):
         ...
 
@@ -103,7 +105,9 @@ class PHRINGE():
             gpus: tuple[int] = None,
             output_dir: Path = Path('.'),
             write_fits: bool = True,
+            fits_suffix: str = '',
             create_copy: bool = True,
+            create_directory: bool = True
     ):
         """Generate synthetic photometry data and return the total data as an array of shape N_differential_outputs x
         N_spectral_channels x N_time_steps or the data for each source separately in a dictionary of such arrays if
@@ -115,7 +119,9 @@ class PHRINGE():
         :param gpus: Indices of the GPUs to use
         :param output_dir: The output directory
         :param write_fits: Whether to write the data to a FITS file
+        :param fits_suffix: The suffix for the FITS file
         :param create_copy: Whether to copy the input files to the output directory
+        :param create_directory: Whether to create a new directory in the output directory for each run
         :return: The data as an array or a dictionary of arrays if enable_stats is True
         """
         config_dict = get_dict_from_path(config_file_path) if config_file_path else None
@@ -130,12 +136,12 @@ class PHRINGE():
         self._director = Director(settings, observatory, observation, scene, input_spectra, gpus)
         self._director.run()
 
-        if write_fits or create_copy:
+        if (write_fits or create_copy) and create_directory:
             output_dir = output_dir.joinpath(f'out_{datetime.now().strftime("%Y%m%d_%H%M%S.%f")}')
             output_dir.mkdir(parents=True, exist_ok=True)
 
         if write_fits:
-            fits_writer = FITSWriter().write(self._director._data, output_dir)
+            fits_writer = FITSWriter().write(self._director._data, output_dir, fits_suffix)
 
         if create_copy:
             if config_file_path:

@@ -7,12 +7,12 @@ class FITSWriter():
     """Class representation of the FITS writer.
     """
 
-    def write(self, data, output_dir: Path, source_name: str = None):
+    def write(self, data, output_dir: Path, fits_suffix: str = ''):
         """Write the data to a FITS file.
 
         :param data: The data to be written to FITS
         :param output_dir: The output directory of the FITS file
-        :param source_name: The name of the source
+        :param fits_suffix: The suffix of the FITS file
         """
         primary = fits.PrimaryHDU()
         header = primary.header
@@ -22,8 +22,4 @@ class FITSWriter():
             hdu = fits.ImageHDU(data_per_output)
             hdu_list.append(hdu)
         hdul = fits.HDUList(hdu_list)
-
-        if source_name:
-            hdul.writeto(output_dir.joinpath(f'data_{source_name}.fits'))
-        else:
-            hdul.writeto(output_dir.joinpath('data.fits'))
+        hdul.writeto(output_dir.joinpath(f'data_{fits_suffix}.fits'))

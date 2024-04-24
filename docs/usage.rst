@@ -58,6 +58,9 @@ Options
    * - ``-o``, ``--output-dir``
      - PATH
      - Path to the output directory
+   * - ``-f``, ``--fits-suffix``
+     - TEXT
+     - Suffix for the FITS file name
    * - ``-h``, ``--help``
      - \-
      - Show the help message and exit
@@ -81,6 +84,8 @@ Flags
      - Save the generated data to a FITS file; default is true
    * - ``--copy``/``--no-copy``
      - Create a copy of the configuration and exoplanetary system files in the output directory; default is true
+   * - ``--dir``/``--no-dir``
+     - Create a new directory in the output directory for each run; default is true
 
 Usage From Python Module
 ------------------------
@@ -106,7 +111,9 @@ PHRINGE can also be used from within another Python module in the following way:
         gpus=None,
         output_dir=Path('path_to_output_directory'),
         write_fits=True,
-        create_copy=True
+        fit_suffix='',
+        create_copy=True,
+        create_dir=True
     )
 
 .. hint::
@@ -149,7 +156,9 @@ objects, these objects can also be manually created and then passed to ``PHRINGE
         gpus=None,
         output_dir=Path('path_to_output_directory'),
         write_fits=True,
-        create_copy=True
+        fit_suffix='',
+        create_copy=True,
+        create_dir=True
     )
 
 .. note::
