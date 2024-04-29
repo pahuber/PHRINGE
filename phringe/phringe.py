@@ -114,7 +114,7 @@ class PHRINGE():
             scene: Scene = None,
             spectrum_files: tuple[tuple[str, Path]] = None,
             gpus: tuple[int] = None,
-            verbose: bool = False,
+            detailed: bool = False,
             output_dir: Path = Path('.'),
             write_fits: bool = True,
             fits_suffix: str = '',
@@ -130,7 +130,7 @@ class PHRINGE():
         :param spectrum_files: List of tuples containing the planet name and the path to the corresponding spectrum text file
         :param gpus: Indices of the GPUs to use
         :param output_dir: The output directory
-        :param verbose: Whether to run in verbose mode. If verbose mode is used, the intensity responses are saved during the data generation
+        :param detailed: Whether to run in detailed mode. If detailed mode is used, the intensity responses are saved during the data generation
         :param write_fits: Whether to write the data to a FITS file
         :param fits_suffix: The suffix for the FITS file
         :param create_copy: Whether to copy the input files to the output directory
@@ -146,7 +146,7 @@ class PHRINGE():
         scene = Scene(**system_dict) if not scene else scene
         input_spectra = PHRINGE._get_spectra_from_paths(spectrum_files) if spectrum_files else None
 
-        self._director = Director(settings, observatory, observation, scene, input_spectra, gpus, verbose)
+        self._director = Director(settings, observatory, observation, scene, input_spectra, gpus, detailed)
         self._director.run()
 
         if (write_fits or create_copy) and create_directory:

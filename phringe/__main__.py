@@ -54,7 +54,7 @@ from phringe.phringe import PHRINGE
     default='',
     required=False
 )
-@click.option('--verbose/--no-verbose', default=False, help="Run in verbose mode.")
+@click.option('--detailed/--no-detailed', default=False, help="Run in detailed mode.")
 @click.option('--fits/--no-fits', default=True, help="Write data to FITS file.")
 @click.option('--copy/--no-copy', default=True, help="Write copy of input files to output directory.")
 @click.option('--dir/--no-dir', default=True, help="Create a new directory in the output directory for each run.")
@@ -64,7 +64,7 @@ def main(
         spectrum_tuples: tuple = None,
         gpus: tuple = None,
         output_dir: Path = Path('.'),
-        verbose: bool = False,
+        detailed: bool = False,
         fits: bool = True,
         fits_suffix: str = '',
         copy: bool = True,
@@ -81,7 +81,7 @@ def main(
         exoplanetary_system_file_path=exoplanetary_system,
         spectrum_files=spectrum_tuples,
         output_dir=output_dir,
-        verbose=verbose,
+        detailed=detailed,
         write_fits=fits,
         fits_suffix=fits_suffix,
         create_copy=copy,
