@@ -38,7 +38,7 @@ class Director():
             scene: Scene,
             input_spectra: list[InputSpectrum],
             gpus: tuple[int] = None,
-            verbose: bool = False
+            detailed: bool = False
     ):
         """Constructor method.
 
@@ -48,7 +48,7 @@ class Director():
         :param scene: The scene
         :param input_spectra: The input spectra
         :param gpus: The GPUs
-        :param verbose: Whether to run in verbose mode
+        :param detailed: Whether to run in detailed mode
         """
         self._aperture_diameter = observatory.aperture_diameter
         self._array_configuration = observatory.array_configuration
@@ -57,6 +57,7 @@ class Director():
         self._baseline_ratio = observation.baseline_ratio
         self._beam_combination_scheme = observatory.beam_combination_scheme
         self._beam_combination_transfer_matrix = self._beam_combination_scheme.get_beam_combination_transfer_matrix()
+        self._detailed = detailed
         self._detector_integration_time = observation.detector_integration_time
         self._devices = self._get_devices(gpus)
         self._differential_output_pairs = self._beam_combination_scheme.get_differential_output_pairs()
@@ -91,7 +92,6 @@ class Director():
         self._time_step_size = settings.time_step_size
         self._total_integration_time = observation.total_integration_time
         self._unperturbed_instrument_throughput = observatory.unperturbed_instrument_throughput
-        self._verbose = verbose
 
     def _get_devices(self, gpus: tuple[int]) -> list[str]:
         """Get the devices.
@@ -305,6 +305,7 @@ class Director():
             self._aperture_diameter / 2,
             self._beam_combination_transfer_matrix,
             self._differential_output_pairs,
+            self._detailed,
             self._device,
             self._grid_size,
             self._has_planet_orbital_motion,
@@ -324,8 +325,7 @@ class Director():
             self.simulation_wavelength_bin_centers,
             self.simulation_wavelength_bin_widths,
             self._sources,
-            self._unperturbed_instrument_throughput,
-            self._verbose
+            self._unperturbed_instrument_throughput
         )
         return data_generator.run()
 

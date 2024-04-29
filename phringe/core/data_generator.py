@@ -49,6 +49,7 @@ class DataGenerator():
             aperture_radius: float,
             beam_combination_matrix: Tensor,
             differential_output_pairs: list[tuple[int, int]],
+            detailed: bool,
             device: str,
             grid_size: int,
             has_planet_orbital_motion: bool,
@@ -68,8 +69,7 @@ class DataGenerator():
             simulation_wavelength_bin_centers: Tensor,
             simulation_wavelength_bin_widths: Tensor,
             sources: list[BasePhotonSource],
-            unperturbed_instrument_throughput: Tensor,
-            verbose: bool = False
+            unperturbed_instrument_throughput: Tensor
     ):
         """Constructor method.
 
@@ -81,6 +81,7 @@ class DataGenerator():
         """
         self.aperture_radius = aperture_radius
         self.beam_combination_matrix = beam_combination_matrix
+        self.detailed = detailed
         self.device = device
         self.instrument_wavelength_bin_centers = observatory_wavelength_bin_centers
         self.instrument_wavelength_bin_widths = observatory_wavelength_bin_widths
@@ -95,7 +96,6 @@ class DataGenerator():
         self.sources = sources
         self.simulation_time_step_length = simulation_time_step_length
         self.unperturbed_instrument_throughput = unperturbed_instrument_throughput
-        self.verbose = verbose
         self.number_of_instrument_time_steps = number_of_instrument_time_steps
         self.amplitude_perturbations = amplitude_perturbations
         self.phase_perturbations = phase_perturbations
@@ -153,7 +153,7 @@ class DataGenerator():
 
             intensity_response = result_x + result_y
 
-            if self.verbose:
+            if self.detailed:
                 intensity_responses[source.name] = intensity_response
 
             # Calculate photon counts
