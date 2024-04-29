@@ -231,7 +231,7 @@ class Director():
             for i in range(len(indices)):
                 while i <= len(indices) - 2:
                     lower_index = indices[i]
-                    upper_index = indices[i + 1] - 1
+                    upper_index = indices[i + 1]  # - 1
 
                     try:
                         # Generate the data
@@ -246,11 +246,17 @@ class Director():
                         div += 1
                         break
         concatenated_data = torch.cat(data_parts, dim=2).cpu()
+        # print(concatenated_data.shape)
+
         # Bin photon counts to observatory time and wavelengths
+        binning_factor = int(round(len(self.simulation_time_steps) / len(self._instrument_time_steps), 0))
+        # print(len(self.simulation_time_steps))
+        # print(len(self._instrument_time_steps))
+        # print(binning_factor)
         self._data = torch.asarray(
             block_reduce(
                 concatenated_data.numpy(),
-                (1, 1, len(self.simulation_time_steps) // len(self._instrument_time_steps)),
+                (1, 1, binning_factor),
                 np.sum
             )
         )
@@ -273,6 +279,7 @@ class Director():
             self._sources = [source for source in self._sources if not isinstance(source, Planet)]
             self._sources.extend(planets_copy)
 
+        # print(f'blaaaa: {self.observatory_coordinates[:, :, lower_index:upper_index].shape}')
         # sources_copy = self._sources.copy()
         # for source in sources_copy:
         #     source.spectral_flux_density = source.spectral_flux_density[:, lower_index:upper_index]
