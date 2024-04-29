@@ -37,7 +37,8 @@ class Director():
             observation: Observation,
             scene: Scene,
             input_spectra: list[InputSpectrum],
-            gpus: tuple[int] = None
+            gpus: tuple[int] = None,
+            verbose: bool = False
     ):
         """Constructor method.
 
@@ -47,6 +48,7 @@ class Director():
         :param scene: The scene
         :param input_spectra: The input spectra
         :param gpus: The GPUs
+        :param verbose: Whether to run in verbose mode
         """
         self._aperture_diameter = observatory.aperture_diameter
         self._array_configuration = observatory.array_configuration
@@ -89,6 +91,7 @@ class Director():
         self._time_step_size = settings.time_step_size
         self._total_integration_time = observation.total_integration_time
         self._unperturbed_instrument_throughput = observatory.unperturbed_instrument_throughput
+        self._verbose = verbose
 
     def _get_devices(self, gpus: tuple[int]) -> list[str]:
         """Get the devices.
@@ -226,6 +229,7 @@ class Director():
         worked = True
         while worked:
             data_parts = []
+            intensity_response_parts = []
             indices = self._generate_indices(div)
             # print(indices)
             for i in range(len(indices)):
@@ -235,17 +239,28 @@ class Director():
 
                     try:
                         # Generate the data
-                        data = self._run_data_generator(lower_index, upper_index, div)
+                        data, intensity_response = self._run_data_generator(lower_index, upper_index, div)
                         # print(data.shape)
                         data_parts.append(data)
+                        intensity_response_parts.append(intensity_response)
                         # print(f'appending: {lower_index} - {upper_index}')
                         worked = False
+                        # if i == len(indices) - 1:
+                        #     worked = False
                         break
                     except OutOfMemoryError:
                         # print(f'{div} out of memory')
                         div += 1
                         break
+            if not len(data_parts) == len(indices) - 1:
+                worked = True
+
         concatenated_data = torch.cat(data_parts, dim=2).cpu()
+        # self._intensity_response = torch.cat(intensity_response_parts, dim=2).cpu()
+        self._intensity_response = {
+            key: torch.cat([dict[key].cpu() for dict in intensity_response_parts], dim=0)
+            for key in intensity_response_parts[0]
+        }
         # print(concatenated_data.shape)
 
         # Bin photon counts to observatory time and wavelengths
@@ -309,9 +324,10 @@ class Director():
             self.simulation_wavelength_bin_centers,
             self.simulation_wavelength_bin_widths,
             self._sources,
-            self._unperturbed_instrument_throughput
+            self._unperturbed_instrument_throughput,
+            self._verbose
         )
-        return data_generator.run().cpu()
+        return data_generator.run()
 
     def _generate_indices(self, div):
         number_of_time_steps = len(self.simulation_time_steps)

@@ -69,6 +69,7 @@ class DataGenerator():
             simulation_wavelength_bin_widths: Tensor,
             sources: list[BasePhotonSource],
             unperturbed_instrument_throughput: Tensor,
+            verbose: bool = False
     ):
         """Constructor method.
 
@@ -94,6 +95,7 @@ class DataGenerator():
         self.sources = sources
         self.simulation_time_step_length = simulation_time_step_length
         self.unperturbed_instrument_throughput = unperturbed_instrument_throughput
+        self.verbose = verbose
         self.number_of_instrument_time_steps = number_of_instrument_time_steps
         self.amplitude_perturbations = amplitude_perturbations
         self.phase_perturbations = phase_perturbations
@@ -111,6 +113,8 @@ class DataGenerator():
             dtype=torch.float32,
             device=self.device
         )
+
+        intensity_responses = {}
 
         for source in self.sources:
             # Calculate the complex amplitude
@@ -148,6 +152,9 @@ class DataGenerator():
             del dot_product_y
 
             intensity_response = result_x + result_y
+
+            if self.verbose:
+                intensity_responses[source.name] = intensity_response
 
             # Calculate photon counts
             photon_counts = _calculate_photon_counts_from_intensity_response(
@@ -209,4 +216,4 @@ class DataGenerator():
                 binned_photon_counts[pair[0]] - binned_photon_counts[pair[1]]
             )
 
-        return self.differential_photon_counts
+        return self.differential_photon_counts, intensity_responses

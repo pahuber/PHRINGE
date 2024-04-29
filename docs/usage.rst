@@ -80,6 +80,8 @@ Flags
 
    * - Flag
      - Description
+   * - ``--verbose``/``--no-verbose``
+     - Run in verbose mode; default is false
    * - ``--fits``/``--no-fits``
      - Save the generated data to a FITS file; default is true
    * - ``--copy``/``--no-copy``
@@ -110,6 +112,7 @@ PHRINGE can also be used from within another Python module in the following way:
         spectrum_files=spectrum_files,
         gpus=None,
         output_dir=Path('path_to_output_directory'),
+        verbose=False,
         write_fits=True,
         fit_suffix='',
         create_copy=True,
@@ -155,6 +158,7 @@ objects, these objects can also be manually created and then passed to ``PHRINGE
         spectrum_files=spectrum_files,
         gpus=None,
         output_dir=Path('path_to_output_directory'),
+        verbose=False,
         write_fits=True,
         fit_suffix='',
         create_copy=True,
