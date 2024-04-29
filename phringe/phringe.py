@@ -49,6 +49,13 @@ class PHRINGE():
         """
         return self._director._data
 
+    def get_field_of_view(self) -> Tensor:
+        """Return the field of view.
+
+        :return: The field of view
+        """
+        return self._director.field_of_view
+
     def get_intensity_response(self) -> Tensor:
         """Return the intensity response.
 
