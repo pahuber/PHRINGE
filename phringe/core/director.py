@@ -228,6 +228,10 @@ class Director():
         div = 1
         worked = True
         while worked:
+            # print(f'div: {div}')
+            if div > len(self.simulation_time_steps):
+                # print('div')
+                raise OutOfMemoryError('Not enough memory to generate data. Choose other configurations.')
             data_parts = []
             intensity_response_parts = []
             indices = self._generate_indices(div)
@@ -258,7 +262,7 @@ class Director():
         concatenated_data = torch.cat(data_parts, dim=2).cpu()
         # self._intensity_response = torch.cat(intensity_response_parts, dim=2).cpu()
         self._intensity_response = {
-            key: torch.cat([dict[key].cpu() for dict in intensity_response_parts], dim=0)
+            key: torch.cat([dict[key].cpu() for dict in intensity_response_parts], dim=2)
             for key in intensity_response_parts[0]
         }
         # print(concatenated_data.shape)
