@@ -38,7 +38,8 @@ class Director():
             scene: Scene,
             input_spectra: list[InputSpectrum],
             gpus: tuple[int] = None,
-            detailed: bool = False
+            detailed: bool = False,
+            normalize: bool = False
     ):
         """Constructor method.
 
@@ -49,6 +50,7 @@ class Director():
         :param input_spectra: The input spectra
         :param gpus: The GPUs
         :param detailed: Whether to run in detailed mode
+        :param normalize: Whether to normalize the data to unit RMS along the time axis
         """
         self._aperture_diameter = observatory.aperture_diameter
         self._array_configuration = observatory.array_configuration
@@ -71,6 +73,7 @@ class Director():
         self._has_stellar_leakage = settings.has_stellar_leakage
         self._input_spectra = input_spectra
         self._modulation_period = observation.modulation_period
+        self._normalize = normalize
         self._number_of_inputs = self._beam_combination_scheme.number_of_inputs
         self._number_of_outputs = self._beam_combination_scheme.number_of_outputs
         self._instrument_wavelength_bin_centers = observatory.wavelength_bin_centers
@@ -218,6 +221,7 @@ class Director():
         self.simulation_time_steps = self.simulation_time_steps.to(self._device)
         self.simulation_wavelength_bin_centers = self.simulation_wavelength_bin_centers.to(self._device)
         self.simulation_wavelength_bin_widths = self.simulation_wavelength_bin_widths.to(self._device)
+
         for index_source, source in enumerate(self._sources):
             self._sources[index_source].spectral_flux_density = source.spectral_flux_density.to(self._device)
             self._sources[index_source].sky_coordinates = source.sky_coordinates.to(self._device)
@@ -279,6 +283,8 @@ class Director():
                 np.sum
             )
         )
+        if self._normalize:
+            self._data = torch.einsum('ijk, ij->ijk', self._data, 1 / torch.sqrt(torch.mean(self._data ** 2, axis=2)))
         # print(self._data.shape)
 
     def _run_data_generator(self, lower_index: int, upper_index: int, div):

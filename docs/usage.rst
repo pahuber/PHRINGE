@@ -88,6 +88,8 @@ Flags
      - Create a copy of the configuration and exoplanetary system files in the output directory; default is true
    * - ``--dir``/``--no-dir``
      - Create a new directory in the output directory for each run; default is true
+   * - ``--normalize``/``--no-normalize``
+     - Whether to normalize the data to unit RMS along the time axis; default is false
 
 Usage From Python Module
 ------------------------
@@ -111,12 +113,13 @@ PHRINGE can also be used from within another Python module in the following way:
         exoplanetary_system_file_path=Path('path_to_exoplanetary_system_file'),
         spectrum_files=spectrum_files,
         gpus=None,
+        fit_suffix='',
         output_dir=Path('path_to_output_directory'),
         detailed=False,
         write_fits=True,
-        fit_suffix='',
         create_copy=True,
-        create_dir=True
+        create_dir=True,
+        normalize=False
     )
 
 .. hint::
@@ -157,12 +160,13 @@ objects, these objects can also be manually created and then passed to ``PHRINGE
         settings=settings,
         spectrum_files=spectrum_files,
         gpus=None,
+        fit_suffix='',
         output_dir=Path('path_to_output_directory'),
         detailed=False,
         write_fits=True,
-        fit_suffix='',
         create_copy=True,
-        create_dir=True
+        create_dir=True,
+        normalize=False
     )
 
 .. note::
