@@ -3,14 +3,13 @@
 Installation
 ============
 
-PHRINGE requires Python 3.9 or 3.10 to run.
+Prerequisites
+-------------
 
-.. _virtual_environment:
+The following list shows the prerequisites for installing PHRINGE:
 
-Using a Virtual Environment (Recommended)
--------------------
-
-We recommended to install PHRINGE in a virtual environment to avoid conflicts with other Python packages. For instructions
+* PHRINGE requires Python 3.9 or 3.10 to run. If you do not have Python installed, you can download it from the `Python website <https://www.python.org/downloads/>`_.
+* We recommended to install PHRINGE in a virtual environment to avoid conflicts with other Python packages. For instructions
 on how to create and activate a virtual environment, see the `virtualenv user guide <https://virtualenv.pypa.io/en/latest/user_guide.html>`_.
 
 .. _pip_install:
