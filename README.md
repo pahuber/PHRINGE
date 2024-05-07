@@ -28,9 +28,9 @@
 
 [black]: https://github.com/psf/black
 
-`PHRINGE` is a synthetic **PH**otomet**R**y data generator for null**ING** int**E**rferometers. It can simulate the
-observation of an exoplanetary system with a space-based nulling interferometer and generate realistic photometry data
-as a function of wavelength/spectral channel and time, considering both astrophysical and instrumental noise sources.
+`PHRINGE` is a synthetic **PH**oton count data generator for null**ING** int**E**rferometers. It can simulate the
+observation of an exoplanetary system with a space-based nulling interferometer and generate realistic data in terms
+of photon counts as a function of wavelength/spectral channel and time, considering both astrophysical and instrumental noise sources.
 
 ## Documentation
 
