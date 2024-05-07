@@ -80,8 +80,8 @@ def main(
     """
     phringe = PHRINGE()
     phringe.run(
-        config_file_path=config,
-        exoplanetary_system_file_path=exoplanetary_system,
+        config_file_path=Path(config),
+        exoplanetary_system_file_path=Path(exoplanetary_system),
         spectrum_files=spectrum_tuples,
         gpus=gpus,
         output_dir=output_dir,

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "phringe"
-version = "0.0.22"
+version = "0.0.23"
 description = "PHRINGE"
 authors = ["Philipp A. Huber <huberph@phys.ethz.ch>"]
 license = "MIT"
@@ -16,16 +16,15 @@ classifiers = [
 Changelog = "https://github.com/pahuber/phringe/releases"
 
 [tool.poetry.dependencies]
-python = ">=3.9,<3.11"
+python = ">=3.10,<3.11"
 click = ">=8.0.1"
 numpy = "^1.26.3"
 astropy = ">=5.3,<6"
 pydantic = "^2.6.1"
 spectres = "^2.2.0"
 poliastro = "^0.17.0"
+torch = "^1.13.0"
 tqdm = "^4.66.1"
-numba = "^0.59.0"
-sphinx-copybutton = "^0.5.2"
 
 [tool.poetry.dev-dependencies]
 Pygments = ">=2.10.0"
@@ -55,6 +54,9 @@ myst-parser = { version = ">=0.16.1" }
 
 [tool.poetry.scripts]
 phringe = "phringe.__main__:main"
+
+[tool.poetry.group.dev.dependencies]
+sphinx-copybutton = "0.5.2"
 
 [tool.coverage.paths]
 source = ["src", "*/site-packages"]
