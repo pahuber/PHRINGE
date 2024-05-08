@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "phringe"
-version = "0.0.24"
+version = "0.0.25"
 description = "PHRINGE"
 authors = ["Philipp A. Huber <huberph@phys.ethz.ch>"]
 license = "MIT"
@@ -26,6 +26,7 @@ poliastro = "^0.17.0"
 torch = "^1.13.0"
 tqdm = "^4.66.1"
 scikit-image = "^0.23.2"
+sphinx-copybutton = ">=0.5.2"
 
 [tool.poetry.dev-dependencies]
 Pygments = ">=2.10.0"
@@ -49,7 +50,6 @@ safety = ">=1.10.3"
 sphinx = ">=5.0.0"
 sphinx-autobuild = ">=2021.3.14"
 sphinx-click = ">=3.0.2"
-sphinx-copybutton = ">=0.5.2"
 typeguard = ">=2.13.3"
 xdoctest = { extras = ["colors"], version = ">=0.15.10" }
 myst-parser = { version = ">=0.16.1" }
