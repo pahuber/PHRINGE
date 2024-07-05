@@ -264,6 +264,17 @@ def calculate_simulation_wavelength_bins(
         planets: list[Planet],
         input_spectra: list[InputSpectrum]
 ) -> tuple[Tensor, Tensor]:
+    """Return the simulation wavelength bin centers, bin widths and reference spectra for all planets in the scene.
+
+    :param wavelength_range_lower_limit: The lower limit of the wavelength range
+    :param wavelength_range_upper_limit: The upper limit of the wavelength range
+    :param maximum_simulation_wavelength_sampling: The maximum resolution of the simulation wavelength range
+    :param instrument_wavelength_bin_centers: The instrument wavelength bin centers
+    :param planets: The planets in the scene
+    :param input_spectra: The input spectra
+
+    :return: The simulation wavelength bin centers, bin widths and reference spectra
+    """
     reference_spectra = generate_reference_spectra(
         wavelength_range_lower_limit,
         wavelength_range_upper_limit,
@@ -293,8 +304,10 @@ def generate_reference_spectra(
         planets: list[Planet],
         input_spectra: list[InputSpectrum]
 ) -> list[Tensor]:
-    """Generate reference spectra for all planets in the scene in units of ph m-3 s-1 sr-1. If no input spectrum is
-    provided for a planet, generate a blackbody spectrum for it.
+    """Generate reference spectra for all planets in the scene in units of ph m-3 s-1 sr-1. Reference spectra are the
+    highest-resolution spectra that are used in the simulation, i.e. no spectrum will ever be sampled higher than these.
+    Depending on simulation configurations, these spectra will be re-binned to lower resolutions for computational
+    efficiency.If no input spectrum is provided for a planet, generate a blackbody spectrum for it.
 
     :param wavelength_range_lower_limit: The lower limit of the wavelength range
     :param wavelength_range_upper_limit: The upper limit of the wavelength range
@@ -352,6 +365,24 @@ def prepare_modeled_sources(
         has_local_zodi_leakage: bool,
         has_exozodi_leakage: bool
 ) -> list[BasePhotonSource]:
+    """Return the spectral flux densities, brightness distributions and coordinates for all sources in the scene.
+
+    :param sources: The sources in the scene
+    :param simulation_time_steps: The simulation time steps
+    :param simulation_wavelength_bin_centers: The simulation wavelength bin centers
+    :param wavelength_range_lower_limit: The lower limit of the wavelength range
+    :param wavelength_range_upper_limit: The upper limit of the wavelength range
+    :param maximum_simulation_wavelength_sampling: The maximum resolution of the simulation wavelength range
+    :param reference_spectra: The reference spectra
+    :param grid_size: The grid size
+    :param field_of_view: The field of view
+    :param solar_ecliptic_latitude: The solar ecliptic latitude
+    :param has_planet_orbital_motion: Whether the simulation has planet orbital motion
+    :param has_stellar_leakage: Whether the simulation has stellar leakage
+    :param has_local_zodi_leakage: Whether the simulation has local zodi leakage
+    :param has_exozodi_leakage: Whether the simulation has exozodi leakage
+    :return: The prepared sources
+    """
     wavelength_range = torch.linspace(
         wavelength_range_lower_limit,
         wavelength_range_upper_limit,
