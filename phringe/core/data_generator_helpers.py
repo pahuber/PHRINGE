@@ -1,5 +1,3 @@
-import gc
-
 import torch
 from torch import Tensor
 
@@ -204,78 +202,78 @@ def _calculate_photon_counts_from_intensity_response(
 
     return torch.poisson(mean_photon_counts)
 
-
-def calculate_photon_counts(
-        device: torch.device,
-        aperture_radius: Tensor,
-        unperturbed_instrument_throughput: Tensor,
-        amplitude_perturbation_time_series: Tensor,
-        phase_perturbation_time_series: Tensor,
-        polarization_perturbation_time_series: Tensor,
-        observatory_coordinates_x: Tensor,
-        observatory_coordinates_y: Tensor,
-        source_sky_coordinates_x: Tensor,
-        source_sky_coordinates_y: Tensor,
-        source_sky_brightness_distribution: Tensor,
-        simulation_wavelength_steps: Tensor,
-        simulation_wavelength_bin_widths: Tensor,
-        simulation_time_step_duration: float,
-        beam_combination_matrix: Tensor,
-        normalization_array: Tensor
-):
-    """Calculate the photon counts.
-
-    :param device: The device
-    :param aperture_radius: The aperture radius
-    :param unperturbed_instrument_throughput: The unperturbed instrument throughput
-    :param amplitude_perturbation_time_series: The amplitude perturbation time series
-    :param phase_perturbation_time_series: The phase perturbation time series
-    :param polarization_perturbation_time_series: The polarization perturbation time series
-    :param observatory_coordinates_x: The observatory x coordinates
-    :param observatory_coordinates_y: The observatory y coordinates
-    :param source_sky_coordinates_x: The source sky x coordinates
-    :param source_sky_coordinates_y: The source sky y coordinates
-    :param source_sky_brightness_distribution: The source sky brightness distribution
-    :param simulation_wavelength_steps: The simulation wavelength steps
-    :param simulation_wavelength_bin_widths: The simulation wavelength bin widths
-    :param simulation_time_step_duration: The simulation time step duration
-    :param beam_combination_matrix: The beam combination matrix
-    :return: The photon counts
-    """
-    base_complex_amplitude = _calculate_complex_amplitude_base(
-        amplitude_perturbation_time_series,
-        phase_perturbation_time_series,
-        observatory_coordinates_x,
-        observatory_coordinates_y,
-        source_sky_coordinates_x,
-        source_sky_coordinates_y,
-        simulation_wavelength_steps
-    ) * aperture_radius * torch.sqrt(unperturbed_instrument_throughput)
-
-    complex_amplitude_x, complex_amplitude_y = _calculate_complex_amplitude(
-        base_complex_amplitude,
-        polarization_perturbation_time_series
-    )
-
-    del base_complex_amplitude
-    del observatory_coordinates_x
-    del observatory_coordinates_y
-    gc.collect()
-
-    intensity_response = _calculate_intensity_response(
-        complex_amplitude_x,
-        complex_amplitude_y,
-        beam_combination_matrix
-    )
-    print('here')
-
-    photon_counts = _calculate_photon_counts_from_intensity_response(
-        device,
-        intensity_response,
-        source_sky_brightness_distribution,
-        simulation_wavelength_steps,
-        simulation_wavelength_bin_widths,
-        simulation_time_step_duration,
-        normalization_array
-    )
-    return photon_counts
+#
+# def calculate_photon_counts(
+#         device: torch.device,
+#         aperture_radius: Tensor,
+#         unperturbed_instrument_throughput: Tensor,
+#         amplitude_perturbation_time_series: Tensor,
+#         phase_perturbation_time_series: Tensor,
+#         polarization_perturbation_time_series: Tensor,
+#         observatory_coordinates_x: Tensor,
+#         observatory_coordinates_y: Tensor,
+#         source_sky_coordinates_x: Tensor,
+#         source_sky_coordinates_y: Tensor,
+#         source_sky_brightness_distribution: Tensor,
+#         simulation_wavelength_steps: Tensor,
+#         simulation_wavelength_bin_widths: Tensor,
+#         simulation_time_step_duration: float,
+#         beam_combination_matrix: Tensor,
+#         normalization_array: Tensor
+# ):
+#     """Calculate the photon counts.
+#
+#     :param device: The device
+#     :param aperture_radius: The aperture radius
+#     :param unperturbed_instrument_throughput: The unperturbed instrument throughput
+#     :param amplitude_perturbation_time_series: The amplitude perturbation time series
+#     :param phase_perturbation_time_series: The phase perturbation time series
+#     :param polarization_perturbation_time_series: The polarization perturbation time series
+#     :param observatory_coordinates_x: The observatory x coordinates
+#     :param observatory_coordinates_y: The observatory y coordinates
+#     :param source_sky_coordinates_x: The source sky x coordinates
+#     :param source_sky_coordinates_y: The source sky y coordinates
+#     :param source_sky_brightness_distribution: The source sky brightness distribution
+#     :param simulation_wavelength_steps: The simulation wavelength steps
+#     :param simulation_wavelength_bin_widths: The simulation wavelength bin widths
+#     :param simulation_time_step_duration: The simulation time step duration
+#     :param beam_combination_matrix: The beam combination matrix
+#     :return: The photon counts
+#     """
+#     base_complex_amplitude = _calculate_complex_amplitude_base(
+#         amplitude_perturbation_time_series,
+#         phase_perturbation_time_series,
+#         observatory_coordinates_x,
+#         observatory_coordinates_y,
+#         source_sky_coordinates_x,
+#         source_sky_coordinates_y,
+#         simulation_wavelength_steps
+#     ) * aperture_radius * torch.sqrt(unperturbed_instrument_throughput)
+#
+#     complex_amplitude_x, complex_amplitude_y = _calculate_complex_amplitude(
+#         base_complex_amplitude,
+#         polarization_perturbation_time_series
+#     )
+#
+#     del base_complex_amplitude
+#     del observatory_coordinates_x
+#     del observatory_coordinates_y
+#     gc.collect()
+#
+#     intensity_response = _calculate_intensity_response(
+#         complex_amplitude_x,
+#         complex_amplitude_y,
+#         beam_combination_matrix
+#     )
+#     print('here')
+#
+#     photon_counts = _calculate_photon_counts_from_intensity_response(
+#         device,
+#         intensity_response,
+#         source_sky_brightness_distribution,
+#         simulation_wavelength_steps,
+#         simulation_wavelength_bin_widths,
+#         simulation_time_step_duration,
+#         normalization_array
+#     )
+#     return photon_counts

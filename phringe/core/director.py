@@ -189,7 +189,6 @@ class Director():
         - Bin the data to observatory time steps and wavelength steps
 
         """
-
         # Check simulation time step is smaller than detector integration time
         if self._time_step_size > self._detector_integration_time:
             raise ValueError('The simulation time step size must be smaller than the detector integration time.')
