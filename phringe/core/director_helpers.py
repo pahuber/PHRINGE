@@ -4,8 +4,8 @@ import spectres
 import torch
 from torch import Tensor
 
-from phringe.core.entities.observatory.array_configuration import ArrayConfigurationEnum
-from phringe.core.entities.observatory.beam_combination_scheme import BeamCombinationSchemeEnum
+from phringe.core.entities.observatory.array import ArrayEnum
+from phringe.core.entities.observatory.beam_combiner import BeamCombinerEnum
 from phringe.core.entities.photon_sources.base_photon_source import BasePhotonSource
 from phringe.core.entities.photon_sources.exozodi import Exozodi
 from phringe.core.entities.photon_sources.local_zodi import LocalZodi
@@ -71,44 +71,44 @@ def calculate_nulling_baseline(
 
         # 3 collector arrays
         case (
-            ArrayConfigurationEnum.EQUILATERAL_TRIANGLE_CIRCULAR_ROTATION.value,
-            BeamCombinationSchemeEnum.KERNEL_3.value
+            ArrayEnum.EQUILATERAL_TRIANGLE_CIRCULAR_ROTATION.value,
+            BeamCombinerEnum.KERNEL_3.value
         ):
             factors = (0.67,)
 
         # 4 collector arrays
         case (
-            ArrayConfigurationEnum.EMMA_X_CIRCULAR_ROTATION.value,
-            BeamCombinationSchemeEnum.DOUBLE_BRACEWELL.value
+            ArrayEnum.EMMA_X_CIRCULAR_ROTATION.value,
+            BeamCombinerEnum.DOUBLE_BRACEWELL.value
         ):
             factors = (0.6,)
 
         case (
-            ArrayConfigurationEnum.EMMA_X_CIRCULAR_ROTATION.value,
-            BeamCombinationSchemeEnum.KERNEL_4.value
+            ArrayEnum.EMMA_X_CIRCULAR_ROTATION.value,
+            BeamCombinerEnum.KERNEL_4.value
         ):
             factors = 0.31, 1, 0.6
             print(
                 "The optimal baseline for Emma-X with kernel nulling is ill-defined for second differential output.")
 
         case (
-            ArrayConfigurationEnum.EMMA_X_DOUBLE_STRETCH.value,
-            BeamCombinationSchemeEnum.DOUBLE_BRACEWELL.value
+            ArrayEnum.EMMA_X_DOUBLE_STRETCH.value,
+            BeamCombinerEnum.DOUBLE_BRACEWELL.value
         ):
             factors = (1,)
             raise Warning("The optimal baseline for Emma-X with double stretching is not yet implemented.")
 
         case (
-            ArrayConfigurationEnum.EMMA_X_DOUBLE_STRETCH.value,
-            BeamCombinationSchemeEnum.KERNEL_4.value
+            ArrayEnum.EMMA_X_DOUBLE_STRETCH.value,
+            BeamCombinerEnum.KERNEL_4.value
         ):
             factors = 1, 1, 1
             raise Warning("The optimal baseline for Emma-X with double stretching is not yet implemented."
                           )
         # 5 collector arrays
         case (
-            ArrayConfigurationEnum.REGULAR_PENTAGON_CIRCULAR_ROTATION.value,
-            BeamCombinationSchemeEnum.KERNEL_5.value
+            ArrayEnum.REGULAR_PENTAGON_CIRCULAR_ROTATION.value,
+            BeamCombinerEnum.KERNEL_5.value
         ):
             factors = 1.04, 0.67
 

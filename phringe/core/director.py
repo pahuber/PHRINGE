@@ -96,6 +96,18 @@ class Director():
         self._total_integration_time = observation.total_integration_time
         self._unperturbed_instrument_throughput = observatory.unperturbed_instrument_throughput
 
+    def _generate_sub_data_indices(self, divisor: int) -> list[int]:
+        """Generate indices representing the data split into 'divisor' parts.
+
+        :param divisor: The divisor
+        :return: The sub data indices
+        """
+        time_steps_per_iteration = len(self.simulation_time_steps) // divisor
+        indices = []
+        for i in range(0, divisor + 1):
+            indices.append(i * time_steps_per_iteration)
+        return indices
+
     def _get_devices(self, gpus: tuple[int]) -> list[str]:
         """Get the devices.
 
@@ -112,7 +124,72 @@ class Director():
             devices.append(torch.device('cpu'))
         return devices
 
+    def _run_data_generator(self, lower_index: int, upper_index: int, divisor: int) -> np.ndarray:
+        """Run the data generator.
+
+        :param lower_index: The lower index
+        :param upper_index: The upper index
+        :param divisor: The divisor
+        :return: The data and intensity response
+        """
+        if self._has_planet_orbital_motion:
+            planets_copy = []
+
+            for index_planet, planet in enumerate(self._planets):
+                planet_copy = copy(planet)
+                planet_copy.sky_coordinates = copy(planet.sky_coordinates[:, lower_index:upper_index])
+                planet_copy.sky_brightness_distribution = copy(
+                    planet.sky_brightness_distribution[lower_index:upper_index])
+                planets_copy.append(planet_copy)
+
+            # Remove all planets from sources object and add new ones
+            self._sources = [source for source in self._sources if not isinstance(source, Planet)]
+            self._sources.extend(planets_copy)
+
+        # Create the data generator object
+        data_generator = DataGenerator(
+            self._aperture_diameter / 2,
+            self._beam_combination_transfer_matrix,
+            self._differential_output_pairs,
+            self._detailed,
+            self._device,
+            self._grid_size,
+            self._has_planet_orbital_motion,
+            len(self._instrument_time_steps) / divisor,
+            self._instrument_wavelength_bin_centers,
+            self._instrument_wavelength_bin_widths,
+            self._instrument_wavelength_bin_edges,
+            self._modulation_period,
+            self._number_of_inputs,
+            self._number_of_outputs,
+            self.observatory_coordinates[:, :, lower_index:upper_index],
+            self.amplitude_perturbations[:, lower_index:upper_index],
+            self.phase_perturbations[:, lower_index:upper_index],
+            self.polarization_perturbations[:, lower_index:upper_index],
+            self._time_step_size,
+            self.simulation_time_steps[lower_index:upper_index],
+            self.simulation_wavelength_bin_centers,
+            self.simulation_wavelength_bin_widths,
+            self._sources,
+            self._unperturbed_instrument_throughput
+        )
+        return data_generator.run()
+
     def run(self):
+        """Run the director. This includes the following steps:
+        - Calculate simulation and instrument time steps
+        - Calculate the simulation wavelength bins
+        - Calculate field of view
+        - Calculate the nulling baseline
+        - Calculate the instrument perturbation time series
+        - Calculate the observatory coordinates time series
+        - Calculate the spectral flux densities, coordinates and brightness distributions of all sources in the scene
+        - Move all tensors to the device (i.e. GPU, if available)
+        - Generate the data in a memory-safe way
+        - Bin the data to observatory time steps and wavelength steps
+
+        """
+
         # Check simulation time step is smaller than detector integration time
         if self._time_step_size > self._detector_integration_time:
             raise ValueError('The simulation time step size must be smaller than the detector integration time.')
@@ -229,53 +306,49 @@ class Director():
                 self._device)
         self._unperturbed_instrument_throughput = self._unperturbed_instrument_throughput.to(self._device)
 
-        div = 1
-        worked = True
-        while worked:
-            # print(f'div: {div}')
-            if div > len(self.simulation_time_steps):
-                # print('div')
+        # Generate data. If GPU runs out of memory, divide the data along the time dimension and retry until no memory
+        # error occurs, then concatenate the data
+        divisor = 1
+        is_succesful = True
+
+        while is_succesful:
+            if divisor > len(self.simulation_time_steps):
                 raise OutOfMemoryError('Not enough memory to generate data. Choose other configurations.')
+
             data_parts = []
             intensity_response_parts = []
-            indices = self._generate_indices(div)
-            # print(indices)
+            indices = self._generate_sub_data_indices(divisor)
+
+            # Generate data for each set of indices
             for i in range(len(indices)):
                 while i <= len(indices) - 2:
                     lower_index = indices[i]
-                    upper_index = indices[i + 1]  # - 1
+                    upper_index = indices[i + 1]
 
                     try:
-                        # Generate the data
-                        data, intensity_response = self._run_data_generator(lower_index, upper_index, div)
-                        # print(data.shape)
+                        # Run data generator and append data and intensity response
+                        data, intensity_response = self._run_data_generator(lower_index, upper_index, divisor)
                         data_parts.append(data)
                         intensity_response_parts.append(intensity_response)
-                        # print(f'appending: {lower_index} - {upper_index}')
-                        worked = False
-                        # if i == len(indices) - 1:
-                        #     worked = False
+                        is_succesful = False
                         break
-                    except OutOfMemoryError:
-                        # print(f'{div} out of memory')
-                        div += 1
-                        break
-            if not len(data_parts) == len(indices) - 1:
-                worked = True
 
+                    except OutOfMemoryError:
+                        divisor += 1
+                        break
+
+            if not len(data_parts) == len(indices) - 1:
+                is_succesful = True
+
+        # Concatenate data and intensity response
         concatenated_data = torch.cat(data_parts, dim=2).cpu()
-        # self._intensity_response = torch.cat(intensity_response_parts, dim=2).cpu()
         self._intensity_response = {
             key: torch.cat([dict[key].cpu() for dict in intensity_response_parts], dim=2)
             for key in intensity_response_parts[0]
         }
-        # print(concatenated_data.shape)
 
-        # Bin photon counts to observatory time and wavelengths
+        # Bin data to observatory time and wavelengths
         binning_factor = int(round(len(self.simulation_time_steps) / len(self._instrument_time_steps), 0))
-        # print(len(self.simulation_time_steps))
-        # print(len(self._instrument_time_steps))
-        # print(binning_factor)
         self._data = torch.asarray(
             block_reduce(
                 concatenated_data.numpy(),
@@ -285,66 +358,3 @@ class Director():
         )
         if self._normalize:
             self._data = torch.einsum('ijk, ij->ijk', self._data, 1 / torch.sqrt(torch.mean(self._data ** 2, axis=2)))
-        # print(self._data.shape)
-
-    def _run_data_generator(self, lower_index: int, upper_index: int, div):
-        if self._has_planet_orbital_motion:
-            planets_copy = []
-
-            for index_planet, planet in enumerate(self._planets):
-                planet_copy = copy(planet)
-                planet_copy.sky_coordinates = copy(planet.sky_coordinates[:, lower_index:upper_index])
-                planet_copy.sky_brightness_distribution = copy(
-                    planet.sky_brightness_distribution[lower_index:upper_index])
-                planets_copy.append(planet_copy)
-
-                # print(planet.sky_coordinates.shape)
-                # print(planet_copy.sky_coordinates.shape)
-            # remove all planets from sources and add new ones
-            self._sources = [source for source in self._sources if not isinstance(source, Planet)]
-            self._sources.extend(planets_copy)
-
-        # print(f'blaaaa: {self.observatory_coordinates[:, :, lower_index:upper_index].shape}')
-        # sources_copy = self._sources.copy()
-        # for source in sources_copy:
-        #     source.spectral_flux_density = source.spectral_flux_density[:, lower_index:upper_index]
-        #     source.sky_coordinates = source.sky_coordinates[:, lower_index:upper_index]
-        #     source.sky_brightness_distribution = source.sky_brightness_distribution[:, lower_index:upper_index]
-
-        data_generator = DataGenerator(
-            self._aperture_diameter / 2,
-            self._beam_combination_transfer_matrix,
-            self._differential_output_pairs,
-            self._detailed,
-            self._device,
-            self._grid_size,
-            self._has_planet_orbital_motion,
-            len(self._instrument_time_steps) / div,
-            self._instrument_wavelength_bin_centers,
-            self._instrument_wavelength_bin_widths,
-            self._instrument_wavelength_bin_edges,
-            self._modulation_period,
-            self._number_of_inputs,
-            self._number_of_outputs,
-            self.observatory_coordinates[:, :, lower_index:upper_index],
-            self.amplitude_perturbations[:, lower_index:upper_index],
-            self.phase_perturbations[:, lower_index:upper_index],
-            self.polarization_perturbations[:, lower_index:upper_index],
-            self._time_step_size,
-            self.simulation_time_steps[lower_index:upper_index],
-            self.simulation_wavelength_bin_centers,
-            self.simulation_wavelength_bin_widths,
-            self._sources,
-            self._unperturbed_instrument_throughput
-        )
-        return data_generator.run()
-
-    def _generate_indices(self, div):
-        number_of_time_steps = len(self.simulation_time_steps)
-        time_steps_per_iteration = number_of_time_steps // div
-
-        indices = []
-        for i in range(0, div + 1):
-            indices.append(i * time_steps_per_iteration)
-
-        return indices

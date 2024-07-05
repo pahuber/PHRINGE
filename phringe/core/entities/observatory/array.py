@@ -14,8 +14,8 @@ from phringe.util.helpers import Coordinates
 from phringe.util.matrix import get_2d_rotation_matrix
 
 
-class ArrayConfigurationEnum(Enum):
-    """Enum representing the different array configuration types.
+class ArrayEnum(Enum):
+    """Enum representing the different array types.
     """
     EMMA_X_CIRCULAR_ROTATION = 'emma-x-circular-rotation'
     EMMA_X_DOUBLE_STRETCH = 'emma-x-double-stretch'
@@ -23,8 +23,8 @@ class ArrayConfigurationEnum(Enum):
     REGULAR_PENTAGON_CIRCULAR_ROTATION = 'regular-pentagon-circular-rotation'
 
 
-class ArrayConfiguration(ABC, BaseModel):
-    """Class representation of a collector array configuration.
+class Array(ABC, BaseModel):
+    """Class representation of a collector array.
 
     :param nulling_baseline_length: The length of the nulling baseline
     :param type: The type of the array configuration
@@ -51,10 +51,10 @@ class ArrayConfiguration(ABC, BaseModel):
         pass
 
 
-class EmmaXCircularRotation(ArrayConfiguration):
+class EmmaXCircularRotation(Array):
     """Class representation of the Emma-X array configuration with circular rotation of the array.
     """
-    type: Any = ArrayConfigurationEnum.EMMA_X_CIRCULAR_ROTATION
+    type: Any = ArrayEnum.EMMA_X_CIRCULAR_ROTATION
 
     def get_collector_coordinates(
             self,
@@ -70,10 +70,10 @@ class EmmaXCircularRotation(ArrayConfiguration):
         return collector_positions.swapaxes(0, 2)
 
 
-class EmmaXDoubleStretch(ArrayConfiguration):
+class EmmaXDoubleStretch(Array):
     """Class representation of the Emma-X array configuration with double stretching of the array.
     """
-    type: Any = ArrayConfigurationEnum.EMMA_X_DOUBLE_STRETCH
+    type: Any = ArrayEnum.EMMA_X_DOUBLE_STRETCH
 
     def get_collector_coordinates(self,
                                   time_steps: np.ndarray,
@@ -88,10 +88,10 @@ class EmmaXDoubleStretch(ArrayConfiguration):
         return Coordinates(collector_positions[0], collector_positions[1])
 
 
-class EquilateralTriangleCircularRotation(ArrayConfiguration):
+class EquilateralTriangleCircularRotation(Array):
     """Class representation of an equilateral triangle configuration with circular rotation of the array.
     """
-    type: Any = ArrayConfigurationEnum.EQUILATERAL_TRIANGLE_CIRCULAR_ROTATION
+    type: Any = ArrayEnum.EQUILATERAL_TRIANGLE_CIRCULAR_ROTATION
 
     def get_collector_coordinates(
             self,
@@ -109,16 +109,13 @@ class EquilateralTriangleCircularRotation(ArrayConfiguration):
              [height - height_to_center, -height_to_center, -height_to_center]], dtype=torch.float32)
         collector_positions = torch.einsum('ijl,jk->ikl', rotation_matrix,
                                            equilateral_triangle_static)
-        # collector_coordinates = torch.zeros(len(time_steps), dtype=object)
-        # for i in range(len(time_steps)):
-        #     collector_coordinates[i] = Coordinates(collector_positions[0, :, i], collector_positions[1, :, i])
         return collector_positions.swapaxes(0, 2)
 
 
-class RegularPentagonCircularRotation(ArrayConfiguration):
+class RegularPentagonCircularRotation(Array):
     """Class representation of a regular pentagon configuration with circular rotation of the array.
     """
-    type: Any = ArrayConfigurationEnum.REGULAR_PENTAGON_CIRCULAR_ROTATION
+    type: Any = ArrayEnum.REGULAR_PENTAGON_CIRCULAR_ROTATION
 
     def _get_x_position(self, angle, nulling_baseline) -> astropy.units.Quantity:
         """Return the x position.

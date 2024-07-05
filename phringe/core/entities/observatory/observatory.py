@@ -8,17 +8,17 @@ from pydantic import BaseModel, field_validator
 from pydantic_core.core_schema import ValidationInfo
 from torch import Tensor
 
-from phringe.core.entities.observatory.array_configuration import (
-    ArrayConfiguration,
-    ArrayConfigurationEnum,
+from phringe.core.entities.observatory.array import (
+    Array,
+    ArrayEnum,
     EmmaXCircularRotation,
     EmmaXDoubleStretch,
     EquilateralTriangleCircularRotation,
     RegularPentagonCircularRotation,
 )
-from phringe.core.entities.observatory.beam_combination_scheme import (
-    BeamCombinationScheme,
-    BeamCombinationSchemeEnum,
+from phringe.core.entities.observatory.beam_combiner import (
+    BeamCombiner,
+    BeamCombinerEnum,
     DoubleBracewell,
     Kernel3,
     Kernel4,
@@ -186,7 +186,7 @@ class Observatory(BaseModel):
         return torch.asarray(wavelength_bin_centers, dtype=torch.float32), torch.asarray(wavelength_bin_widths,
                                                                                          dtype=torch.float32)
 
-    def _load_array_configuration(self, array_configuration_type) -> ArrayConfiguration:
+    def _load_array_configuration(self, array_configuration_type) -> Array:
         """Return the array configuration object from the dictionary.
 
         :param config_dict: The dictionary
@@ -194,19 +194,19 @@ class Observatory(BaseModel):
         """
 
         match array_configuration_type:
-            case ArrayConfigurationEnum.EMMA_X_CIRCULAR_ROTATION.value:
+            case ArrayEnum.EMMA_X_CIRCULAR_ROTATION.value:
                 return EmmaXCircularRotation()
 
-            case ArrayConfigurationEnum.EMMA_X_DOUBLE_STRETCH.value:
+            case ArrayEnum.EMMA_X_DOUBLE_STRETCH.value:
                 return EmmaXDoubleStretch()
 
-            case ArrayConfigurationEnum.EQUILATERAL_TRIANGLE_CIRCULAR_ROTATION.value:
+            case ArrayEnum.EQUILATERAL_TRIANGLE_CIRCULAR_ROTATION.value:
                 return EquilateralTriangleCircularRotation()
 
-            case ArrayConfigurationEnum.REGULAR_PENTAGON_CIRCULAR_ROTATION.value:
+            case ArrayEnum.REGULAR_PENTAGON_CIRCULAR_ROTATION.value:
                 return RegularPentagonCircularRotation()
 
-    def _load_beam_combination_scheme(self, beam_combination_scheme_type) -> BeamCombinationScheme:
+    def _load_beam_combination_scheme(self, beam_combination_scheme_type) -> BeamCombiner:
         """Return the beam combination scheme object from the dictionary.
 
         :param beam_combination_scheme_type: The beam combination scheme type
@@ -214,14 +214,14 @@ class Observatory(BaseModel):
         """
 
         match beam_combination_scheme_type:
-            case BeamCombinationSchemeEnum.DOUBLE_BRACEWELL.value:
+            case BeamCombinerEnum.DOUBLE_BRACEWELL.value:
                 return DoubleBracewell()
 
-            case BeamCombinationSchemeEnum.KERNEL_3.value:
+            case BeamCombinerEnum.KERNEL_3.value:
                 return Kernel3()
 
-            case BeamCombinationSchemeEnum.KERNEL_4.value:
+            case BeamCombinerEnum.KERNEL_4.value:
                 return Kernel4()
 
-            case BeamCombinationSchemeEnum.KERNEL_5.value:
+            case BeamCombinerEnum.KERNEL_5.value:
                 return Kernel5()

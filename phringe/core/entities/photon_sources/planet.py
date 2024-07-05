@@ -31,6 +31,7 @@ class Planet(BasePhotonSource, BaseModel):
     :param true_anomaly: The true anomaly of the planet
     :param angular_separation_from_star_x: The angular separation of the planet from the star in x-direction
     :param angular_separation_from_star_y: The angular separation of the planet from the star in y-direction
+    :param grid_position: The grid position of the planet
     """
     name: str
     mass: str
