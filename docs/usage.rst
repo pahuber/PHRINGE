@@ -3,22 +3,22 @@
 Usage
 =====
 
-Input Files
------------
+Required User Input
+-------------------
 
-PHRINGE requires the following files to run:
+``PHRINGE`` requires certain user input to configure the `simulation settings`, `observation strategy`, `observatory hardware` and `astrophysical scene`. Usually, this input is provided through the following files:
 
 * A :ref:`configuration file <configuration>` to configure the simulation settings, observation strategy and observatory hardware
 * An :ref:`exoplanetary system file <exoplanetary_system>` to specify the observed exoplanetary system including the stellar, planetary and exozodi properties
-* Optional: A :ref:`spectrum file <spectrum>` that represents the spectral radiance in W/sr/m2/um of the planet
+* Optional: A :ref:`spectrum file <spectrum>` that contains the spectra of the planets in the system in W/sr/m2/um
 
 .. note::
-    If no spectrum file is provided for a planet, a blackbody spectrum will be created from the exoplanetary system file.
+    If no spectrum is provided for a planet, a blackbody spectrum will be created from the planetary properties specified in the exoplanetary system file.
 
 Usage From Command Line
-------------
+------------------------
 
-PHRINGE can be run from the command line as follows:
+``PHRINGE`` features a command line interface and can be run from the command line as follows:
 
 .. code-block:: console
 
@@ -91,9 +91,11 @@ Flags
    * - ``--normalize``/``--no-normalize``
      - Whether to normalize the data to unit RMS along the time axis; default is false
 
+
+
 Usage From Python Module
 ------------------------
-
+``PHRINGE`` can also be used from within another Python module either by using input files or by manually creating the required objects.
 
 
 Using Input Files

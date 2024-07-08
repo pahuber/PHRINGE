@@ -3,7 +3,7 @@
 PHRINGE
 ====
 
-PHRINGE is a synthetic **PH**\ oton count data gene\ **R**\ ator for null\ **ING** int\ **E**\ rferometers. It can
+PHRINGE is a synthetic **PH**\ otometry data gene\ **R**\ ator for null\ **ING** int\ **E**\ rferometers. It can
 simulate the observation of an exoplanetary system with a space-based nulling interferometer and generate realistic data
 in terms of photon counts as a function of wavelength and time, considering both astrophysical and instrumental
 noise sources.
