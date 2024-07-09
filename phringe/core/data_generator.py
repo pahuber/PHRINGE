@@ -18,6 +18,7 @@ class DataGenerator():
     :param baseline_ratio: The baseline ratio
     :param beam_combination_matrix: The beam combination matrix
     :param differential_output_pairs: The differential output pairs
+    :param differential_photon_counts: The differential photon counts
     :param generate_separate: The flag indicating whether to enable photon statistics by generating separate data sets for all
     :param measured_wavelength_bin_centers: The measured wavelength bin centers
     :param measured_wavelength_bin_edges: The measured wavelength bin edges
@@ -39,9 +40,6 @@ class DataGenerator():
     :param time_step_duration: The time step duration
     :param time_steps: The time steps
     :param unperturbed_instrument_throughput: The unperturbed instrument throughput
-    :param wavelength_steps: The wavelength steps
-    :param differential_photon_counts: The differential photon counts
-    :param photon_counts_binned: The photon counts binned
     """
 
     def __init__(
