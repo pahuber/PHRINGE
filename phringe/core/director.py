@@ -20,12 +20,45 @@ from phringe.util.helpers import InputSpectrum
 class Director():
     """Class representation of the director.
 
-    :param device: The device
     :param aperture_diameter: The aperture diameter
-    :param array_configuration: The array configuration
+    :param array: The array
     :param baseline_maximum: The maximum baseline
-
-
+    :param baseline_minimum: The minimum baseline
+    :param baseline_ratio: The baseline ratio
+    :param beam_combiner: The beam combiner
+    :param beam_combination_transfer_matrix: The beam combination transfer matrix
+    :param detailed: Whether to run in detailed mode
+    :param detector_integration_time: The detector integration time
+    :param device: The device
+    :param differential_output_pairs: The differential output pairs
+    :param grid_size: The grid size
+    :param has_amplitude_perturbations: Whether to have amplitude perturbations
+    :param has_exozodi_leakage: Whether to have exozodi leakage
+    :param has_local_zodi_leakage: Whether to have local zodi leakage
+    :param has_phase_perturbations: Whether to have phase perturbations
+    :param has_planet_orbital_motion: Whether to have planet orbital motion
+    :param has_polarization_perturbations: Whether to have polarization perturbations
+    :param has_stellar_leakage: Whether to have stellar leakage
+    :param input_spectra: The input spectra
+    :param instrument_wavelength_bin_centers: The instrument wavelength bin centers
+    :param instrument_wavelength_bin_edges: The instrument wavelength bin edges
+    :param instrument_wavelength_bin_widths: The instrument wavelength bin widths
+    :param observatory_wavelength_range_lower_limit: The observatory wavelength range lower limit
+    :param observatory_wavelength_range_upper_limit: The observatory wavelength range upper limit
+    :param optimized_differential_output: The optimized differential output
+    :param optimized_star_separation: The optimized star separation
+    :param optimized_wavelength: The optimized wavelength
+    :param phase_falloff_exponent: The phase falloff exponent
+    :param phase_perturbation_rms: The phase perturbation RMS
+    :param planets: The planets
+    :param polarization_falloff_exponent: The polarization falloff exponent
+    :param polarization_perturbation_rms: The polarization perturbation RMS
+    :param solar_ecliptic_latitude: The solar ecliptic latitude
+    :param sources: The sources
+    :param star: The star
+    :param time_step_size: The time step size
+    :param total_integration_time: The total integration time
+    :param unperturbed_instrument_throughput: The unperturbed instrument throughput
     """
     # _simulation_time_step_length = tensor(0.5, dtype=torch.float32)
     _maximum_simulation_wavelength_sampling = 1000
@@ -53,16 +86,16 @@ class Director():
         :param normalize: Whether to normalize the data to unit RMS along the time axis
         """
         self._aperture_diameter = observatory.aperture_diameter
-        self._array_configuration = observatory.array_configuration
+        self.array = observatory.array
         self._baseline_maximum = observation.baseline_maximum
         self._baseline_minimum = observation.baseline_minimum
         self._baseline_ratio = observation.baseline_ratio
-        self._beam_combination_scheme = observatory.beam_combination_scheme
-        self._beam_combination_transfer_matrix = self._beam_combination_scheme.get_beam_combination_transfer_matrix()
+        self._beam_combiner = observatory.beam_combiner
+        self._beam_combination_transfer_matrix = self._beam_combiner.get_beam_combination_transfer_matrix()
         self._detailed = detailed
         self._detector_integration_time = observation.detector_integration_time
         self._devices = self._get_devices(gpus)
-        self._differential_output_pairs = self._beam_combination_scheme.get_differential_output_pairs()
+        self._differential_output_pairs = self._beam_combiner.get_differential_output_pairs()
         self._grid_size = settings.grid_size
         self._has_amplitude_perturbations = settings.has_amplitude_perturbations
         self._has_exozodi_leakage = settings.has_exozodi_leakage
@@ -74,8 +107,8 @@ class Director():
         self._input_spectra = input_spectra
         self._modulation_period = observation.modulation_period
         self._normalize = normalize
-        self._number_of_inputs = self._beam_combination_scheme.number_of_inputs
-        self._number_of_outputs = self._beam_combination_scheme.number_of_outputs
+        self._number_of_inputs = self._beam_combiner.number_of_inputs
+        self._number_of_outputs = self._beam_combiner.number_of_outputs
         self._instrument_wavelength_bin_centers = observatory.wavelength_bin_centers
         self._instrument_wavelength_bin_edges = observatory.wavelength_bin_edges
         self._instrument_wavelength_bin_widths = observatory.wavelength_bin_widths
@@ -96,8 +129,48 @@ class Director():
         self._total_integration_time = observation.total_integration_time
         self._unperturbed_instrument_throughput = observatory.unperturbed_instrument_throughput
 
+    def _generate_sub_data(self) -> tuple[list[torch.Tensor], list[dict]]:
+        """Generate data in a memory-safe way. If GPU runs out of memory, divide the data along the time dimension and
+        retry iteratively until no memory error occurs, then concatenate the data
+
+        :return: The sub data and sub intensity response
+        """
+        # TODO: Implement a more sophisticated memory management
+        divisor = 1
+        is_successful = True
+        while is_successful:
+            if divisor > len(self.simulation_time_steps):
+                raise OutOfMemoryError('Not enough memory to generate data. Choose other configurations.')
+
+            sub_data = []
+            sub_intensity_response = []
+            indices = self._generate_sub_data_indices(divisor)
+
+            # Generate data for each set of indices
+            for i in range(len(indices)):
+                while i <= len(indices) - 2:
+                    lower_index = indices[i]
+                    upper_index = indices[i + 1]
+
+                    try:
+                        # Run data generator and append data and intensity response
+                        data, intensity_response = self._run_data_generator(lower_index, upper_index, divisor)
+                        sub_data.append(data)
+                        sub_intensity_response.append(intensity_response)
+                        is_successful = False
+                        break
+
+                    except OutOfMemoryError:
+                        divisor += 1
+                        break
+
+            if not len(sub_data) == len(indices) - 1:
+                is_successful = True
+
+        return sub_data, sub_intensity_response
+
     def _generate_sub_data_indices(self, divisor: int) -> list[int]:
-        """Generate indices representing the data split into 'divisor' parts.
+        """Generate indices representing the data split into x parts, where x is given by 'divisor'.
 
         :param divisor: The divisor
         :return: The sub data indices
@@ -132,6 +205,8 @@ class Director():
         :param divisor: The divisor
         :return: The data and intensity response
         """
+        # If orbital motion is considered, planet sky coordinates and brightness distribution have a time axis as well,
+        # i.e. change with time, and need to be sliced to the sub indices
         if self._has_planet_orbital_motion:
             planets_copy = []
 
@@ -146,7 +221,7 @@ class Director():
             self._sources = [source for source in self._sources if not isinstance(source, Planet)]
             self._sources.extend(planets_copy)
 
-        # Create the data generator object
+        # Create and run the data generator object
         data_generator = DataGenerator(
             self._aperture_diameter / 2,
             self._beam_combination_transfer_matrix,
@@ -228,8 +303,8 @@ class Director():
             self._optimized_wavelength,
             self._baseline_maximum,
             self._baseline_minimum,
-            self._array_configuration.type.value,
-            self._beam_combination_scheme.type
+            self.array.type.value,
+            self._beam_combiner.type
         )
 
         # Calculate the instrument perturbations
@@ -256,7 +331,7 @@ class Director():
         )
 
         # Calculate the observatory coordinates
-        self.observatory_coordinates = self._array_configuration.get_collector_coordinates(
+        self.observatory_coordinates = self.array.get_collector_coordinates(
             self.simulation_time_steps,
             self.nulling_baseline,
             self._modulation_period,
@@ -305,45 +380,14 @@ class Director():
                 self._device)
         self._unperturbed_instrument_throughput = self._unperturbed_instrument_throughput.to(self._device)
 
-        # Generate data. If GPU runs out of memory, divide the data along the time dimension and retry until no memory
-        # error occurs, then concatenate the data
-        divisor = 1
-        is_succesful = True
-
-        while is_succesful:
-            if divisor > len(self.simulation_time_steps):
-                raise OutOfMemoryError('Not enough memory to generate data. Choose other configurations.')
-
-            data_parts = []
-            intensity_response_parts = []
-            indices = self._generate_sub_data_indices(divisor)
-
-            # Generate data for each set of indices
-            for i in range(len(indices)):
-                while i <= len(indices) - 2:
-                    lower_index = indices[i]
-                    upper_index = indices[i + 1]
-
-                    try:
-                        # Run data generator and append data and intensity response
-                        data, intensity_response = self._run_data_generator(lower_index, upper_index, divisor)
-                        data_parts.append(data)
-                        intensity_response_parts.append(intensity_response)
-                        is_succesful = False
-                        break
-
-                    except OutOfMemoryError:
-                        divisor += 1
-                        break
-
-            if not len(data_parts) == len(indices) - 1:
-                is_succesful = True
+        # Generate data
+        sub_data, sub_intensity_response = self._generate_sub_data()
 
         # Concatenate data and intensity response
-        concatenated_data = torch.cat(data_parts, dim=2).cpu()
+        concatenated_data = torch.cat(sub_data, dim=2).cpu()
         self._intensity_response = {
-            key: torch.cat([dict[key].cpu() for dict in intensity_response_parts], dim=2)
-            for key in intensity_response_parts[0]
+            key: torch.cat([dict[key].cpu() for dict in sub_intensity_response], dim=2)
+            for key in sub_intensity_response[0]
         }
 
         # Bin data to observatory time and wavelengths
@@ -355,5 +399,7 @@ class Director():
                 np.sum
             )
         )
+
+        # Normalize data (used for template creation)
         if self._normalize:
             self._data = torch.einsum('ijk, ij->ijk', self._data, 1 / torch.sqrt(torch.mean(self._data ** 2, axis=2)))
