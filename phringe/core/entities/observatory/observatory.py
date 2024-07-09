@@ -49,8 +49,8 @@ class Observatory(BaseModel):
     :param polarization_perturbation_time_series: The polarization perturbation time series
     """
 
-    array_configuration: str
-    beam_combination_scheme: str
+    array: str
+    beam_combiner: str
     aperture_diameter: str
     spectral_resolving_power: int
     wavelength_range_lower_limit: str
@@ -71,8 +71,8 @@ class Observatory(BaseModel):
         """Constructor method.
         """
         super().__init__(**data)
-        self.array_configuration = self._load_array_configuration(self.array_configuration)
-        self.beam_combination_scheme = self._load_beam_combination_scheme(self.beam_combination_scheme)
+        self.array = self._load_array(self.array)
+        self.beam_combiner = self._load_beam_combiner(self.beam_combiner)
 
     @field_validator('aperture_diameter')
     def _validate_aperture_diameter(cls, value: Any, info: ValidationInfo) -> Tensor:
@@ -186,7 +186,7 @@ class Observatory(BaseModel):
         return torch.asarray(wavelength_bin_centers, dtype=torch.float32), torch.asarray(wavelength_bin_widths,
                                                                                          dtype=torch.float32)
 
-    def _load_array_configuration(self, array_configuration_type) -> Array:
+    def _load_array(self, array_configuration_type) -> Array:
         """Return the array configuration object from the dictionary.
 
         :param config_dict: The dictionary
@@ -206,7 +206,7 @@ class Observatory(BaseModel):
             case ArrayEnum.REGULAR_PENTAGON_CIRCULAR_ROTATION.value:
                 return RegularPentagonCircularRotation()
 
-    def _load_beam_combination_scheme(self, beam_combination_scheme_type) -> BeamCombiner:
+    def _load_beam_combiner(self, beam_combination_scheme_type) -> BeamCombiner:
         """Return the beam combination scheme object from the dictionary.
 
         :param beam_combination_scheme_type: The beam combination scheme type
