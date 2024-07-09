@@ -58,6 +58,9 @@ myst-parser = { version = ">=0.16.1" }
 [tool.poetry.scripts]
 phringe = "phringe.__main__:main"
 
+[tool.poetry.group.dev.dependencies]
+nbsphinx = "^0.9.4"
+
 [tool.coverage.paths]
 source = ["src", "*/site-packages"]
 tests = ["tests", "*/tests"]
