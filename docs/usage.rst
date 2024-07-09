@@ -117,14 +117,7 @@ THe simplest way is to specify everything in the input files. The following exam
         config_file_path=Path('path_to_config_file'),
         exoplanetary_system_file_path=Path('path_to_exoplanetary_system_file'),
         spectrum_files=spectrum_files,
-        gpus=None,
-        fits_suffix='',
-        output_dir=Path('path_to_output_directory'),
-        detailed=False,
-        write_fits=True,
-        create_copy=True,
-        create_dir=True,
-        normalize=False
+        gpus=(1,)
     )
 
 .. hint::
@@ -164,14 +157,7 @@ objects, these objects can also be manually created and then passed to ``PHRINGE
         exoplanetary_system_file_path=Path('path_to_exoplanetary_system_file'),
         settings=settings,
         spectrum_files=spectrum_files,
-        gpus=None,
-        fits_suffix='',
-        output_dir=Path('path_to_output_directory'),
-        detailed=False,
-        write_fits=True,
-        create_copy=True,
-        create_dir=True,
-        normalize=False
+        gpus=(1,)
     )
 
 .. note::
