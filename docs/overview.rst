@@ -7,6 +7,7 @@ Features
 --------
 
 `PHRINGE` includes the following features:
+
 * Model different array architectures including different array configurations (Emma-X, Triangle, Pentagon) and different nulling schemes (double Bracewell, Kernel)
 * Model noise contributions from astrophysical sources including stellar, local zodi and exozodi leakage
 * Model noise contributions from systematic instrument perturbations including amplitude, phase (OPD) and polarization rotation perturbations
