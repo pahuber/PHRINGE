@@ -2,7 +2,7 @@ import torch
 from torch import Tensor
 
 
-def _calculate_complex_amplitude_base(
+def calculate_complex_amplitude_base(
         amplitude_perturbation_time_series: Tensor,
         phase_perturbation_time_series: Tensor,
         observatory_coordinates_x: Tensor,
@@ -66,7 +66,7 @@ def _calculate_complex_amplitude_base(
     return a
 
 
-def _calculate_complex_amplitude(
+def calculate_complex_amplitude(
         base_complex_amplitude: Tensor,
         polarization_perturbation_time_series: Tensor
 ) -> Tensor:
@@ -110,7 +110,7 @@ def _calculate_complex_amplitude(
 #     return result_x + result_y
 
 
-def _calculate_normalization(
+def calculate_normalization(
         device: torch.device,
         source_sky_brightness_distribution: Tensor,
         simulation_wavelength_steps: Tensor
@@ -147,7 +147,7 @@ def _calculate_normalization(
     return normalization
 
 
-def _calculate_photon_counts_from_intensity_response(
+def calculate_photon_counts_from_intensity_response(
         device: torch.device,
         intensity_response: Tensor,
         source_sky_brightness_distribution: Tensor,
@@ -165,7 +165,7 @@ def _calculate_photon_counts_from_intensity_response(
     :return: The photon counts
     """
 
-    normalization = _calculate_normalization(
+    normalization = calculate_normalization(
         device,
         source_sky_brightness_distribution,
         simulation_wavelength_steps

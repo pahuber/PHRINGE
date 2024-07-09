@@ -2,8 +2,8 @@ import numpy as np
 import torch
 from torch import Tensor
 
-from phringe.core.data_generator_helpers import _calculate_complex_amplitude_base, \
-    _calculate_complex_amplitude, _calculate_photon_counts_from_intensity_response
+from phringe.core.data_generator_helpers import calculate_complex_amplitude_base, \
+    calculate_complex_amplitude, calculate_photon_counts_from_intensity_response
 from phringe.core.entities.photon_sources.base_photon_source import BasePhotonSource
 
 
@@ -116,7 +116,7 @@ class DataGenerator():
 
         for source in self.sources:
             # Calculate the complex amplitude
-            base_complex_amplitude = _calculate_complex_amplitude_base(
+            base_complex_amplitude = calculate_complex_amplitude_base(
                 self.amplitude_perturbations,
                 self.phase_perturbations,
                 self.observatory_coordinates[0],
@@ -126,7 +126,7 @@ class DataGenerator():
                 self.simulation_wavelength_bin_centers
             ) * self.aperture_radius * torch.sqrt(self.unperturbed_instrument_throughput)
 
-            complex_amplitude_x, complex_amplitude_y = _calculate_complex_amplitude(
+            complex_amplitude_x, complex_amplitude_y = calculate_complex_amplitude(
                 base_complex_amplitude,
                 self.polarization_perturbations
             )
@@ -155,7 +155,7 @@ class DataGenerator():
                 intensity_responses[source.name] = intensity_response
 
             # Calculate photon counts
-            photon_counts = _calculate_photon_counts_from_intensity_response(
+            photon_counts = calculate_photon_counts_from_intensity_response(
                 self.device,
                 intensity_response,
                 source.sky_brightness_distribution,
