@@ -7,7 +7,7 @@ Architecture
 ------------
 
 The simplified class diagram of PHRINGE shown below gives an overview of the software architecture. The key components
-are a **user interface** (UI), a **processing** component, an **input/output** (IO) component and the **entities**.
+are a **user interface (UI)**, a **processing** component, an **input/output (IO)** component and the **entities**.
 
 .. image:: _static/architecture.jpg
     :alt: Architecture
@@ -18,7 +18,7 @@ Components
 
 UI
 ~~
-The UI contains the ``PHRINGE`` class, which serves as an interface to let the user configure the simulation and retrieve the results thereof.
+The UI contains the `PHRINGE class, which serves as an interface to let the user configure the simulation and retrieve the results thereof.
 
 Processing
 ~~~~~~~~~~

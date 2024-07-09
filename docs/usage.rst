@@ -3,10 +3,13 @@
 Usage
 =====
 
+.. note::
+    It is recommended to run PHRINGE on a GPU, as the simulation gets computationally expensive quickly.
+
 Required User Input
 -------------------
 
-``PHRINGE`` requires certain user input to configure the `simulation settings`, `observation strategy`, `observatory hardware` and `astrophysical scene`. Usually, this input is provided through the following files:
+`PHRINGE` requires certain user input to configure the `simulation settings`, `observation strategy`, `observatory hardware` and `astrophysical scene`. Usually, this input is provided through the following files:
 
 * A :ref:`configuration file <configuration>` to configure the simulation settings, observation strategy and observatory hardware
 * An :ref:`exoplanetary system file <exoplanetary_system>` to specify the observed exoplanetary system including the stellar, planetary and exozodi properties
@@ -18,7 +21,7 @@ Required User Input
 Usage From Command Line
 ------------------------
 
-``PHRINGE`` features a command line interface and can be run from the command line as follows:
+`PHRINGE` features a command line interface and can be run from the command line as follows:
 
 .. code-block:: console
 
@@ -95,12 +98,12 @@ Flags
 
 Usage From Python Module
 ------------------------
-``PHRINGE`` can also be used from within another Python module either by using input files or by manually creating the required objects.
+`PHRINGE` can also be used from within another Python module either by using input files or by manually creating the required objects.
 
 
 Using Input Files
 ~~~~~~~~~~~~~~~~~
-PHRINGE can also be used from within another Python module in the following way:
+THe simplest way is to specify everything in the input files. The following example demonstrates how to run `PHRINGE` using input files:
 
 .. code-block:: python
 
@@ -115,7 +118,7 @@ PHRINGE can also be used from within another Python module in the following way:
         exoplanetary_system_file_path=Path('path_to_exoplanetary_system_file'),
         spectrum_files=spectrum_files,
         gpus=None,
-        fit_suffix='',
+        fits_suffix='',
         output_dir=Path('path_to_output_directory'),
         detailed=False,
         write_fits=True,
@@ -162,7 +165,7 @@ objects, these objects can also be manually created and then passed to ``PHRINGE
         settings=settings,
         spectrum_files=spectrum_files,
         gpus=None,
-        fit_suffix='',
+        fits_suffix='',
         output_dir=Path('path_to_output_directory'),
         detailed=False,
         write_fits=True,
