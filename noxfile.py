@@ -217,7 +217,6 @@ def docs_build(session: Session) -> None:
     if build_dir.exists():
         shutil.rmtree(build_dir)
 
-    session.run("sphinx-apidoc", "-o", "docs/source", "phringe/core")
     session.run("sphinx-build", *args)
 
 

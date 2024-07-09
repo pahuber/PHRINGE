@@ -27,9 +27,15 @@ copyright = f'2024, Philipp A. Huber'
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 
-extensions = ['sphinx_copybutton']
+extensions = ['sphinx_copybutton',
+              'sphinx.ext.autodoc']
 
 # -- Options for HTML output -------------------------------------------------
 
 master_doc = 'index'
 html_theme = "furo"
+
+import os
+import sys
+
+sys.path.insert(0, os.path.abspath('../phringe'))

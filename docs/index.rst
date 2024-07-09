@@ -18,6 +18,7 @@ noise sources.
    :caption: Getting Started:
    :hidden:
 
+   overview
    installation
    usage
    first_example
@@ -27,7 +28,7 @@ noise sources.
    :caption: User Documentation:
    :hidden:
 
-   overview
+   architecture
    input_files
    api_documentation
 
