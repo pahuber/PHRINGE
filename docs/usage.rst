@@ -4,7 +4,7 @@ Usage
 =====
 
 .. note::
-    It is recommended to run PHRINGE on a GPU, as the simulation gets computationally expensive quickly.
+    It is recommended to run `PHRINGE` on a GPU, as the simulation gets computationally expensive quickly.
 
 Required User Input
 -------------------
