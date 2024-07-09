@@ -18,10 +18,10 @@ Required User Input
 .. note::
     If no spectrum is provided for a planet, a blackbody spectrum will be created from the planetary properties specified in the exoplanetary system file.
 
-Usage From Command Line
-------------------------
+Using Command Line Interface (CLI)
+-----------------------------------
 
-`PHRINGE` features a command line interface and can be run from the command line as follows:
+`PHRINGE` features a command line interface (CLI) and can be run from the command line as follows:
 
 .. code-block:: console
 
@@ -96,8 +96,8 @@ Flags
 
 
 
-Usage From Python Module
-------------------------
+Using Within Python Module
+--------------------------
 `PHRINGE` can also be used from within another Python module either by using input files or by manually creating the required objects.
 
 
@@ -107,7 +107,7 @@ THe simplest way is to specify everything in the input files. The following exam
 
 .. code-block:: python
 
-    from phringe.phringe import PHRINGE
+    from phringe.phringe_ui import PHRINGE
     from pathlib import Path
 
     spectrum_files = (('Planet Name', Path('path_to_planet_name_spectrum_file')),)
@@ -135,7 +135,7 @@ objects, these objects can also be manually created and then passed to ``PHRINGE
 .. code-block:: python
 
     from phringe.core.entities.settings import Settings
-    from phringe.phringe import PHRINGE
+    from phringe.phringe_ui import PHRINGE
     from pathlib import Path
 
     settings = Settings(

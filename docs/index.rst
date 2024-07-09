@@ -1,7 +1,7 @@
 .. _index:
 
 PHRINGE
-====
+=======
 
 **PHRINGE** is a synthetic **PH**\ otometry data gene\ **R**\ ator for null\ **ING** int\ **E**\ rferometers. It can
 simulate the observation of an exoplanetary system with a space-based nulling interferometer and generate realistic data
@@ -21,7 +21,7 @@ noise sources.
    overview
    installation
    usage
-   first_example
+   first_examples
 
 .. toctree::
    :maxdepth: 2

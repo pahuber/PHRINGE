@@ -33,8 +33,8 @@ observation:
 # Observatory (Hardware)
 # -------------------------------------------
 observatory:
-  array_configuration: emma-x-circular-rotation
-  beam_combination_scheme: double-bracewell
+  array: emma-x-circular-rotation
+  beam_combiner: double-bracewell
   aperture_diameter: 2 m
   spectral_resolving_power: 20
   wavelength_range_lower_limit: 4 um
