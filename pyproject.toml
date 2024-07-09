@@ -49,6 +49,7 @@ pyupgrade = ">=2.29.1"
 safety = ">=1.10.3"
 sphinx = ">=5.0.0"
 sphinx-autobuild = ">=2021.3.14"
+sphinx-copybutton = ">=0.5.2"
 sphinx-click = ">=3.0.2"
 typeguard = ">=2.13.3"
 xdoctest = { extras = ["colors"], version = ">=0.15.10" }

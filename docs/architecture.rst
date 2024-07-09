@@ -18,11 +18,11 @@ Components
 
 UI
 ~~
-The UI contains the `PHRINGE class, which serves as an interface to let the user configure the simulation and retrieve the results thereof.
+The UI contains the :ref:`PHRINGE <class.phringe>` class, which serves as an interface to let the user configure the simulation and retrieve the results thereof.
 
 Processing
 ~~~~~~~~~~
-The processing component contains the ``Director`` and ``DataGenerator`` classes. The ``Director`` class is responsible for coordinating the simulation, i.e. preparing all objects needed by the ``DataGenerator`` and then running the latter.
+The processing component contains the :ref:`Director <class.director>` and :ref:`DataGenerator <class.data_generator>` classes. The ``Director`` class is responsible for coordinating the simulation, i.e. preparing all objects needed by the ``DataGenerator`` and then running the latter.
 This includes the following steps:
 
 * Calculate the simulation time steps.
@@ -46,4 +46,4 @@ The IO component contains the ``TXTReader``, ``FITSWriter`` and ``YAMLHandler`` 
 
 Entities
 ~~~~~~~~
-The entities are the classes that represent the objects in the simulation. The main objects are the ``Settings``, ``Observation``, ``Observatory`` and ``Scene`` classes.
+The entities are the classes that represent the objects in the simulation. The main objects are the :ref:`Settings <class.settings>`, :ref:`Observation <class.observation>`, :ref:`Observatory <class.observatory>` and :ref:`Scene <class.scene>` classes.
