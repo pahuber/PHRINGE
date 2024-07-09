@@ -36,6 +36,7 @@ extensions = ['sphinx_copybutton',
 
 master_doc = 'index'
 html_theme = "furo"
+html_static_path = ['_static']
 
 import os
 import sys
