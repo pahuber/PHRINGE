@@ -131,9 +131,8 @@ class PHRINGE():
             create_directory: bool = True,
             normalize: bool = False
     ):
-        """Generate synthetic photometry data and return the total data as an array of shape N_differential_outputs x
-        N_spectral_channels x N_time_steps or the data for each source separately in a dictionary of such arrays if
-        enable_stats is True.
+        """Generate synthetic photometry data and return the total data as an array of shape N_diff_outputs x
+        N_spec_channels x N_observation_time_steps.
 
         :param config_file_path: The path to the configuration file
         :param exoplanetary_system_file_path: The path to the exoplanetary system file

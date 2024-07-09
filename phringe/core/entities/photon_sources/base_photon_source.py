@@ -38,7 +38,9 @@ class BasePhotonSource(ABC, BaseModel):
 
     @abstractmethod
     def _calculate_sky_brightness_distribution(self, grid_size: int, **kwargs) -> np.ndarray:
-        """Calculate and return the sky brightness distribution of the source object for each (time and) wavelength.
+        """Calculate and return the sky brightness distribution of the source object for each (time and) wavelength as
+        an array of shape N_wavelengths x N_pix x N_pix or N_time_steps x N_wavelengths x N_pix x N_pix (e.g. when
+        accounting for planetary orbital motion).
 
         :param grid_size: The grid size
         :param kwargs: Additional keyword arguments
@@ -49,7 +51,12 @@ class BasePhotonSource(ABC, BaseModel):
     @abstractmethod
     def _calculate_sky_coordinates(self, grid_size: int, **kwargs) -> np.ndarray:
         """Calculate and return the sky coordinates of the source for a given time. For moving sources, such as planets,
-         the sky coordinates might change over time.
+         the sky coordinates might change over time to ensure optimal sampling, e.g. for a planet that moves in very
+         close to the star). The sky coordinates for the different sources are of the following shapes:
+            - star: 2 x N_pix x N_pix
+            - planet: 2 x N_pix x N_pix (no motion) or 2 x N_time_steps x N_pix x N_pix (with motion)
+            - local and exozodi: 2 x N_wavelength x N_pix x N_pix (N_wavelength, since they fill the whole FoV, which is
+              wavelength-dependent).
 
         :param grid_size: The grid size
         :param kwargs: Additional keyword arguments

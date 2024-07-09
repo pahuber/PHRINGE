@@ -390,7 +390,7 @@ class Director():
             for key in sub_intensity_response[0]
         }
 
-        # Bin data to observatory time and wavelengths
+        # Bin data to from simulation time steps observatory/instrument time steps
         binning_factor = int(round(len(self.simulation_time_steps) / len(self._instrument_time_steps), 0))
         self._data = torch.asarray(
             block_reduce(

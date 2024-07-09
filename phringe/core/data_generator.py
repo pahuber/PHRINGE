@@ -115,7 +115,7 @@ class DataGenerator():
         intensity_responses = {}
 
         for source in self.sources:
-            # Calculate the complex amplitude
+            # Calculate the complex amplitude (N_wavelengths x N_collectors x N_time_steps x N_pix x N_pix)
             base_complex_amplitude = calculate_complex_amplitude_base(
                 self.amplitude_perturbations,
                 self.phase_perturbations,
@@ -132,7 +132,7 @@ class DataGenerator():
             )
             del base_complex_amplitude
 
-            # Calculate the intensity response
+            # Calculate the intensity response (N_wavelengths x N_outputs x N_time_steps x N_pix x N_pix)
             dot_product_x = (
                     self.beam_combination_matrix[None, ..., None, None, None] * complex_amplitude_x.unsqueeze(1)
             )
@@ -154,7 +154,7 @@ class DataGenerator():
             if self.detailed:
                 intensity_responses[source.name] = intensity_response
 
-            # Calculate photon counts
+            # Calculate photon counts (N_outputs x N_wavelengths x N_time_steps)
             photon_counts = calculate_photon_counts_from_intensity_response(
                 self.device,
                 intensity_response,
@@ -198,7 +198,7 @@ class DataGenerator():
         # shape = time_binned_photon_counts.shape[2]
         # del time_binned_photon_counts
 
-        # Calculate differential photon counts
+        # Calculate differential photon counts (N_diff_outputs x N_spec_channels x N_time_steps)
         self.differential_photon_counts = torch.zeros(
             (
                 self.number_of_differential_outputs,

@@ -21,7 +21,7 @@ def calculate_amplitude_perturbations(
         simulation_time_steps: Tensor,
         has_amplitude_perturbations: bool
 ) -> Tensor:
-    """Return the amplitude perturbation time series in units of 1.
+    """Return the amplitude perturbation time series in units of 1 as an array of shape N_collectors x N_time_steps.
 
     :param number_of_inputs: The number of inputs
     :param simulation_time_steps: The simulation time steps
@@ -129,7 +129,7 @@ def calculate_phase_perturbations(
         phase_falloff_exponent: float,
         has_phase_perturbations: bool
 ) -> Tensor:
-    """Return the phase perturbation time series in units of meters.
+    """Return the phase perturbation time series in units of meters  as an array of shape N_collectors x N_time_steps.
 
     :param settings: The settings object
     :param observation: The observation object
@@ -152,7 +152,7 @@ def calculate_polarization_perturbations(
         polarization_falloff_exponent: float,
         has_polarization_perturbations: bool
 ) -> Tensor:
-    """Return the polarization perturbation time series in units of rad.
+    """Return the polarization perturbation time series in units of rad  as an array of shape N_collectors x N_time_steps.
 
     :param settings: The settings object
     :param observation: The observation object
@@ -190,7 +190,8 @@ def calculate_simulation_wavelength_bin_centers(
     """Calculate the optimized wavelength sampling for the simulation. This is done by taking the gradient of the
     normalized planet spectra and adding extra wavelength steps (to the instrument wavelength bins) where the
     gradient is larger than the threshold. This assures a good sampling of the planet spectra if the instrument spectral
-    resolving power is low compared to the variation of the spectra.
+    resolving power is low compared to the variation of the spectra. This specified the number of  simulation wavelength
+    steps N_wavelengths.
 
     :param instrument_wavelength_bin_centers: The instrument wavelength bin centers
     :param maximum_simulation_wavelength_sampling: The maximum resolution of the simulation wavelength range

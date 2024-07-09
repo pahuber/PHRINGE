@@ -41,7 +41,8 @@ class Array(ABC, BaseModel):
             modulation_period: float,
             baseline_ratio: int
     ) -> Tensor:
-        """Return time-dependent x- and y-coordinates of the collectors.
+        """Return time-dependent x- and y-coordinates of the collectors as an array of shape 2 x N_collectors x
+        N_time_steps.
 
         :param time_steps: The time steps for which the collector positions are calculated
         :param modulation_period: The modulation period of the array

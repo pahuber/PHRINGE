@@ -11,7 +11,8 @@ def calculate_complex_amplitude_base(
         source_sky_coordinates_y: Tensor,
         wavelength_steps: Tensor,
 ) -> Tensor:
-    """Calculate the complex amplitude element for a single polarization.
+    """Calculate the complex amplitude element for a single polarization and return an array of shape N_wavelengths x
+    N_collectors x N_time_steps x N_pix x N_pix.
 
     :param amplitude_perturbation_time_series: The amplitude perturbation time series
     :param phase_perturbation_time_series: The phase perturbation time series
@@ -27,7 +28,7 @@ def calculate_complex_amplitude_base(
     # obs_x_source_x = torch.einsum('ij,kl->ijkl', observatory_coordinates_x, source_sky_coordinates_x)
     # obs_y_source_y = torch.einsum('ij,kl->ijkl', observatory_coordinates_y, source_sky_coordinates_y)
 
-    # Source = Star or = Planet and no planet orbital motion
+    # (Source = Star) or (source = Planet and no planet orbital motion)
     if len(source_sky_coordinates_x.shape) == 2:
         obs_x = observatory_coordinates_x[..., None, None]
         obs_y = observatory_coordinates_y[..., None, None]
@@ -70,7 +71,8 @@ def calculate_complex_amplitude(
         base_complex_amplitude: Tensor,
         polarization_perturbation_time_series: Tensor
 ) -> Tensor:
-    """Calculate the complex amplitude.
+    """Calculate the complex amplitude and return an array of shape 2 x N_wavelengths x N_collectors x N_time_steps x
+    N_pix x N_pix.
 
     :param base_complex_amplitude: The base complex amplitude
     :param polarization_perturbation_time_series: The polarization perturbation time series
@@ -115,7 +117,7 @@ def calculate_normalization(
         source_sky_brightness_distribution: Tensor,
         simulation_wavelength_steps: Tensor
 ) -> Tensor:
-    """Calculate the normalization.
+    """Calculate the normalization of shape N_wavelengths.
 
     :param device: The device
     :param source_sky_brightness_distribution: The source sky brightness distribution
@@ -156,7 +158,7 @@ def calculate_photon_counts_from_intensity_response(
         simulation_time_step_duration: float,
         normalization: Tensor
 ) -> Tensor:
-    """Calculate the photon counts.
+    """Calculate the photon counts and return an array of shape N_outputs x N_wavelengths x N_time_steps.
 
     :param intensity_response: The intensity response
     :param source_sky_brightness_distribution: The source sky brightness distribution
