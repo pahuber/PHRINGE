@@ -15,7 +15,7 @@ noise sources.
 
 .. toctree::
    :maxdepth: 2
-   :caption: Getting Started:
+   :caption: Getting Started
    :hidden:
 
    overview
@@ -25,9 +25,17 @@ noise sources.
 
 .. toctree::
    :maxdepth: 2
-   :caption: User Documentation:
+   :caption: User Documentation
    :hidden:
 
-   architecture
    input_files
+   architecture
    api_documentation
+
+
+.. toctree::
+   :maxdepth: 2
+   :caption: About
+   :hidden:
+
+   about
