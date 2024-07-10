@@ -18,6 +18,24 @@ Required User Input
 .. note::
     If no spectrum is provided for a planet, a blackbody spectrum will be created from the planetary properties specified in the exoplanetary system file.
 
+Using Within Python Module
+--------------------------
+`PHRINGE` can also be used from within another Python module either by using input files (see :doc:`basic example <tutorials/example_basic>`) or by manually creating the required objects (see :doc:`advanced example <tutorials/example_advanced>`).
+To do this, the ``PHRINGE`` class from the ``phringe.phringe_ui`` module must be used:
+
+.. code-block:: python
+
+    from phringe.phringe_ui import PHRINGE
+    from pathlib import Path
+
+
+    phringe = PHRINGE()
+    phringe.run(
+        config_file_path=Path('path_to_config_file'),
+        exoplanetary_system_file_path=Path('path_to_exoplanetary_system_file')
+    )
+
+
 Using Command Line Interface (CLI)
 -----------------------------------
 
@@ -96,19 +114,3 @@ Flags
 
 
 
-Using Within Python Module
---------------------------
-`PHRINGE` can also be used from within another Python module either by using input files (see :doc:`basic example <tutorials/example_basic>`) or by manually creating the required objects (see :doc:`advanced example <tutorials/example_advanced>`).
-To do this, the ``PHRINGE`` class from the ``phringe.phringe_ui`` module must be used:
-
-.. code-block:: python
-
-    from phringe.phringe_ui import PHRINGE
-    from pathlib import Path
-
-
-    phringe = PHRINGE()
-    phringe.run(
-        config_file_path=Path('path_to_config_file'),
-        exoplanetary_system_file_path=Path('path_to_exoplanetary_system_file')
-    )
