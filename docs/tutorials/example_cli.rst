@@ -1,4 +1,4 @@
-.. example_cli:
+.. _example_cli:
 
 CLI Example
 =============

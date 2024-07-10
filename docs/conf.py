@@ -30,7 +30,8 @@ copyright = f'2024, Philipp A. Huber'
 extensions = ['sphinx_copybutton',
               'sphinx.ext.autodoc',
               'sphinx.ext.napoleon',
-              'nbsphinx']
+              'nbsphinx',
+              'recommonmark']
 
 # -- Options for HTML output -------------------------------------------------
 
