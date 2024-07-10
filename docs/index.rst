@@ -31,10 +31,3 @@ noise sources.
    architecture
    input_files
    api_documentation
-
-.. toctree::
-   :maxdepth: 2
-   :caption: Developer Documentation:
-   :hidden:
-
-   architecture
