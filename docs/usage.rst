@@ -20,8 +20,7 @@ Required User Input
 
 Using Within Python Module
 --------------------------
-`PHRINGE` can also be used from within another Python module either by using input files (see :doc:`basic example <tutorials/example_basic>`) or by manually creating the required objects (see :doc:`advanced example <tutorials/example_advanced>`).
-To do this, the ``PHRINGE`` class from the ``phringe.phringe_ui`` module must be used:
+`PHRINGE` can be used from within another Python module by using the ``PHRINGE`` class from the ``phringe.phringe_ui`` module:
 
 .. code-block:: python
 
@@ -35,11 +34,12 @@ To do this, the ``PHRINGE`` class from the ``phringe.phringe_ui`` module must be
         exoplanetary_system_file_path=Path('path_to_exoplanetary_system_file')
     )
 
+The input can either be given through input files (as done here; see :doc:`basic example <tutorials/example_basic>`) or by manually creating the required objects (see :doc:`advanced example <tutorials/example_advanced>`).
 
 Using Command Line Interface (CLI)
 -----------------------------------
 
-`PHRINGE` features a command line interface (CLI) and can be run from the command line as follows:
+`PHRINGE` features a command line interface (CLI) and can be run from the command line as follows to directly generate FITS files containing the synthetic data:
 
 .. code-block:: console
 
