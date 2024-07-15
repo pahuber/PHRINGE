@@ -40,8 +40,8 @@ observatory:
   wavelength_range_lower_limit: 4 um
   wavelength_range_upper_limit: 18 um
   unperturbed_instrument_throughput: 0.05
-  amplitude_perturbation_rms: 0.7
-  amplitude_falloff_exponent: 1
+  amplitude_perturbation_lower_limit: 0.7
+  amplitude_perturbation_upper_limit: 0.9
   phase_perturbation_rms: 20 nm
   phase_falloff_exponent: 1
   polarization_perturbation_rms: 0.1 rad

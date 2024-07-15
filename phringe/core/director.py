@@ -20,6 +20,8 @@ from phringe.util.helpers import InputSpectrum
 class Director():
     """Class representation of the director.
 
+    :param amplitude_falloff_exponent: The amplitude falloff exponent
+    :param amplitude_perturbation_rms: The amplitude perturbation RMS
     :param aperture_diameter: The aperture diameter
     :param array: The array
     :param baseline_maximum: The maximum baseline
@@ -85,8 +87,10 @@ class Director():
         :param detailed: Whether to run in detailed mode
         :param normalize: Whether to normalize the data to unit RMS along the time axis
         """
+        self._amplitude_perturbation_lower_limit = observatory.amplitude_perturbation_lower_limit
+        self._amplitude_perturbation_upper_limit = observatory.amplitude_perturbation_upper_limit
         self._aperture_diameter = observatory.aperture_diameter
-        self.array = observatory.array
+        self._array = observatory.array
         self._baseline_maximum = observation.baseline_maximum
         self._baseline_minimum = observation.baseline_minimum
         self._baseline_ratio = observation.baseline_ratio
@@ -303,7 +307,7 @@ class Director():
             self._optimized_wavelength,
             self._baseline_maximum,
             self._baseline_minimum,
-            self.array.type.value,
+            self._array.type.value,
             self._beam_combiner.type
         )
 
@@ -311,6 +315,8 @@ class Director():
         self.amplitude_perturbations = calculate_amplitude_perturbations(
             self._number_of_inputs,
             self.simulation_time_steps,
+            self._amplitude_perturbation_lower_limit,
+            self._amplitude_perturbation_upper_limit,
             self._has_amplitude_perturbations
         )
         self.phase_perturbations = calculate_phase_perturbations(
@@ -331,7 +337,7 @@ class Director():
         )
 
         # Calculate the observatory coordinates
-        self.observatory_coordinates = self.array.get_collector_coordinates(
+        self.observatory_coordinates = self._array.get_collector_coordinates(
             self.simulation_time_steps,
             self.nulling_baseline,
             self._modulation_period,

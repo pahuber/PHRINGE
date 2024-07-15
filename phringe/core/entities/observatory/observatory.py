@@ -30,15 +30,15 @@ from phringe.io.validators import validate_quantity_units
 class Observatory(BaseModel):
     """Class representing the observatory.
 
+    :param amplitude_perturbation_lower_limit: The lower limit of the amplitude perturbation
+    :param amplitude_perturbation_upper_limit: The upper limit of the amplitude perturbation
     :param array_configuration: The array configuration
-    :param beam_combination_scheme: The beam combination scheme
     :param aperture_diameter: The aperture diameter
+    :param beam_combination_scheme: The beam combination scheme
     :param spectral_resolving_power: The spectral resolving power
     :param wavelength_range_lower_limit: The lower limit of the wavelength range
     :param wavelength_range_upper_limit: The upper limit of the wavelength range
     :param unperturbed_instrument_throughput: The unperturbed instrument throughput
-    :param amplitude_perturbation_rms: The amplitude perturbation rms
-    :param amplitude_falloff_exponent: The amplitude falloff exponent
     :param phase_perturbation_rms: The phase perturbation rms
     :param phase_falloff_exponent: The phase falloff exponent
     :param polarization_perturbation_rms: The polarization perturbation rms
@@ -49,6 +49,8 @@ class Observatory(BaseModel):
     :param polarization_perturbation_time_series: The polarization perturbation time series
     """
 
+    amplitude_perturbation_lower_limit: float
+    amplitude_perturbation_upper_limit: float
     array: str
     beam_combiner: str
     aperture_diameter: str
@@ -56,8 +58,6 @@ class Observatory(BaseModel):
     wavelength_range_lower_limit: str
     wavelength_range_upper_limit: str
     unperturbed_instrument_throughput: float
-    amplitude_perturbation_rms: float
-    amplitude_falloff_exponent: float
     phase_perturbation_rms: str
     phase_falloff_exponent: float
     polarization_perturbation_rms: str
@@ -73,6 +73,33 @@ class Observatory(BaseModel):
         super().__init__(**data)
         self.array = self._load_array(self.array)
         self.beam_combiner = self._load_beam_combiner(self.beam_combiner)
+
+    @field_validator('amplitude_perturbation_lower_limit')
+    def _validate_amplitude_perturbation_lower_limit(cls, value: Any, info: ValidationInfo) -> Tensor:
+        """Validate the amplitude perturbation lower limit input.
+
+        :param value: Value given as input
+        :param info: ValidationInfo object
+        :return: The amplitude perturbation lower limit
+        """
+        if value < 0:
+            raise ValueError(f'{value} is not a valid input for {info.field_name}. Can not be negative.')
+        return torch.tensor(value, dtype=torch.float32)
+
+    @field_validator('amplitude_perturbation_upper_limit')
+    def _validate_amplitude_perturbation_upper_limit(cls, value: Any, info: ValidationInfo) -> Tensor:
+        """Validate the amplitude perturbation upper limit input.
+
+        :param value: Value given as input
+        :param info: ValidationInfo object
+        :return: The amplitude perturbation upper limit
+        """
+        if value < 0:
+            raise ValueError(f'{value} is not a valid input for {info.field_name}. Can not be negative.')
+        if value <= info.data['amplitude_perturbation_lower_limit']:
+            raise ValueError(f'{value} is not a valid input for {info.field_name}. Must be greater than '
+                             f'{info.data["amplitude_perturbation_lower_limit"]}.')
+        return torch.tensor(value, dtype=torch.float32)
 
     @field_validator('aperture_diameter')
     def _validate_aperture_diameter(cls, value: Any, info: ValidationInfo) -> Tensor:

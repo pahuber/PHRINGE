@@ -201,16 +201,16 @@ accepted values and meanings are given in the table below:
      - e.g. 0.1
      - 1
      - Throughput of the unperturbed instrument
-   * - amplitude_perturbation_rms
+   * - amplitude_perturbation_lower_limit
      - float
      - e.g. 0.7
      - 1
-     - RMS of the amplitude perturbation
-   * - amplitude_falloff_exponent
+     - Minimum value of the amplitude perturbation
+   * - amplitude_perturbation_upper_limit
      - int
-     - e.g. 1
+     - e.g. 0.9
      - 1
-     - Falloff exponent of the amplitude perturbation power spectrum
+     - Maximum value of the amplitude perturbation
    * - phase_perturbation_rms
      - str*
      - e.g. 1 nm

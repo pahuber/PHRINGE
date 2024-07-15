@@ -19,20 +19,24 @@ from phringe.util.spectrum import create_blackbody_spectrum
 def calculate_amplitude_perturbations(
         number_of_inputs: int,
         simulation_time_steps: Tensor,
+        amplitude_perturbation_lower_limit: float,
+        amplitude_perturbation_upper_limit: float,
         has_amplitude_perturbations: bool
 ) -> Tensor:
     """Return the amplitude perturbation time series in units of 1 as an array of shape N_collectors x N_time_steps.
 
     :param number_of_inputs: The number of inputs
     :param simulation_time_steps: The simulation time steps
+    :param amplitude_perturbation_lower_limit: The amplitude perturbation lower limit
+    :param amplitude_perturbation_upper_limit: The amplitude perturbation upper limit
     :param has_amplitude_perturbations: Whether the simulation has amplitude perturbations
     :return: The amplitude perturbation time series in units of 1
     """
     # TODO: Update this
-    return 0.7 + (0.9 - 0.7) * torch.rand((
-        number_of_inputs,
-        len(simulation_time_steps)), dtype=torch.float32) \
-        if has_amplitude_perturbations else torch.ones(
+    return amplitude_perturbation_lower_limit + (
+            amplitude_perturbation_upper_limit - amplitude_perturbation_lower_limit) * torch.rand(
+        (number_of_inputs, len(simulation_time_steps)),
+        dtype=torch.float32) if has_amplitude_perturbations else torch.ones(
         (number_of_inputs, len(simulation_time_steps)))
 
 
