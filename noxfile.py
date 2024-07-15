@@ -190,7 +190,7 @@ def typeguard(session: Session) -> None:
 
 @session(python=python_versions)
 def xdoctest(session: Session) -> None:
-    """Run examples with xdoctest."""
+    """Run _wd with xdoctest."""
     if session.posargs:
         args = [package, *session.posargs]
     else:
