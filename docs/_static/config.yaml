@@ -9,6 +9,7 @@ settings:
   grid_size: 20
   time_step_size: 100 s
   has_planet_orbital_motion: false
+  has_planet_signal: false
   has_stellar_leakage: true
   has_local_zodi_leakage: false
   has_exozodi_leakage: false

@@ -14,7 +14,7 @@ def get_meshgrid(full_extent: float, grid_size: int) -> Tuple[np.ndarray, np.nda
     :return: Tuple of numpy arrays
     """
     linspace = torch.linspace(-full_extent / 2, full_extent / 2, grid_size)
-    return torch.meshgrid(linspace, linspace)
+    return torch.meshgrid((linspace, linspace), indexing='ij')
 
 
 def get_radial_map(full_extent: Quantity, grid_size: int) -> Tuple[np.ndarray, np.ndarray]:

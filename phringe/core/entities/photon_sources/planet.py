@@ -14,6 +14,7 @@ from torch import Tensor
 from phringe.core.entities.photon_sources.base_photon_source import BasePhotonSource
 from phringe.io.validators import validate_quantity_units
 from phringe.util.grid import get_index_of_closest_value, get_meshgrid, get_index_of_closest_value_numpy
+from phringe.util.spectrum import create_blackbody_spectrum
 
 
 class Planet(BasePhotonSource, BaseModel):
@@ -137,18 +138,44 @@ class Planet(BasePhotonSource, BaseModel):
         :param kwargs: The keyword arguments
         :return: The binned mean spectral flux density in units of ph s-1 m-3
         """
-        reference_wavelength_bin_centers = kwargs.get('reference_wavelength_bin_centers')
-        reference_spectrum = kwargs.get('reference_spectrum')
+        # wavelength_range = kwargs.get('reference_wavelength_bin_centers')
+        # reference_spectrum = kwargs.get('reference_spectrum')
+        input_spectra = kwargs.get('input_spectra')
 
-        binned_spectral_flux_density = spectres.spectres(
-            wavelength_bin_centers.numpy(),
-            reference_wavelength_bin_centers.numpy(),
-            reference_spectrum.numpy(),
-            fill=0,
-            verbose=False
-        ) * self.solid_angle
+        input_spectra_planet_names = [spectrum.planet_name for spectrum in input_spectra] if input_spectra else []
+        # reference_spectra = []
+        # for planet in planets:
+        if self.name in input_spectra_planet_names:
+            input_spectrum = next(
+                (input_spectrum for input_spectrum in input_spectra if input_spectrum.planet_name == self.name),
+                None
+            )
+            binned_spectral_flux_density = spectres.spectres(
+                wavelength_bin_centers.numpy(),
+                input_spectrum.wavelengths.numpy(),
+                input_spectrum.spectral_flux_density.numpy(),
+                fill=0,
+                verbose=False
+            ) * self.solid_angle
+            return torch.asarray(binned_spectral_flux_density, dtype=torch.float32)
+        else:
+            binned_spectral_flux_density = torch.asarray(
+                create_blackbody_spectrum(
+                    self.temperature,
+                    wavelength_bin_centers
+                )
+                , dtype=torch.float32) * self.solid_angle
+            return binned_spectral_flux_density
 
-        return torch.asarray(binned_spectral_flux_density, dtype=torch.float32)
+        # binned_spectral_flux_density = spectres.spectres(
+        #     wavelength_bin_centers.numpy(),
+        #     reference_wavelength_bin_centers.numpy(),
+        #     reference_spectrum.numpy(),
+        #     fill=0,
+        #     verbose=False
+        # ) * self.solid_angle
+        #
+        # return torch.asarray(binned_spectral_flux_density, dtype=torch.float32)
 
     def _calculate_sky_brightness_distribution(self, grid_size: int, **kwargs) -> np.ndarray:
         """Calculate and return the sky brightness distribution.

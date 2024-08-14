@@ -47,6 +47,11 @@ accepted values and meanings are given in the table below:
      - true, false
      - \-
      - Whether planet orbital motion is modeled
+   * - has_planet_signal
+     - bool
+     - true, false
+     - \-
+     - Whether planet signal is modeled
    * - has_stellar_leakage
      - bool
      - true, false

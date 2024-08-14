@@ -167,37 +167,6 @@ class DataGenerator():
 
             total_photon_counts += photon_counts
 
-        # Bin photon counts to observatory time and wavelengths
-        # time_binned_photon_counts = torch.asarray(
-        #     block_reduce(
-        #         total_photon_counts.cpu().numpy(),
-        #         (1, 1, int(round(len(self.simulation_time_steps) / self.number_of_instrument_time_steps, 0))),
-        #         np.sum
-        #     )
-        # ).to(self.device)
-        # del total_photon_counts
-
-        binned_photon_counts = torch.zeros(
-            (self.number_of_outputs, len(self.instrument_wavelength_bin_centers),
-             len(self.simulation_time_steps)),
-            dtype=torch.float32,
-            device=self.device
-        )
-
-        for index_wl, wl in enumerate(self.simulation_wavelength_bin_centers):
-            index_closest_wavelength_edge = torch.abs(self.instrument_wavelength_bin_edges - wl).argmin()
-            if index_closest_wavelength_edge == 0:
-                index_wavelength_bin = 0
-            elif wl <= self.instrument_wavelength_bin_edges[index_closest_wavelength_edge]:
-                index_wavelength_bin = index_closest_wavelength_edge - 1
-            else:
-                index_wavelength_bin = index_closest_wavelength_edge
-
-            binned_photon_counts[:, index_wavelength_bin, :] += total_photon_counts[:, index_wl, :]
-
-        # shape = time_binned_photon_counts.shape[2]
-        # del time_binned_photon_counts
-
         # Calculate differential photon counts (N_diff_outputs x N_spec_channels x N_time_steps)
         self.differential_photon_counts = torch.zeros(
             (
@@ -211,7 +180,7 @@ class DataGenerator():
 
         for index_pair, pair in enumerate(self.differential_output_pairs):
             self.differential_photon_counts[index_pair] = Tensor(
-                binned_photon_counts[pair[0]] - binned_photon_counts[pair[1]]
+                total_photon_counts[pair[0]] - total_photon_counts[pair[1]]
             )
 
         return self.differential_photon_counts, intensity_responses

@@ -15,6 +15,7 @@ class Settings(BaseModel):
     :param grid_size: The size of the grid
     :param time_step_size: The time step size
     :param has_planet_orbital_motion: Whether the planet has orbital motion
+    :param has_planet_signal: Whether the planet signal is present
     :param has_stellar_leakage: Whether the stellar leakage is present
     :param has_local_zodi_leakage: Whether the local zodiacal light leakage is present
     :param has_exozodi_leakage: Whether the exozodiacal light leakage is present
@@ -27,6 +28,7 @@ class Settings(BaseModel):
     grid_size: int
     time_step_size: str
     has_planet_orbital_motion: bool
+    has_planet_signal: bool
     has_stellar_leakage: bool
     has_local_zodi_leakage: bool
     has_exozodi_leakage: bool

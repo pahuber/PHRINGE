@@ -1,13 +1,15 @@
 from copy import copy
+from typing import Any
 
 import numpy as np
 import torch
 from skimage.measure import block_reduce
 from torch.cuda import OutOfMemoryError
+from tqdm import tqdm
 
 from phringe.core.data_generator import DataGenerator
 from phringe.core.director_helpers import calculate_simulation_time_steps, calculate_nulling_baseline, \
-    calculate_simulation_wavelength_bins, calculate_amplitude_perturbations, calculate_phase_perturbations, \
+    calculate_amplitude_perturbations, calculate_phase_perturbations, \
     calculate_polarization_perturbations, prepare_modeled_sources
 from phringe.core.entities.observation import Observation
 from phringe.core.entities.observatory.observatory import Observatory
@@ -39,6 +41,7 @@ class Director():
     :param has_local_zodi_leakage: Whether to have local zodi leakage
     :param has_phase_perturbations: Whether to have phase perturbations
     :param has_planet_orbital_motion: Whether to have planet orbital motion
+    :param has_planet_signal: Whether to have planet signal
     :param has_polarization_perturbations: Whether to have polarization perturbations
     :param has_stellar_leakage: Whether to have stellar leakage
     :param input_spectra: The input spectra
@@ -100,12 +103,14 @@ class Director():
         self._detector_integration_time = observation.detector_integration_time
         self._devices = self._get_devices(gpus)
         self._differential_output_pairs = self._beam_combiner.get_differential_output_pairs()
+        self._gpus = gpus
         self._grid_size = settings.grid_size
         self._has_amplitude_perturbations = settings.has_amplitude_perturbations
         self._has_exozodi_leakage = settings.has_exozodi_leakage
         self._has_local_zodi_leakage = settings.has_local_zodi_leakage
         self._has_phase_perturbations = settings.has_phase_perturbations
         self._has_planet_orbital_motion = settings.has_planet_orbital_motion
+        self._has_planet_signal = settings.has_planet_signal
         self._has_polarization_perturbations = settings.has_polarization_perturbations
         self._has_stellar_leakage = settings.has_stellar_leakage
         self._input_spectra = input_spectra
@@ -133,6 +138,19 @@ class Director():
         self._total_integration_time = observation.total_integration_time
         self._unperturbed_instrument_throughput = observatory.unperturbed_instrument_throughput
 
+    def _generate_sub_data2(self):
+        # get available gpu memory
+        total_memory = torch.cuda.get_device_properties(self._gpus[0]).total_memory
+        free_memory = torch.cuda.memory_reserved(self._gpus[0]) + torch.cuda.memory_allocated(self._gpus[0])
+        available_memory = total_memory - free_memory
+
+        # get the size of the data that will be produced in the data generator
+        self._run_
+
+        # if the size of the data is larger than the available memory, divide the data into smaller parts that fit into the memory
+        # loop over all parts, making sure to delete the parts after they are not used anymore to free up memory and don't pile it up
+        # return the data
+
     def _generate_sub_data(self) -> tuple[list[torch.Tensor], list[dict]]:
         """Generate data in a memory-safe way. If GPU runs out of memory, divide the data along the time dimension and
         retry iteratively until no memory error occurs, then concatenate the data
@@ -151,7 +169,7 @@ class Director():
             indices = self._generate_sub_data_indices(divisor)
 
             # Generate data for each set of indices
-            for i in range(len(indices)):
+            for i in tqdm(range(len(indices))):
                 while i <= len(indices) - 2:
                     lower_index = indices[i]
                     upper_index = indices[i + 1]
@@ -165,7 +183,8 @@ class Director():
                         break
 
                     except OutOfMemoryError:
-                        divisor += 1
+                        divisor *= 2
+                        print(f'Out of memory error occurred. Dividing data into {divisor} parts and retrying.')
                         break
 
             if not len(sub_data) == len(indices) - 1:
@@ -201,7 +220,7 @@ class Director():
             devices.append(torch.device('cpu'))
         return devices
 
-    def _run_data_generator(self, lower_index: int, upper_index: int, divisor: int) -> np.ndarray:
+    def _run_data_generator(self, lower_index: int, upper_index: int, divisor: int) -> tuple[Any, Any]:
         """Run the data generator.
 
         :param lower_index: The lower index
@@ -252,7 +271,14 @@ class Director():
             self._sources,
             self._unperturbed_instrument_throughput
         )
-        return data_generator.run()
+        differential_photon_counts, intensity_responses = data_generator.run()
+
+        import gc
+        del data_generator
+
+        gc.collect()
+
+        return differential_photon_counts, intensity_responses
 
     def run(self):
         """Run the director. This includes the following steps:
@@ -283,17 +309,25 @@ class Director():
             int(self._total_integration_time / self._detector_integration_time)
         )
 
+        # TODO: Add this again if necessary. Also update director helpers functions
         # Calculate the simulation wavelength bins
-        self.simulation_wavelength_bin_centers, self.simulation_wavelength_bin_widths, self.reference_spectra = (
-            calculate_simulation_wavelength_bins(
-                self._observatory_wavelength_range_lower_limit,
-                self._observatory_wavelength_range_upper_limit,
-                self._maximum_simulation_wavelength_sampling,
-                self._instrument_wavelength_bin_centers,
-                self._planets,
-                self._input_spectra
-            )
-        )
+        # self.simulation_wavelength_bin_centers, self.simulation_wavelength_bin_widths, self.reference_spectra = (
+        #     calculate_simulation_wavelength_bins(
+        #         self._observatory_wavelength_range_lower_limit,
+        #         self._observatory_wavelength_range_upper_limit,
+        #         self._maximum_simulation_wavelength_sampling,
+        #         self._instrument_wavelength_bin_centers,
+        #         self._planets,
+        #         self._input_spectra
+        #     )
+        # )
+        # self.reference_spectra = generate_input_spectra(
+        #     self._instrument_wavelength_bin_centers,
+        #     self._planets,
+        #     self._input_spectra
+        # )
+        self.simulation_wavelength_bin_centers = self._instrument_wavelength_bin_centers
+        self.simulation_wavelength_bin_widths = self._instrument_wavelength_bin_widths
 
         # Calculate field of view
         self.field_of_view = self.simulation_wavelength_bin_centers / self._aperture_diameter / 40
@@ -349,14 +383,12 @@ class Director():
             self._sources,
             self.simulation_time_steps,
             self.simulation_wavelength_bin_centers,
-            self._observatory_wavelength_range_lower_limit,
-            self._observatory_wavelength_range_upper_limit,
-            self._maximum_simulation_wavelength_sampling,
-            self.reference_spectra,
+            self._input_spectra,
             self._grid_size,
             self.field_of_view,
             self._solar_ecliptic_latitude,
             self._has_planet_orbital_motion,
+            self._has_planet_signal,
             self._has_stellar_leakage,
             self._has_local_zodi_leakage,
             self._has_exozodi_leakage

@@ -1,6 +1,5 @@
 from typing import Union
 
-import spectres
 import torch
 from torch import Tensor
 
@@ -13,7 +12,6 @@ from phringe.core.entities.photon_sources.planet import Planet
 from phringe.core.entities.photon_sources.star import Star
 from phringe.util.helpers import InputSpectrum
 from phringe.util.noise_generator import get_perturbation_time_series
-from phringe.util.spectrum import create_blackbody_spectrum
 
 
 def calculate_amplitude_perturbations(
@@ -184,188 +182,16 @@ def calculate_simulation_time_steps(total_integration_time: float, simulation_ti
     return torch.linspace(0, total_integration_time, number_of_steps)
 
 
-def calculate_simulation_wavelength_bin_centers(
-        instrument_wavelength_bin_centers: Tensor,
-        maximum_simulation_wavelength_sampling: int,
-        wavelength_range_lower_limit: float,
-        wavelength_range_upper_limit: float,
-        reference_spectra: list[Tensor]
-) -> Tensor:
-    """Calculate the optimized wavelength sampling for the simulation. This is done by taking the gradient of the
-    normalized planet spectra and adding extra wavelength steps (to the instrument wavelength bins) where the
-    gradient is larger than the threshold. This assures a good sampling of the planet spectra if the instrument spectral
-    resolving power is low compared to the variation of the spectra. This specified the number of  simulation wavelength
-    steps N_wavelengths.
-
-    :param instrument_wavelength_bin_centers: The instrument wavelength bin centers
-    :param maximum_simulation_wavelength_sampling: The maximum resolution of the simulation wavelength range
-    :param wavelength_range_lower_limit: The lower limit of the wavelength range
-    :param wavelength_range_upper_limit: The upper limit of the wavelength range
-    :param reference_spectra: The reference spectra
-    :return: The wavelength bin centers in units of meters
-    """
-    # Generate the maximum resolution wavelength range. Spectra will never be sampled higher than this resolution
-    wavelength_range = torch.linspace(
-        wavelength_range_lower_limit,
-        wavelength_range_upper_limit,
-        maximum_simulation_wavelength_sampling
-    )
-    optimum_wavelength_bin_centers = []
-
-    for reference_spectrum in reference_spectra:
-
-        # Calculate gradient of normalized reference planet spectrum
-        spectrum_gradient = torch.gradient(reference_spectrum / torch.max(reference_spectrum))[0]
-
-        # Create a mask of ones where the gradient is larger than the threshold and zeros elsewhere
-        gradient_threshold = 0.05
-        indices = torch.where(torch.abs(spectrum_gradient) > gradient_threshold)
-        mask = torch.zeros(len(wavelength_range))
-        mask[indices] = 1
-
-        for index, value in enumerate(mask):
-
-            # Add the wavelength step to the list of optimum wavelength steps if the mask value is 1
-            if value == 1:
-                optimum_wavelength_bin_centers.append(wavelength_range[index])
-
-        # Update the optimum wavelength bin centers list
-        optimum_wavelength_bin_centers = sorted(
-            optimum_wavelength_bin_centers + list(instrument_wavelength_bin_centers)
-        )
-
-    return torch.unique(torch.tensor(optimum_wavelength_bin_centers, dtype=torch.float32))
-
-
-def calculate_simulation_wavelength_bin_widths(
-        wavelength_range_lower_limit: float,
-        wavelength_range_upper_limit: float,
-        simulation_wavelength_bin_centers: Tensor
-) -> Tensor:
-    """Calculate the simulation wavelength bin widths from the simulation bin centers, in units of meters.
-
-    :param wavelength_range_lower_limit: The lower limit of the wavelength range
-    :param wavelength_range_upper_limit: The upper limit of the wavelength range
-    :param simulation_wavelength_bin_centers: The simulation wavelength bin centers
-    :return: The simulation wavelength bin widths in units of meters
-    """
-    current_edge = wavelength_range_lower_limit
-    bin_widths = []
-
-    for index, wavelength in enumerate(simulation_wavelength_bin_centers):
-        upper_wavelength = simulation_wavelength_bin_centers[index + 1] \
-            if index < len(simulation_wavelength_bin_centers) - 1 else wavelength_range_upper_limit
-        bin_widths.append(
-            ((wavelength - current_edge) + (upper_wavelength - wavelength) / 2))
-        current_edge += bin_widths[index]
-    return torch.asarray(bin_widths, dtype=torch.float32)
-
-
-def calculate_simulation_wavelength_bins(
-        wavelength_range_lower_limit: float,
-        wavelength_range_upper_limit: float,
-        maximum_simulation_wavelength_sampling: int,
-        instrument_wavelength_bin_centers: Tensor,
-        planets: list[Planet],
-        input_spectra: list[InputSpectrum]
-) -> tuple[Tensor, Tensor]:
-    """Return the simulation wavelength bin centers, bin widths and reference spectra for all planets in the scene.
-
-    :param wavelength_range_lower_limit: The lower limit of the wavelength range
-    :param wavelength_range_upper_limit: The upper limit of the wavelength range
-    :param maximum_simulation_wavelength_sampling: The maximum resolution of the simulation wavelength range
-    :param instrument_wavelength_bin_centers: The instrument wavelength bin centers
-    :param planets: The planets in the scene
-    :param input_spectra: The input spectra
-
-    :return: The simulation wavelength bin centers, bin widths and reference spectra
-    """
-    reference_spectra = generate_reference_spectra(
-        wavelength_range_lower_limit,
-        wavelength_range_upper_limit,
-        maximum_simulation_wavelength_sampling,
-        planets,
-        input_spectra
-    )
-    simulation_wavelength_bin_centers = calculate_simulation_wavelength_bin_centers(
-        instrument_wavelength_bin_centers,
-        maximum_simulation_wavelength_sampling,
-        wavelength_range_lower_limit,
-        wavelength_range_upper_limit,
-        reference_spectra
-    )
-    simulation_wavelength_bin_widths = calculate_simulation_wavelength_bin_widths(
-        wavelength_range_lower_limit,
-        wavelength_range_upper_limit,
-        simulation_wavelength_bin_centers
-    )
-    return simulation_wavelength_bin_centers, simulation_wavelength_bin_widths, reference_spectra
-
-
-def generate_reference_spectra(
-        wavelength_range_lower_limit: float,
-        wavelength_range_upper_limit: float,
-        maximum_simulation_wavelength_sampling: int,
-        planets: list[Planet],
-        input_spectra: list[InputSpectrum]
-) -> list[Tensor]:
-    """Generate reference spectra for all planets in the scene in units of ph m-3 s-1 sr-1. Reference spectra are the
-    highest-resolution spectra that are used in the simulation, i.e. no spectrum will ever be sampled higher than these.
-    Depending on simulation configurations, these spectra will be re-binned to lower resolutions for computational
-    efficiency.If no input spectrum is provided for a planet, generate a blackbody spectrum for it.
-
-    :param wavelength_range_lower_limit: The lower limit of the wavelength range
-    :param wavelength_range_upper_limit: The upper limit of the wavelength range
-    :param maximum_simulation_wavelength_sampling: The resolution of the simulation wavelength range
-    :param planets: The planets in the scene
-    :param input_spectra: The input spectra
-    :return: The reference spectra in units of ph m-3 s-1 sr-1
-    """
-    # Generate the maximum resolution wavelength range. Spectra will never be sampled higher than this resolution
-    wavelength_range = torch.linspace(
-        wavelength_range_lower_limit,
-        wavelength_range_upper_limit,
-        maximum_simulation_wavelength_sampling
-    )
-    input_spectra_planet_names = [spectrum.planet_name for spectrum in input_spectra] if input_spectra else []
-    reference_spectra = []
-    for planet in planets:
-        if planet.name in input_spectra_planet_names:
-            input_spectrum = next(
-                (input_spectrum for input_spectrum in input_spectra if input_spectrum.planet_name == planet.name),
-                None
-            )
-            reference_spectrum = spectres.spectres(
-                wavelength_range.numpy(),
-                input_spectrum.wavelengths.numpy(),
-                input_spectrum.spectral_flux_density.numpy(),
-                fill=0,
-                verbose=False)
-            reference_spectra.append(torch.asarray(reference_spectrum, dtype=torch.float32))
-        else:
-            reference_spectra.append(
-                torch.asarray(
-                    create_blackbody_spectrum(
-                        planet.temperature,
-                        wavelength_range
-                    )
-                    , dtype=torch.float32)
-            )
-    return reference_spectra
-
-
 def prepare_modeled_sources(
         sources: list[BasePhotonSource],
         simulation_time_steps: Tensor,
         simulation_wavelength_bin_centers: Tensor,
-        wavelength_range_lower_limit: float,
-        wavelength_range_upper_limit: float,
-        maximum_simulation_wavelength_sampling: int,
-        reference_spectra: list[Tensor],
+        input_spectra: list[InputSpectrum],
         grid_size: int,
         field_of_view: Tensor,
         solar_ecliptic_latitude: float,
         has_planet_orbital_motion: bool,
+        has_planet_signal: bool,
         has_stellar_leakage: bool,
         has_local_zodi_leakage: bool,
         has_exozodi_leakage: bool
@@ -375,10 +201,6 @@ def prepare_modeled_sources(
     :param sources: The sources in the scene
     :param simulation_time_steps: The simulation time steps
     :param simulation_wavelength_bin_centers: The simulation wavelength bin centers
-    :param wavelength_range_lower_limit: The lower limit of the wavelength range
-    :param wavelength_range_upper_limit: The upper limit of the wavelength range
-    :param maximum_simulation_wavelength_sampling: The maximum resolution of the simulation wavelength range
-    :param reference_spectra: The reference spectra
     :param grid_size: The grid size
     :param field_of_view: The field of view
     :param solar_ecliptic_latitude: The solar ecliptic latitude
@@ -388,30 +210,25 @@ def prepare_modeled_sources(
     :param has_exozodi_leakage: Whether the simulation has exozodi leakage
     :return: The prepared sources
     """
-    wavelength_range = torch.linspace(
-        wavelength_range_lower_limit,
-        wavelength_range_upper_limit,
-        maximum_simulation_wavelength_sampling
-    )
     star = [star for star in sources if isinstance(star, Star)][0]
     planets = [planet for planet in sources if isinstance(planet, Planet)]
     local_zodi = [local_zodi for local_zodi in sources if isinstance(local_zodi, LocalZodi)][0]
     exozodi = [exozodi for exozodi in sources if isinstance(exozodi, Exozodi)][0]
     prepared_sources = []
 
-    for index_planet, planet in enumerate(planets):
-        planet.prepare(
-            simulation_wavelength_bin_centers,
-            grid_size,
-            star_distance=star.distance,
-            reference_spectrum=reference_spectra[index_planet],
-            reference_wavelength_bin_centers=wavelength_range,
-            time_steps=simulation_time_steps,
-            has_planet_orbital_motion=has_planet_orbital_motion,
-            star_mass=star.mass,
-            number_of_wavelength_steps=len(simulation_wavelength_bin_centers)
-        )
-        prepared_sources.append(planet)
+    if has_planet_signal:
+        for index_planet, planet in enumerate(planets):
+            planet.prepare(
+                simulation_wavelength_bin_centers,
+                grid_size,
+                star_distance=star.distance,
+                input_spectra=input_spectra,
+                time_steps=simulation_time_steps,
+                has_planet_orbital_motion=has_planet_orbital_motion,
+                star_mass=star.mass,
+                number_of_wavelength_steps=len(simulation_wavelength_bin_centers)
+            )
+            prepared_sources.append(planet)
     if has_stellar_leakage:
         star.prepare(
             simulation_wavelength_bin_centers,
