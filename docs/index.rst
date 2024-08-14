@@ -5,7 +5,7 @@ PHRINGE
 
 **PHRINGE** is a **PH**\ otoelectron counts generato\ **R**\ for null\ **ING** int\ **E**\ rferometers capable of generating
 synthetic data for space-based nulling interferometers. It can simulate the observation of an exoplanetary system and
-generate realistic data in terms of photonelectron counts as a function of wavelength and time, considering both
+generate realistic data in terms of photoelectron counts as a function of wavelength and time, considering both
 astrophysical and instrumental noise sources.
 
 .. image:: _static/thumbnail.jpg
