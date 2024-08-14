@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "phringe"
-version = "0.0.31"
+version = "0.0.32"
 description = "PHRINGE"
 authors = ["Philipp A. Huber <huberph@phys.ethz.ch>"]
 license = "MIT"
