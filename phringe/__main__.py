@@ -73,7 +73,7 @@ def main(
         dir: bool = True,
         normalize: bool = False
 ):
-    """PHRINGE. synthetic PHotometRy data generator for nullING intErferometers.
+    """PHRINGE. PHotoelectron counts generatoR for nullING intErferometers.
 
     CONFIG: Path to the configuration file.
     EXOPLANETARY_SYSTEM: Path to the exoplanetary system file.
