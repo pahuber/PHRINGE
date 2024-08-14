@@ -309,23 +309,6 @@ class Director():
             int(self._total_integration_time / self._detector_integration_time)
         )
 
-        # TODO: Add this again if necessary. Also update director helpers functions
-        # Calculate the simulation wavelength bins
-        # self.simulation_wavelength_bin_centers, self.simulation_wavelength_bin_widths, self.reference_spectra = (
-        #     calculate_simulation_wavelength_bins(
-        #         self._observatory_wavelength_range_lower_limit,
-        #         self._observatory_wavelength_range_upper_limit,
-        #         self._maximum_simulation_wavelength_sampling,
-        #         self._instrument_wavelength_bin_centers,
-        #         self._planets,
-        #         self._input_spectra
-        #     )
-        # )
-        # self.reference_spectra = generate_input_spectra(
-        #     self._instrument_wavelength_bin_centers,
-        #     self._planets,
-        #     self._input_spectra
-        # )
         self.simulation_wavelength_bin_centers = self._instrument_wavelength_bin_centers
         self.simulation_wavelength_bin_widths = self._instrument_wavelength_bin_widths
 
