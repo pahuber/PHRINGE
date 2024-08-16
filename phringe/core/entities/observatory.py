@@ -8,22 +8,6 @@ from pydantic import BaseModel, field_validator
 from pydantic_core.core_schema import ValidationInfo
 from torch import Tensor
 
-from phringe.core.entities.observatory.array import (
-    Array,
-    ArrayEnum,
-    EmmaXCircularRotation,
-    EmmaXDoubleStretch,
-    EquilateralTriangleCircularRotation,
-    RegularPentagonCircularRotation,
-)
-from phringe.core.entities.observatory.beam_combiner import (
-    BeamCombiner,
-    BeamCombinerEnum,
-    DoubleBracewell,
-    Kernel3,
-    Kernel4,
-    Kernel5,
-)
 from phringe.io.validators import validate_quantity_units
 
 
@@ -51,8 +35,10 @@ class Observatory(BaseModel):
 
     amplitude_perturbation_lower_limit: float
     amplitude_perturbation_upper_limit: float
-    array: str
-    beam_combiner: str
+    array_configuration_matrix: Any
+    complex_amplitude_transfer_matrix: Any
+    differential_outputs: Any
+    max_modulation_efficiency: Any
     aperture_diameter: str
     spectral_resolving_power: int
     wavelength_range_lower_limit: str
@@ -67,12 +53,12 @@ class Observatory(BaseModel):
     phase_perturbation_time_series: Any = None
     polarization_perturbation_time_series: Any = None
 
-    def __init__(self, **data):
-        """Constructor method.
-        """
-        super().__init__(**data)
-        self.array = self._load_array(self.array)
-        self.beam_combiner = self._load_beam_combiner(self.beam_combiner)
+    # def __init__(self, **data):
+    #     """Constructor method.
+    #     """
+    #     super().__init__(**data)
+    #     # self.array_configuration_matrix = self._load_array(self.array_configuration_matrix)
+    #     # self.complex_amplitude_transfer_matrix = self._load_beam_combiner(self.complex_amplitude_transfer_matrix)
 
     @field_validator('amplitude_perturbation_lower_limit')
     def _validate_amplitude_perturbation_lower_limit(cls, value: Any, info: ValidationInfo) -> Tensor:
@@ -160,7 +146,7 @@ class Observatory(BaseModel):
 
     @cached_property
     def _wavelength_bins(self) -> Tuple[np.ndarray, np.ndarray]:
-        return self._calculate_wavelength_bins()
+        return self._get_wavelength_bins()
 
     @cached_property
     def wavelength_bin_centers(self) -> np.ndarray:
@@ -187,7 +173,7 @@ class Observatory(BaseModel):
         return torch.concatenate((self.wavelength_bin_centers - self.wavelength_bin_widths / 2,
                                   self.wavelength_bin_centers[-1:] + self.wavelength_bin_widths[-1:] / 2))
 
-    def _calculate_wavelength_bins(self) -> Tuple[np.ndarray, np.ndarray]:
+    def _get_wavelength_bins(self) -> Tuple[np.ndarray, np.ndarray]:
         """Return the wavelength bin centers and widths. The wavelength bin widths are calculated starting from the
         wavelength lower range. As a consequence, the uppermost wavelength bin might be smaller than anticipated.
 
@@ -212,43 +198,3 @@ class Observatory(BaseModel):
                 break
         return torch.asarray(wavelength_bin_centers, dtype=torch.float32), torch.asarray(wavelength_bin_widths,
                                                                                          dtype=torch.float32)
-
-    def _load_array(self, array_configuration_type) -> Array:
-        """Return the array configuration object from the dictionary.
-
-        :param config_dict: The dictionary
-        :return: The array configuration object.
-        """
-
-        match array_configuration_type:
-            case ArrayEnum.EMMA_X_CIRCULAR_ROTATION.value:
-                return EmmaXCircularRotation()
-
-            case ArrayEnum.EMMA_X_DOUBLE_STRETCH.value:
-                return EmmaXDoubleStretch()
-
-            case ArrayEnum.EQUILATERAL_TRIANGLE_CIRCULAR_ROTATION.value:
-                return EquilateralTriangleCircularRotation()
-
-            case ArrayEnum.REGULAR_PENTAGON_CIRCULAR_ROTATION.value:
-                return RegularPentagonCircularRotation()
-
-    def _load_beam_combiner(self, beam_combination_scheme_type) -> BeamCombiner:
-        """Return the beam combination scheme object from the dictionary.
-
-        :param beam_combination_scheme_type: The beam combination scheme type
-        :return: The beam combination object.
-        """
-
-        match beam_combination_scheme_type:
-            case BeamCombinerEnum.DOUBLE_BRACEWELL.value:
-                return DoubleBracewell()
-
-            case BeamCombinerEnum.KERNEL_3.value:
-                return Kernel3()
-
-            case BeamCombinerEnum.KERNEL_4.value:
-                return Kernel4()
-
-            case BeamCombinerEnum.KERNEL_5.value:
-                return Kernel5()

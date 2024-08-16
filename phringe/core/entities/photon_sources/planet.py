@@ -12,6 +12,7 @@ from pydantic_core.core_schema import ValidationInfo
 from torch import Tensor
 
 from phringe.core.entities.photon_sources.base_photon_source import BasePhotonSource
+from phringe.io.txt_reader import TXTReader
 from phringe.io.validators import validate_quantity_units
 from phringe.util.grid import get_index_of_closest_value, get_meshgrid, get_index_of_closest_value_numpy
 from phringe.util.spectrum import create_blackbody_spectrum
@@ -44,6 +45,7 @@ class Planet(BasePhotonSource, BaseModel):
     raan: str
     argument_of_periapsis: str
     true_anomaly: str
+    path_to_spectrum: Any
     angular_separation_from_star_x: Any = None
     angular_separation_from_star_y: Any = None
     grid_position: Tuple = None
@@ -138,22 +140,12 @@ class Planet(BasePhotonSource, BaseModel):
         :param kwargs: The keyword arguments
         :return: The binned mean spectral flux density in units of ph s-1 m-3
         """
-        # wavelength_range = kwargs.get('reference_wavelength_bin_centers')
-        # reference_spectrum = kwargs.get('reference_spectrum')
-        input_spectra = kwargs.get('input_spectra')
-
-        input_spectra_planet_names = [spectrum.planet_name for spectrum in input_spectra] if input_spectra else []
-        # reference_spectra = []
-        # for planet in planets:
-        if self.name in input_spectra_planet_names:
-            input_spectrum = next(
-                (input_spectrum for input_spectrum in input_spectra if input_spectrum.planet_name == self.name),
-                None
-            )
+        if self.path_to_spectrum:
+            fluxes, wavelengths = TXTReader.read(self.path_to_spectrum)
             binned_spectral_flux_density = spectres.spectres(
                 wavelength_bin_centers.numpy(),
-                input_spectrum.wavelengths.numpy(),
-                input_spectrum.spectral_flux_density.numpy(),
+                wavelengths.numpy(),
+                fluxes.numpy(),
                 fill=0,
                 verbose=False
             ) * self.solid_angle

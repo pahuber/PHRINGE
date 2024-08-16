@@ -3,14 +3,11 @@ from typing import Union
 import torch
 from torch import Tensor
 
-from phringe.core.entities.observatory.array import ArrayEnum
-from phringe.core.entities.observatory.beam_combiner import BeamCombinerEnum
 from phringe.core.entities.photon_sources.base_photon_source import BasePhotonSource
 from phringe.core.entities.photon_sources.exozodi import Exozodi
 from phringe.core.entities.photon_sources.local_zodi import LocalZodi
 from phringe.core.entities.photon_sources.planet import Planet
 from phringe.core.entities.photon_sources.star import Star
-from phringe.util.helpers import InputSpectrum
 from phringe.util.noise_generator import get_perturbation_time_series
 
 
@@ -38,16 +35,14 @@ def calculate_amplitude_perturbations(
         (number_of_inputs, len(simulation_time_steps)))
 
 
-def calculate_nulling_baseline(
+def get_nulling_baseline(
         star_habitable_zone_central_angular_radius: float,
-        star_distance: float,
         optimized_star_separation: Union[str, float],
         optimized_differential_output: int,
         optimized_wavelength: float,
         baseline_maximum: float,
         baseline_minimum: float,
-        array_configuration_type: str,
-        beam_combination_scheme_type: str
+        max_modulation_efficiency: list[float],
 ) -> float:
     """Calculate the nulling baseline in meters.
 
@@ -67,54 +62,9 @@ def calculate_nulling_baseline(
         optimized_star_separation = star_habitable_zone_central_angular_radius
 
     # Get the optimal baseline and check if it is within the allowed range
-    # TODO: Check all factors again
-    factors = (1,)
-    match (array_configuration_type, beam_combination_scheme_type):
 
-        # 3 collector arrays
-        case (
-            ArrayEnum.EQUILATERAL_TRIANGLE_CIRCULAR_ROTATION.value,
-            BeamCombinerEnum.KERNEL_3.value
-        ):
-            factors = (0.67,)
-
-        # 4 collector arrays
-        case (
-            ArrayEnum.EMMA_X_CIRCULAR_ROTATION.value,
-            BeamCombinerEnum.DOUBLE_BRACEWELL.value
-        ):
-            factors = (0.6,)
-
-        case (
-            ArrayEnum.EMMA_X_CIRCULAR_ROTATION.value,
-            BeamCombinerEnum.KERNEL_4.value
-        ):
-            factors = 0.31, 1, 0.6
-            print(
-                "The optimal baseline for Emma-X with kernel nulling is ill-defined for second differential output.")
-
-        case (
-            ArrayEnum.EMMA_X_DOUBLE_STRETCH.value,
-            BeamCombinerEnum.DOUBLE_BRACEWELL.value
-        ):
-            factors = (1,)
-            raise Warning("The optimal baseline for Emma-X with double stretching is not yet implemented.")
-
-        case (
-            ArrayEnum.EMMA_X_DOUBLE_STRETCH.value,
-            BeamCombinerEnum.KERNEL_4.value
-        ):
-            factors = 1, 1, 1
-            raise Warning("The optimal baseline for Emma-X with double stretching is not yet implemented."
-                          )
-        # 5 collector arrays
-        case (
-            ArrayEnum.REGULAR_PENTAGON_CIRCULAR_ROTATION.value,
-            BeamCombinerEnum.KERNEL_5.value
-        ):
-            factors = 1.04, 0.67
-
-    nulling_baseline = factors[optimized_differential_output] * optimized_wavelength / optimized_star_separation
+    nulling_baseline = max_modulation_efficiency[
+                           optimized_differential_output] * optimized_wavelength / optimized_star_separation
 
     if baseline_minimum <= nulling_baseline and nulling_baseline <= baseline_maximum:
         return nulling_baseline
@@ -172,7 +122,7 @@ def calculate_polarization_perturbations(
     )
 
 
-def calculate_simulation_time_steps(total_integration_time: float, simulation_time_step_length: float) -> Tensor:
+def get_simulation_time_steps(total_integration_time: float, simulation_time_step_length: float) -> Tensor:
     """Calculate the simulation time steps in seconds.
 
     :param total_integration_time: The total integration time in seconds
@@ -186,7 +136,6 @@ def prepare_modeled_sources(
         sources: list[BasePhotonSource],
         simulation_time_steps: Tensor,
         simulation_wavelength_bin_centers: Tensor,
-        input_spectra: list[InputSpectrum],
         grid_size: int,
         field_of_view: Tensor,
         solar_ecliptic_latitude: float,
@@ -222,7 +171,6 @@ def prepare_modeled_sources(
                 simulation_wavelength_bin_centers,
                 grid_size,
                 star_distance=star.distance,
-                input_spectra=input_spectra,
                 time_steps=simulation_time_steps,
                 has_planet_orbital_motion=has_planet_orbital_motion,
                 star_mass=star.mass,

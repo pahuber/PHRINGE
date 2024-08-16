@@ -7,12 +7,12 @@ from torch import Tensor
 
 from phringe.core.director import Director
 from phringe.core.entities.observation import Observation
-from phringe.core.entities.observatory.observatory import Observatory
+from phringe.core.entities.observatory import Observatory
 from phringe.core.entities.scene import Scene
 from phringe.core.entities.settings import Settings
 from phringe.io.fits_writer import FITSWriter
 from phringe.io.txt_reader import TXTReader
-from phringe.io.utils import get_dict_from_path
+from phringe.io.utils import load_config
 from phringe.io.yaml_handler import YAMLHandler
 from phringe.util.helpers import InputSpectrum
 
@@ -68,7 +68,7 @@ class PHRINGE():
 
         :return: The wavelength bin centers
         """
-        return self._director._instrument_wavelength_bin_centers.cpu()
+        return self._director._wavelength_bin_centers.cpu()
 
     def get_time_steps(self) -> Tensor:
         """Return the observation time steps.
@@ -116,12 +116,12 @@ class PHRINGE():
     def run(
             self,
             config_file_path: Path = None,
-            exoplanetary_system_file_path: Path = None,
+            # exoplanetary_system_file_path: Path = None,
             settings: Settings = None,
             observatory: Observatory = None,
             observation: Observation = None,
             scene: Scene = None,
-            spectrum_files: tuple[tuple[str, Path]] = None,
+            # spectrum_files: tuple[tuple[str, Path]] = None,
             gpus: tuple[int] = None,
             output_dir: Path = Path('.'),
             fits_suffix: str = '',
@@ -147,16 +147,14 @@ class PHRINGE():
         :param normalize: Whether to normalize the data to unit RMS along the time axis
         :return: The data as an array or a dictionary of arrays if enable_stats is True
         """
-        config_dict = get_dict_from_path(config_file_path) if config_file_path else None
-        system_dict = get_dict_from_path(exoplanetary_system_file_path) if exoplanetary_system_file_path else None
+        config_dict = load_config(config_file_path) if config_file_path else None
 
         settings = Settings(**config_dict['settings']) if not settings else settings
         observatory = Observatory(**config_dict['observatory']) if not observatory else observatory
         observation = Observation(**config_dict['observation']) if not observation else observation
-        scene = Scene(**system_dict) if not scene else scene
-        input_spectra = PHRINGE._get_spectra_from_paths(spectrum_files) if spectrum_files else None
+        scene = Scene(**config_dict['scene']) if not scene else scene
 
-        self._director = Director(settings, observatory, observation, scene, input_spectra, gpus, detailed, normalize)
+        self._director = Director(settings, observatory, observation, scene, gpus, detailed, normalize)
         self._director.run()
 
         if (write_fits or create_copy) and create_directory:

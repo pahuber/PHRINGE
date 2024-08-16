@@ -52,22 +52,20 @@ class DataGenerator():
             grid_size: int,
             has_planet_orbital_motion: bool,
             number_of_instrument_time_steps: float,
-            observatory_wavelength_bin_centers: Tensor,
-            observatory_wavelength_bin_widths: Tensor,
-            observatory_wavelength_bin_edges: Tensor,
             modulation_period: float,
             number_of_inputs: int,
             number_of_outputs: int,
+            sources: list[BasePhotonSource],
+            simulation_time_step_length: float,
+            unperturbed_instrument_throughput: Tensor,
+            observatory_wavelength_bin_centers: Tensor,
+            observatory_wavelength_bin_widths: Tensor,
+            observatory_wavelength_bin_edges: Tensor,
             observatory_coordinates: Tensor,
             amplitude_perturbations: Tensor,
             phase_perturbations: Tensor,
             polarization_perturbations: Tensor,
-            simulation_time_step_length: float,
             simulation_time_steps: Tensor,
-            simulation_wavelength_bin_centers: Tensor,
-            simulation_wavelength_bin_widths: Tensor,
-            sources: list[BasePhotonSource],
-            unperturbed_instrument_throughput: Tensor
     ):
         """Constructor method.
 
@@ -99,15 +97,13 @@ class DataGenerator():
         self.phase_perturbations = phase_perturbations
         self.polarization_perturbations = polarization_perturbations
         self.simulation_time_steps = simulation_time_steps
-        self.simulation_wavelength_bin_centers = simulation_wavelength_bin_centers
-        self.simulation_wavelength_bin_widths = simulation_wavelength_bin_widths
         self.differential_output_pairs = differential_output_pairs
 
     def run(self) -> np.ndarray:
         """Run the data generator."""
 
         total_photon_counts = torch.zeros(
-            (self.number_of_outputs, len(self.simulation_wavelength_bin_centers), len(self.simulation_time_steps)),
+            (self.number_of_outputs, len(self.instrument_wavelength_bin_centers), len(self.simulation_time_steps)),
             dtype=torch.float32,
             device=self.device
         )
@@ -123,7 +119,7 @@ class DataGenerator():
                 self.observatory_coordinates[1],
                 source.sky_coordinates[0],
                 source.sky_coordinates[1],
-                self.simulation_wavelength_bin_centers
+                self.instrument_wavelength_bin_centers
             ) * self.aperture_radius * torch.sqrt(self.unperturbed_instrument_throughput)
 
             complex_amplitude_x, complex_amplitude_y = calculate_complex_amplitude(
@@ -151,6 +147,9 @@ class DataGenerator():
 
             intensity_response = result_x + result_y
 
+            # plt.imshow((intensity_response[2] - intensity_response[2]).cpu().detach().numpy()[])
+            # plt.show()
+
             if self.detailed:
                 intensity_responses[source.name] = intensity_response
 
@@ -159,8 +158,8 @@ class DataGenerator():
                 self.device,
                 intensity_response,
                 source.sky_brightness_distribution,
-                self.simulation_wavelength_bin_centers,
-                self.simulation_wavelength_bin_widths,
+                self.instrument_wavelength_bin_centers,
+                self.instrument_wavelength_bin_widths,
                 self.simulation_time_step_length,
                 torch.empty(len(source.sky_brightness_distribution), device=self.device)
             )
