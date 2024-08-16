@@ -74,7 +74,7 @@ class Director():
             observatory: Observatory,
             observation: Observation,
             scene: Scene,
-            gpus: tuple[int] = None,
+            gpu: int = None,
             detailed: bool = False,
             normalize: bool = False
     ):
@@ -84,7 +84,7 @@ class Director():
         :param observatory: The observatory
         :param observation: The observation
         :param scene: The scene
-        :param gpus: The GPUs
+        :param gpu: The GPU
         :param detailed: Whether to run in detailed mode
         :param normalize: Whether to normalize the data to unit RMS along the time axis
         """
@@ -98,9 +98,9 @@ class Director():
         self._complex_amplitude_transfer_matrix = observatory.complex_amplitude_transfer_matrix
         self._detailed = detailed
         self._detector_integration_time = observation.detector_integration_time
-        self._devices = self._get_devices(gpus)
+        self._device = self._get_device(gpu)
         self._differential_outputs = observatory.differential_outputs
-        self._gpus = gpus
+        self._gpu = gpu
         self._grid_size = settings.grid_size
         self._has_amplitude_perturbations = settings.has_amplitude_perturbations
         self._has_exozodi_leakage = settings.has_exozodi_leakage
@@ -137,8 +137,8 @@ class Director():
 
     def _generate_sub_data2(self):
         # get available gpu memory
-        total_memory = torch.cuda.get_device_properties(self._gpus[0]).total_memory
-        free_memory = torch.cuda.memory_reserved(self._gpus[0]) + torch.cuda.memory_allocated(self._gpus[0])
+        total_memory = torch.cuda.get_device_properties(self._gpu[0]).total_memory
+        free_memory = torch.cuda.memory_reserved(self._gpu[0]) + torch.cuda.memory_allocated(self._gpu[0])
         available_memory = total_memory - free_memory
 
         # get the size of the data that will be produced in the data generator
@@ -201,21 +201,20 @@ class Director():
             indices.append(i * time_steps_per_iteration)
         return indices
 
-    def _get_devices(self, gpus: tuple[int]) -> list[str]:
-        """Get the devices.
+    def _get_device(self, gpu: tuple[int]) -> list[str]:
+        """Get the device.
 
         :param gpus: The GPUs
-        :return: The devices
+        :return: The device
         """
-        devices = []
-        if gpus and torch.cuda.is_available() and torch.cuda.device_count():
-            if torch.max(torch.asarray(gpus)) > torch.cuda.device_count():
-                raise ValueError(f'GPU number {torch.max(torch.asarray(gpus))} is not available on this machine.')
-            for gpu in gpus:
-                devices.append(torch.device(f'cuda:{gpu}'))
+        device = []
+        if gpu and torch.cuda.is_available() and torch.cuda.device_count():
+            if torch.max(torch.asarray(gpu)) > torch.cuda.device_count():
+                raise ValueError(f'GPU number {torch.max(torch.asarray(gpu))} is not available on this machine.')
+            device = torch.device(f'cuda:{gpu}')
         else:
-            devices.append(torch.device('cpu'))
-        return devices
+            device.append(torch.device('cpu'))
+        return device
 
     def _run_data_generator(self, lower_index: int, upper_index: int, divisor: int) -> tuple[Any, Any]:
         """Run the data generator.
@@ -372,7 +371,6 @@ class Director():
                                                                            self._number_of_inputs)
 
         # Move all tensors to the device (i.e. GPU, if available)
-        self._device = self._devices[0]
         self._aperture_diameter = self._aperture_diameter.to(self._device)
         self._instrument_time_steps = self._instrument_time_steps.to(self._device)
         self._complex_amplitude_transfer_matrix = self._complex_amplitude_transfer_matrix.to(self._device)

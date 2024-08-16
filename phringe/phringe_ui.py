@@ -129,7 +129,7 @@ class PHRINGE():
     def run(
             self,
             config_file_path: Path,
-            gpus: tuple[int] = None,
+            gpu: int = None,
             fits_suffix: str = '',
             detailed: bool = False,
             write_fits: bool = True,
@@ -146,7 +146,7 @@ class PHRINGE():
             observatory: Observatory,
             observation: Observation,
             scene: Scene,
-            gpus: tuple[int] = None,
+            gpu: int = None,
             detailed: bool = False,
             write_fits: bool = True,
             fits_suffix: str = '',
@@ -163,7 +163,7 @@ class PHRINGE():
             observatory: Observatory = None,
             observation: Observation = None,
             scene: Scene = None,
-            gpus: tuple[int] = None,
+            gpu: int = None,
             fits_suffix: str = '',
             detailed: bool = False,
             write_fits: bool = True,
@@ -175,7 +175,7 @@ class PHRINGE():
         N_spec_channels x N_observation_time_steps.
 
         :param config_file_path: The path to the configuration file
-        :param gpus: Indices of the GPUs to use
+        :param gpu: Index of the GPU to use
         :param fits_suffix: The suffix for the FITS file
         :param detailed: Whether to run in detailed mode. If detailed mode is used, the intensity responses are saved during the data generation
         :param write_fits: Whether to write the data to a FITS file
@@ -191,7 +191,7 @@ class PHRINGE():
         observation = Observation(**config_dict['observation']) if not observation else observation
         scene = Scene(**config_dict['scene']) if not scene else scene
 
-        self._director = Director(settings, observatory, observation, scene, gpus, detailed, normalize)
+        self._director = Director(settings, observatory, observation, scene, gpu, detailed, normalize)
         self._director.run()
 
         if (write_fits or create_copy) and create_directory:

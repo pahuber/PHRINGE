@@ -12,37 +12,13 @@ from phringe.phringe_ui import PHRINGE
     type=click.Path(exists=True),
     required=True,
 )
-@click.argument(
-    'exoplanetary_system',
-    type=click.Path(exists=True),
-    required=True,
-)
-@click.option(
-    '-s',
-    '--spectrum',
-    'spectrum_tuples',
-    nargs=2,
-    multiple=True,
-    type=(str, click.Path(exists=True)),
-    help="Planet name as specified in exoplanetary system file and path to the corresponding spectrum text file.",
-    required=False
-)
 @click.option(
     '-g',
-    '--gpus',
-    'gpus',
+    '--gpu',
+    'gpu',
     type=int,
     help="Indices of the GPUs to use.",
     multiple=True,
-    required=False
-)
-@click.option(
-    '-o',
-    '--output-dir',
-    'output_dir',
-    type=click.Path(exists=True),
-    help="Path to the output directory.",
-    default=Path('.'),
     required=False
 )
 @click.option(
@@ -62,10 +38,7 @@ from phringe.phringe_ui import PHRINGE
               help="Whether to normalize the data to unit RMS along the time axis.")
 def main(
         config: Path,
-        exoplanetary_system: Path,
-        spectrum_tuples: tuple = None,
-        gpus: tuple = None,
-        output_dir: Path = Path('.'),
+        gpu: tuple = None,
         fits_suffix: str = '',
         detailed: bool = False,
         fits: bool = True,
@@ -76,15 +49,11 @@ def main(
     """PHRINGE. PHotoelectron counts generatoR for nullING intErferometers.
 
     CONFIG: Path to the configuration file.
-    EXOPLANETARY_SYSTEM: Path to the exoplanetary system file.
     """
     phringe = PHRINGE()
     phringe.run(
         config_file_path=Path(config),
-        exoplanetary_system_file_path=Path(exoplanetary_system),
-        spectrum_files=spectrum_tuples,
-        gpus=gpus,
-        output_dir=output_dir,
+        gpu=gpu,
         fits_suffix=fits_suffix,
         detailed=detailed,
         write_fits=fits,
