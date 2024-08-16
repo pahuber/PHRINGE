@@ -1,3 +1,4 @@
+import pprint
 import shutil
 from datetime import datetime
 from pathlib import Path
@@ -11,10 +12,7 @@ from phringe.core.entities.observatory import Observatory
 from phringe.core.entities.scene import Scene
 from phringe.core.entities.settings import Settings
 from phringe.io.fits_writer import FITSWriter
-from phringe.io.txt_reader import TXTReader
 from phringe.io.utils import load_config
-from phringe.io.yaml_handler import YAMLHandler
-from phringe.util.helpers import InputSpectrum
 
 
 class PHRINGE():
@@ -27,20 +25,70 @@ class PHRINGE():
     :param _scene: The scene
     """
 
-    @staticmethod
-    def _get_spectra_from_paths(spectrum_files: tuple[tuple[str, Path]]) -> list[InputSpectrum]:
-        """Read the spectra from the paths and return a list of SpectrumContext objects.
-
-        :param spectrum_files: List of tuples containing the planet name and the path to the corresponding spectrum text file
-        :return: The spectra
-        """
-        try:
-            input_spectra = []
-            for index_path, (planet_name, spectrum_file_path) in enumerate(spectrum_files):
-                input_spectra.append(InputSpectrum(planet_name, *TXTReader().read(Path(spectrum_file_path))))
-        except TypeError:
-            pass
-        return input_spectra
+    config = {
+        'settings': {
+            'grid_size': None,
+            'time_step_size': None,
+            'has_planet_orbital_motion': None,
+            'has_planet_signal': None,
+            'has_stellar_leakage': None,
+            'has_local_zodi_leakage': None,
+            'has_exozodi_leakage': None,
+            'has_amplitude_perturbations': None,
+            'has_phase_perturbations': None,
+            'has_polarization_perturbations': None,
+        },
+        'observation': {
+            'solar_ecliptic_latitude': None,
+            'total_integration_time': None,
+            'detector_integration_time': None,
+            'modulation_period': None,
+            'baseline_ratio': None,
+            'baseline_maximum': None,
+            'baseline_minimum': None,
+            'optimized_differential_output': None,
+            'optimized_star_separation': None,
+            'optimized_wavelength': None,
+        },
+        'observatory': {
+            'array_configuration_matrix': None,
+            'complex_amplitude_transfer_matrix': None,
+            'differential_outputs': None,
+            'max_modulation_efficiency': None,
+            'aperture_diameter': None,
+            'spectral_resolving_power': None,
+            'wavelength_range_lower_limit': None,
+            'wavelength_range_upper_limit': None,
+            'unperturbed_instrument_throughput': None,
+            'amplitude_perturbation_lower_limit': None,
+            'amplitude_perturbation_upper_limit': None,
+            'phase_perturbation_rms': None,
+            'phase_falloff_exponent': None,
+            'polarization_perturbation_rms': None,
+            'polarization_falloff_exponent': None,
+        },
+        'scene': {
+            'star': {
+                'name': None,
+                'distance': None,
+                'mass': None,
+                'radius': None,
+                'temperature': None,
+                'luminosity': None,
+                'right_ascension': None,
+                'declination': None,
+            },
+            'exozodi': {
+                'level': None,
+                'inclination': None,
+            },
+            'planets': [
+                {
+                    None,
+                },
+            ],
+        },
+    }
 
     def get_data(self) -> Tensor:
         """Return the generated data.
@@ -81,10 +129,7 @@ class PHRINGE():
     def run(
             self,
             config_file_path: Path,
-            exoplanetary_system_file_path: Path,
-            spectrum_files: tuple[tuple[str, Path]] = None,
             gpus: tuple[int] = None,
-            output_dir: Path = Path('.'),
             fits_suffix: str = '',
             detailed: bool = False,
             write_fits: bool = True,
@@ -101,9 +146,7 @@ class PHRINGE():
             observatory: Observatory,
             observation: Observation,
             scene: Scene,
-            spectrum_files: tuple[tuple[str, Path]] = None,
             gpus: tuple[int] = None,
-            output_dir: Path = Path('.'),
             detailed: bool = False,
             write_fits: bool = True,
             fits_suffix: str = '',
@@ -116,14 +159,11 @@ class PHRINGE():
     def run(
             self,
             config_file_path: Path = None,
-            # exoplanetary_system_file_path: Path = None,
             settings: Settings = None,
             observatory: Observatory = None,
             observation: Observation = None,
             scene: Scene = None,
-            # spectrum_files: tuple[tuple[str, Path]] = None,
             gpus: tuple[int] = None,
-            output_dir: Path = Path('.'),
             fits_suffix: str = '',
             detailed: bool = False,
             write_fits: bool = True,
@@ -135,10 +175,7 @@ class PHRINGE():
         N_spec_channels x N_observation_time_steps.
 
         :param config_file_path: The path to the configuration file
-        :param exoplanetary_system_file_path: The path to the exoplanetary system file
-        :param spectrum_files: List of tuples containing the planet name and the path to the corresponding spectrum text file
         :param gpus: Indices of the GPUs to use
-        :param output_dir: The output directory
         :param fits_suffix: The suffix for the FITS file
         :param detailed: Whether to run in detailed mode. If detailed mode is used, the intensity responses are saved during the data generation
         :param write_fits: Whether to write the data to a FITS file
@@ -158,21 +195,19 @@ class PHRINGE():
         self._director.run()
 
         if (write_fits or create_copy) and create_directory:
-            output_dir = output_dir.joinpath(f'out_{datetime.now().strftime("%Y%m%d_%H%M%S.%f")}')
+            output_dir = Path(f'out_{datetime.now().strftime("%Y%m%d_%H%M%S.%f")}')
             output_dir.mkdir(parents=True, exist_ok=True)
+        else:
+            output_dir = Path('.')
 
         if write_fits:
-            fits_writer = FITSWriter().write(self._director._data, output_dir, fits_suffix)
+            FITSWriter().write(self._director._data, output_dir, fits_suffix)
 
         if create_copy:
             if config_file_path:
                 shutil.copyfile(config_file_path, output_dir.joinpath(config_file_path.name))
             else:
-                YAMLHandler().write(config_file_path, output_dir.joinpath('config.yaml'))
-            if exoplanetary_system_file_path:
-                shutil.copyfile(
-                    exoplanetary_system_file_path,
-                    output_dir.joinpath(exoplanetary_system_file_path.name)
-                )
-            else:
-                YAMLHandler().write(exoplanetary_system_file_path, output_dir.joinpath('system.yaml'))
+                dict_str = pprint.pformat(config_dict)
+                file_content = f"config = {dict_str}\n"
+                with open((output_dir.joinpath('config.py')), 'w') as file:
+                    file.write(file_content)
