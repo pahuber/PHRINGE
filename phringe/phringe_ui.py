@@ -54,12 +54,13 @@ class PHRINGE():
             'array_configuration_matrix': None,
             'complex_amplitude_transfer_matrix': None,
             'differential_outputs': None,
-            'max_modulation_efficiency': None,
+            'sep_at_max_mod_eff': None,
             'aperture_diameter': None,
             'spectral_resolving_power': None,
             'wavelength_range_lower_limit': None,
             'wavelength_range_upper_limit': None,
-            'unperturbed_instrument_throughput': None,
+            'throughput': None,
+            'quantum_efficiency': None,
             'amplitude_perturbation_lower_limit': None,
             'amplitude_perturbation_upper_limit': None,
             'phase_perturbation_rms': None,
@@ -119,11 +120,11 @@ class PHRINGE():
         return self._director._wavelength_bin_centers.cpu()
 
     def get_time_steps(self) -> Tensor:
-        """Return the observation time steps.
+        """Return the detector time steps.
 
-        :return: The observation time steps
+        :return: The detector time steps
         """
-        return self._director._instrument_time_steps.cpu()
+        return self._director._detector_time_steps.cpu()
 
     @overload
     def run(

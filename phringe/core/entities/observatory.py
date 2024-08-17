@@ -38,7 +38,7 @@ class Observatory(BaseModel):
     array_configuration_matrix: Any
     complex_amplitude_transfer_matrix: Any
     differential_outputs: Any
-    max_modulation_efficiency: Any
+    sep_at_max_mod_eff: Any
     aperture_diameter: str
     spectral_resolving_power: int
     wavelength_range_lower_limit: str

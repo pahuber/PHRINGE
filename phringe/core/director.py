@@ -1,15 +1,10 @@
-from copy import copy
-from typing import Any
-
+import numpy as np
 import sympy
 import torch
-from matplotlib import pyplot as plt
+from skimage.measure import block_reduce
 from sympy import Symbol, exp, I, pi, cos, sin, Abs, symbols
-from torch.cuda import OutOfMemoryError
-from tqdm import tqdm
 
-from phringe.core.data_generator import DataGenerator
-from phringe.core.director_helpers import get_simulation_time_steps, get_nulling_baseline, \
+from phringe.core.director_helpers import get_nulling_baseline, \
     calculate_amplitude_perturbations, calculate_phase_perturbations, \
     calculate_polarization_perturbations, prepare_modeled_sources
 from phringe.core.entities.observation import Observation
@@ -112,14 +107,11 @@ class Director():
         self._has_planet_signal = settings.has_planet_signal
         self._has_polarization_perturbations = settings.has_polarization_perturbations
         self._has_stellar_leakage = settings.has_stellar_leakage
-        self._max_modulation_efficiency = observatory.max_modulation_efficiency
+        self._set_at_max_mod_eff = observatory.sep_at_max_mod_eff
         self._modulation_period = observation.modulation_period
         self._normalize = normalize
         self._number_of_inputs = self._complex_amplitude_transfer_matrix.shape[1]
         self._number_of_outputs = self._complex_amplitude_transfer_matrix.shape[0]
-        self._wavelength_bin_centers = observatory.wavelength_bin_centers
-        self._wavelength_bin_edges = observatory.wavelength_bin_edges
-        self._wavelength_bin_widths = observatory.wavelength_bin_widths
         self._observatory_wavelength_range_lower_limit = observatory.wavelength_range_lower_limit
         self._observatory_wavelength_range_upper_limit = observatory.wavelength_range_upper_limit
         self._optimized_differential_output = observation.optimized_differential_output
@@ -131,86 +123,22 @@ class Director():
         self._polarization_falloff_exponent = observatory.polarization_falloff_exponent
         self._polarization_perturbation_rms = observatory.polarization_perturbation_rms
         self._quantum_efficiency = observatory.quantum_efficiency
+        self._simulation_time_step_size = settings.time_step_size
         self._solar_ecliptic_latitude = observation.solar_ecliptic_latitude
         self._sources = scene.get_all_sources()
         self._star = scene.star
         self._throughput = observatory.throughput
-        self._time_step_size = settings.time_step_size
         self._total_integration_time = observation.total_integration_time
+        self._wavelength_bin_centers = observatory.wavelength_bin_centers
+        self._wavelength_bin_edges = observatory.wavelength_bin_edges
+        self._wavelength_bin_widths = observatory.wavelength_bin_widths
 
-    def _generate_sub_data2(self):
-        # get available gpu memory
-        total_memory = torch.cuda.get_device_properties(self._gpu[0]).total_memory
-        free_memory = torch.cuda.memory_reserved(self._gpu[0]) + torch.cuda.memory_allocated(self._gpu[0])
-        available_memory = total_memory - free_memory
-
-        # get the size of the data that will be produced in the data generator
-        self._run_
-
-        # if the size of the data is larger than the available memory, divide the data into smaller parts that fit into the memory
-        # loop over all parts, making sure to delete the parts after they are not used anymore to free up memory and don't pile it up
-        # return the data
-
-    def _generate_sub_data(self) -> tuple[list[torch.Tensor], list[dict]]:
-        """Generate data in a memory-safe way. If GPU runs out of memory, divide the data along the time dimension and
-        retry iteratively until no memory error occurs, then concatenate the data
-
-        :return: The sub data and sub intensity response
-        """
-        # TODO: Implement a more sophisticated memory management
-        divisor = 1
-        is_successful = True
-        while is_successful:
-            if divisor > len(self.simulation_time_steps):
-                raise OutOfMemoryError('Not enough memory to generate data. Choose other configurations.')
-
-            sub_data = []
-            sub_intensity_response = []
-            indices = self._generate_sub_data_indices(divisor)
-
-            # Generate data for each set of indices
-            for i in tqdm(range(len(indices))):
-                while i <= len(indices) - 2:
-                    lower_index = indices[i]
-                    upper_index = indices[i + 1]
-
-                    try:
-                        # Run data generator and append data and intensity response
-                        data, intensity_response = self._run_data_generator(lower_index, upper_index, divisor)
-                        sub_data.append(data)
-                        sub_intensity_response.append(intensity_response)
-                        is_successful = False
-                        break
-
-                    except OutOfMemoryError:
-                        divisor *= 2
-                        print(f'Out of memory error occurred. Dividing data into {divisor} parts and retrying.')
-                        break
-
-            if not len(sub_data) == len(indices) - 1:
-                is_successful = True
-
-        return sub_data, sub_intensity_response
-
-    def _generate_sub_data_indices(self, divisor: int) -> list[int]:
-        """Generate indices representing the data split into x parts, where x is given by 'divisor'.
-
-        :param divisor: The divisor
-        :return: The sub data indices
-        """
-        time_steps_per_iteration = len(self.simulation_time_steps) // divisor
-        indices = []
-        for i in range(0, divisor + 1):
-            indices.append(i * time_steps_per_iteration)
-        return indices
-
-    def _get_device(self, gpu: tuple[int]) -> list[str]:
+    def _get_device(self, gpu: int) -> torch.device:
         """Get the device.
 
-        :param gpus: The GPUs
+        :param gpu: The GPU
         :return: The device
         """
-        # device = []
         if gpu and torch.cuda.is_available() and torch.cuda.device_count():
             if torch.max(torch.asarray(gpu)) > torch.cuda.device_count():
                 raise ValueError(f'GPU number {torch.max(torch.asarray(gpu))} is not available on this machine.')
@@ -218,64 +146,6 @@ class Director():
         else:
             device = torch.device('cpu')
         return device
-
-    def _run_data_generator(self, lower_index: int, upper_index: int, divisor: int) -> tuple[Any, Any]:
-        """Run the data generator.
-
-        :param lower_index: The lower index
-        :param upper_index: The upper index
-        :param divisor: The divisor
-        :return: The data and intensity response
-        """
-        # If orbital motion is considered, planet sky coordinates and brightness distribution have a time axis as well,
-        # i.e. change with time, and need to be sliced to the sub indices
-        if self._has_planet_orbital_motion:
-            planets_copy = []
-
-            for index_planet, planet in enumerate(self._planets):
-                planet_copy = copy(planet)
-                planet_copy.sky_coordinates = copy(planet.sky_coordinates[:, lower_index:upper_index])
-                planet_copy.sky_brightness_distribution = copy(
-                    planet.sky_brightness_distribution[lower_index:upper_index])
-                planets_copy.append(planet_copy)
-
-            # Remove all planets from sources object and add new ones
-            self._sources = [source for source in self._sources if not isinstance(source, Planet)]
-            self._sources.extend(planets_copy)
-
-        # Create and run the data generator object
-        data_generator = DataGenerator(
-            self._aperture_diameter / 2,
-            self._complex_amplitude_transfer_matrix,
-            self._differential_outputs,
-            self._detailed,
-            self._device,
-            self._grid_size,
-            self._has_planet_orbital_motion,
-            len(self._instrument_time_steps) / divisor,
-            self._modulation_period,
-            self._number_of_inputs,
-            self._number_of_outputs,
-            self._sources,
-            self._time_step_size,
-            self._throughput,
-            self._wavelength_bin_centers,
-            self._wavelength_bin_widths,
-            self._wavelength_bin_edges,
-            self.observatory_coordinates[:, :, lower_index:upper_index],
-            self.amplitude_perturbations[:, lower_index:upper_index],
-            self.phase_perturbations[:, lower_index:upper_index],
-            self.polarization_perturbations[:, lower_index:upper_index],
-            self.simulation_time_steps[lower_index:upper_index],
-        )
-        differential_photon_counts, intensity_responses = data_generator.run()
-
-        import gc
-        del data_generator
-
-        gc.collect()
-
-        return differential_photon_counts, intensity_responses
 
     def run(self):
         """Run the director. This includes the following steps:
@@ -292,24 +162,16 @@ class Director():
 
         """
         # Check simulation time step is smaller than detector integration time
-        if self._time_step_size > self._detector_integration_time:
+        if self._simulation_time_step_size > self._detector_integration_time:
             raise ValueError('The simulation time step size must be smaller than the detector integration time.')
-        # Calculate simulation and instrument time steps
-        self.simulation_time_steps = get_simulation_time_steps(
-            self._total_integration_time,
-            self._time_step_size
-        )
-        self._instrument_time_steps = torch.linspace(
-            0,
-            self._total_integration_time,
-            int(self._total_integration_time / self._detector_integration_time)
-        )
 
-        ###################
+        ################################################################################################################
+        # Analytical calculations
+        ################################################################################################################
+
+        # Define symbols for analytical calculations
         catm = self._complex_amplitude_transfer_matrix
         acm = self._array_configuration_matrix
-
-        # Define symbols
         ex = {}
         ey = {}
         a = {}
@@ -338,7 +200,6 @@ class Director():
             'exp': torch.exp,
             'log': torch.log,
             'sqrt': torch.sqrt,
-            # Add any other functions you need
         }
         r = {}
         rx = {}
@@ -355,34 +216,23 @@ class Director():
                 r[j],
                 [torch_func_dict]
             )
+        self.intensity_response = r
 
-        # # Define differential intensity response
-        # dr = {}
-        # for i in range(len(self._differential_outputs)):
-        #     dr[i] = r[self._differential_outputs[i][0]] - r[self._differential_outputs[i][1]]
-        #
-        # # Lambdify expressions
-        # dr_func = {}
-        # for i in range(len(self._differential_outputs)):
-        #     dr_func[i] = sympy.lambdify(
-        #         [t, l, alpha, beta, tm, b, *a.values(), *da.values(), *dphi.values(), *th.values(), *dth.values()],
-        #         dr[i],
-        #         'numpy'
-        #     )
+        ################################################################################################################
+        # Numerical calculations
+        ################################################################################################################
 
-        # times = np.linspace(0, 8.64e6, len(self.simulation_time_steps))
-        # ls = np.array(np.linspace(4e-6, 18e-6, len(self._wavelength_bin_centers)))
-        #
-        # x = dr_func[0](times[np.newaxis, :], ls[:, np.newaxis], 3e-7, 3e-7, 8.64e6, 10,
-        #                *[1 for _ in range(self._number_of_inputs)],
-        #                *[1 for _ in range(self._number_of_inputs)], *[0 for _ in range(self._number_of_inputs)],
-        #                *[0 for _ in range(self._number_of_inputs)], *[0 for _ in range(self._number_of_inputs)])
-        #
-        # plt.imshow(x)
-        # plt.colorbar()
-        # plt.show()
-
-        ###################
+        # Calculate simulation and detector time steps
+        self.simulation_time_steps = torch.linspace(
+            0,
+            self._total_integration_time,
+            int(self._total_integration_time / self._simulation_time_step_size)
+        )
+        self._detector_time_steps = torch.linspace(
+            0,
+            self._total_integration_time,
+            int(self._total_integration_time / self._detector_integration_time)
+        )
 
         # Calculate field of view
         self.field_of_view = self._wavelength_bin_centers / self._aperture_diameter
@@ -395,7 +245,7 @@ class Director():
             self._optimized_wavelength,
             self._baseline_maximum,
             self._baseline_minimum,
-            self._max_modulation_efficiency
+            self._set_at_max_mod_eff
         )
 
         # Calculate the instrument perturbations
@@ -440,16 +290,14 @@ class Director():
 
         # Move all tensors to the device (i.e. GPU, if available)
         self._aperture_diameter = self._aperture_diameter.to(self._device)
-        self._instrument_time_steps = self._instrument_time_steps.to(self._device)
-        # self._complex_amplitude_transfer_matrix = self._complex_amplitude_transfer_matrix.to(self._device)
+        self._detector_time_steps = self._detector_time_steps.to(self._device)
         self._wavelength_bin_centers = self._wavelength_bin_centers.to(self._device)
         self._wavelength_bin_widths = self._wavelength_bin_widths.to(self._device)
         self._wavelength_bin_edges = self._wavelength_bin_edges.to(self._device)
-        # self.observatory_coordinates = self.observatory_coordinates.to(self._device)
         self.amplitude_perturbations = self.amplitude_perturbations.to(self._device)
         self.phase_perturbations = self.phase_perturbations.to(self._device)
         self.polarization_perturbations = self.polarization_perturbations.to(self._device)
-        self._time_step_size = self._time_step_size.to(self._device)
+        self._simulation_time_step_size = self._simulation_time_step_size.to(self._device)
         self.simulation_time_steps = self.simulation_time_steps.to(self._device)
 
         for index_source, source in enumerate(self._sources):
@@ -462,13 +310,14 @@ class Director():
         amplitude = self._aperture_diameter / 2 * torch.sqrt(
             torch.tensor(self._throughput * self._quantum_efficiency, device=self._device))
 
-        # Calculate differential counts
+        # Calculate differential counts for all sources
         diff_counts = torch.zeros(
             (len(self._differential_outputs),
              len(self._wavelength_bin_centers),
              len(self.simulation_time_steps)),
             device=self._device
         )
+
         for source in self._sources:
 
             # Broadcast sky coordinates to the correct shape
@@ -478,6 +327,8 @@ class Director():
             else:
                 sky_coordinates_x = source.sky_coordinates[0]
                 sky_coordinates_y = source.sky_coordinates[1]
+
+            # Broadcast sky brightness distribution to the correct shape
 
             # Define normalization
             if isinstance(source, Planet):
@@ -490,66 +341,68 @@ class Director():
             # Calculate differential counts of shape (N_outputs x N_wavelengths x N_time_steps)
             # Within torch.sum, the shape is (N_wavelengths x N_time_steps x N_pix x N_pix)
             for i in range(len(self._differential_outputs)):
-                # noinspection PyArgumentList
-                counts_1 = torch.sum(
-                    r[self._differential_outputs[i][0]](
-                        self.simulation_time_steps[None, :, None, None],
-                        self._wavelength_bin_centers[:, None, None, None],
-                        sky_coordinates_x,
-                        sky_coordinates_y,
-                        torch.tensor(self._modulation_period, device=self._device),
-                        torch.tensor(self.nulling_baseline, device=self._device),
-                        *[amplitude for _ in range(self._number_of_inputs)],
-                        *[self.amplitude_perturbations[k][None, :, None, None] for k
-                          in
-                          range(self._number_of_inputs)],
-                        *[self.phase_perturbations[k][None, :, None, None] for k in
-                          range(self._number_of_inputs)],
-                        *[torch.tensor(0, device=self._device) for _ in range(self._number_of_inputs)],
-                        *[self.polarization_perturbations[k][None, :, None, None] for
-                          k in
-                          range(self._number_of_inputs)]
-                    ) * source.sky_brightness_distribution[:, None, :, :], axis=(2, 3)) / normalization
+                counts_1 = (
+                    torch.sum(
+                        r[self._differential_outputs[i][0]](
+                            self.simulation_time_steps[None, :, None, None],
+                            self._wavelength_bin_centers[:, None, None, None],
+                            sky_coordinates_x,
+                            sky_coordinates_y,
+                            torch.tensor(self._modulation_period, device=self._device),
+                            torch.tensor(self.nulling_baseline, device=self._device),
+                            *[amplitude for _ in range(self._number_of_inputs)],
+                            *[self.amplitude_perturbations[k][None, :, None, None] for k in
+                              range(self._number_of_inputs)],
+                            *[self.phase_perturbations[k][None, :, None, None] for k in
+                              range(self._number_of_inputs)],
+                            *[torch.tensor(0, device=self._device) for _ in range(self._number_of_inputs)],
+                            *[self.polarization_perturbations[k][None, :, None, None] for k in
+                              range(self._number_of_inputs)]
+                        )
+                        * source.sky_brightness_distribution[:, None, :, :]
+                        / normalization
+                        * self._simulation_time_step_size
+                        * self._wavelength_bin_widths[:, None, None, None], axis=(2, 3)
+                    )
+                )
 
-                # noinspection PyArgumentList
-                counts_2 = torch.sum(
-                    r[self._differential_outputs[i][1]](
-                        self.simulation_time_steps[None, :, None, None],
-                        self._wavelength_bin_centers[:, None, None, None],
-                        sky_coordinates_x,
-                        sky_coordinates_y,
-                        torch.tensor(self._modulation_period, device=self._device),
-                        torch.tensor(self.nulling_baseline, device=self._device),
-                        *[amplitude for _ in range(self._number_of_inputs)],
-                        *[self.amplitude_perturbations[k][None, :, None, None] for k
-                          in
-                          range(self._number_of_inputs)],
-                        *[self.phase_perturbations[k][None, :, None, None] for k in
-                          range(self._number_of_inputs)],
-                        *[torch.tensor(0, device=self._device) for _ in range(self._number_of_inputs)],
-                        *[self.polarization_perturbations[k][None, :, None, None] for
-                          k in
-                          range(self._number_of_inputs)]
-                    ) * source.sky_brightness_distribution[:, None, :, :], axis=(2, 3)) / normalization
+                counts_2 = (
+                    torch.sum(
+                        r[self._differential_outputs[i][1]](
+                            self.simulation_time_steps[None, :, None, None],
+                            self._wavelength_bin_centers[:, None, None, None],
+                            sky_coordinates_x,
+                            sky_coordinates_y,
+                            torch.tensor(self._modulation_period, device=self._device),
+                            torch.tensor(self.nulling_baseline, device=self._device),
+                            *[amplitude for _ in range(self._number_of_inputs)],
+                            *[self.amplitude_perturbations[k][None, :, None, None] for k in
+                              range(self._number_of_inputs)],
+                            *[self.phase_perturbations[k][None, :, None, None] for k in
+                              range(self._number_of_inputs)],
+                            *[torch.tensor(0, device=self._device) for _ in range(self._number_of_inputs)],
+                            *[self.polarization_perturbations[k][None, :, None, None] for k in
+                              range(self._number_of_inputs)]
+                        )
+                        * source.sky_brightness_distribution[:, None, :, :]
+                        / normalization
+                        * self._simulation_time_step_size
+                        * self._wavelength_bin_widths[:, None, None, None], axis=(2, 3)
+                    )
+                )
 
-                diff_counts[i] += ((torch.poisson(counts_1) - torch.poisson(counts_2)))
+                diff_counts[i] += (torch.poisson(counts_1) - torch.poisson(counts_2))
 
-        diff_counts *= self._detector_integration_time * self._wavelength_bin_widths[None, :, None]
-
-        plt.imshow(diff_counts[0].cpu().numpy())
-        plt.colorbar()
-        plt.show()
-
-        # # Bin data to from simulation time steps observatory/instrument time steps
-        # binning_factor = int(round(len(self.simulation_time_steps) / len(self._instrument_time_steps), 0))
-        # self._data = torch.asarray(
-        #     block_reduce(
-        #         concatenated_data.detach().numpy(),
-        #         (1, 1, binning_factor),
-        #         np.sum
-        #     )
-        # )
+        # # Bin data to from simulation time steps detector time steps
+        binning_factor = int(round(len(self.simulation_time_steps) / len(self._detector_time_steps), 0))
+        self._data = torch.asarray(
+            block_reduce(
+                diff_counts.cpu().numpy(),
+                (1, 1, binning_factor),
+                np.sum
+            )
+        )
         #
         # # Normalize data (used for template creation)
-        # if self._normalize:
-        #     self._data = torch.einsum('ijk, ij->ijk', self._data, 1 / torch.sqrt(torch.mean(self._data ** 2, axis=2)))
+        if self._normalize:
+            self._data = torch.einsum('ijk, ij->ijk', self._data, 1 / torch.sqrt(torch.mean(self._data ** 2, axis=2)))
