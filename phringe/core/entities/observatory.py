@@ -22,7 +22,7 @@ class Observatory(BaseModel):
     :param spectral_resolving_power: The spectral resolving power
     :param wavelength_range_lower_limit: The lower limit of the wavelength range
     :param wavelength_range_upper_limit: The upper limit of the wavelength range
-    :param unperturbed_instrument_throughput: The unperturbed instrument throughput
+    :param throughput: The unperturbed instrument throughput
     :param phase_perturbation_rms: The phase perturbation rms
     :param phase_falloff_exponent: The phase falloff exponent
     :param polarization_perturbation_rms: The polarization perturbation rms
@@ -43,7 +43,8 @@ class Observatory(BaseModel):
     spectral_resolving_power: int
     wavelength_range_lower_limit: str
     wavelength_range_upper_limit: str
-    unperturbed_instrument_throughput: float
+    throughput: float
+    quantum_efficiency: float
     phase_perturbation_rms: str
     phase_falloff_exponent: float
     polarization_perturbation_rms: str
@@ -119,10 +120,6 @@ class Observatory(BaseModel):
         :return: The polarization perturbation rms in units of radians
         """
         return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.rad,)).si.value
-
-    @field_validator('unperturbed_instrument_throughput')
-    def _validate_unperturbed_instrument_throughput(cls, value: Any, info: ValidationInfo) -> Tensor:
-        return torch.tensor(value, dtype=torch.float32)
 
     @field_validator('wavelength_range_lower_limit')
     def _validate_wavelength_range_lower_limit(cls, value: Any, info: ValidationInfo) -> float:
