@@ -1,19 +1,22 @@
+from typing import Union
+
 import numpy as np
 import sympy
 import torch
 from skimage.measure import block_reduce
 from sympy import Symbol, exp, I, pi, cos, sin, Abs, symbols
+from torch import Tensor
 
-from phringe.core.director_helpers import get_nulling_baseline, \
-    calculate_amplitude_perturbations, calculate_phase_perturbations, \
-    calculate_polarization_perturbations, prepare_modeled_sources
 from phringe.core.entities.observation import Observation
 from phringe.core.entities.observatory import Observatory
+from phringe.core.entities.photon_sources.base_photon_source import BasePhotonSource
+from phringe.core.entities.photon_sources.exozodi import Exozodi
 from phringe.core.entities.photon_sources.local_zodi import LocalZodi
 from phringe.core.entities.photon_sources.planet import Planet
 from phringe.core.entities.photon_sources.star import Star
 from phringe.core.entities.scene import Scene
 from phringe.core.entities.settings import Settings
+from phringe.core.noise_generator import get_perturbation_time_series, get_photon_noise
 
 
 class Director():
@@ -147,6 +150,119 @@ class Director():
             device = torch.device('cpu')
         return device
 
+    def _get_nulling_baseline(
+            self,
+            star_habitable_zone_central_angular_radius: float,
+            optimized_star_separation: Union[str, float],
+            optimized_differential_output: int,
+            optimized_wavelength: float,
+            baseline_maximum: float,
+            baseline_minimum: float,
+            max_modulation_efficiency: list[float],
+    ) -> float:
+        """Calculate the nulling baseline in meters.
+
+        :param star_habitable_zone_central_angular_radius: The star habitable zone central angular radius
+        :param star_distance: The star distance
+        :param optimized_differential_output: The optimized differential output
+        :param optimized_wavelength: The optimized wavelength
+        :param optimized_star_separation: The optimized star separation
+        :param baseline_maximum: The baseline maximum
+        :param baseline_minimum: The baseline minimum
+        :param array_configuration_type: The array configuration type
+        :param beam_combination_scheme_type: The beam combination scheme type
+        :return: The nulling baseline in meters
+        """
+        # Get the optimized separation in angular units, if it is not yet in angular units
+        if optimized_star_separation == "habitable-zone":
+            optimized_star_separation = star_habitable_zone_central_angular_radius
+
+        # Get the optimal baseline and check if it is within the allowed range
+
+        nulling_baseline = max_modulation_efficiency[
+                               optimized_differential_output] * optimized_wavelength / optimized_star_separation
+
+        if baseline_minimum <= nulling_baseline and nulling_baseline <= baseline_maximum:
+            return nulling_baseline
+        raise ValueError(
+            f"Nulling baseline of {nulling_baseline} is not within allowed ranges of baselines {baseline_minimum}-{baseline_maximum}"
+        )
+
+    def _prepare_sources(
+            self,
+            sources: list[BasePhotonSource],
+            simulation_time_steps: Tensor,
+            simulation_wavelength_bin_centers: Tensor,
+            grid_size: int,
+            field_of_view: Tensor,
+            solar_ecliptic_latitude: float,
+            has_planet_orbital_motion: bool,
+            has_planet_signal: bool,
+            has_stellar_leakage: bool,
+            has_local_zodi_leakage: bool,
+            has_exozodi_leakage: bool
+    ) -> list[BasePhotonSource]:
+        """Return the spectral flux densities, brightness distributions and coordinates for all sources in the scene.
+
+        :param sources: The sources in the scene
+        :param simulation_time_steps: The simulation time steps
+        :param simulation_wavelength_bin_centers: The simulation wavelength bin centers
+        :param grid_size: The grid size
+        :param field_of_view: The field of view
+        :param solar_ecliptic_latitude: The solar ecliptic latitude
+        :param has_planet_orbital_motion: Whether the simulation has planet orbital motion
+        :param has_stellar_leakage: Whether the simulation has stellar leakage
+        :param has_local_zodi_leakage: Whether the simulation has local zodi leakage
+        :param has_exozodi_leakage: Whether the simulation has exozodi leakage
+        :return: The prepared sources
+        """
+        star = [star for star in sources if isinstance(star, Star)][0]
+        planets = [planet for planet in sources if isinstance(planet, Planet)]
+        local_zodi = [local_zodi for local_zodi in sources if isinstance(local_zodi, LocalZodi)][0]
+        exozodi = [exozodi for exozodi in sources if isinstance(exozodi, Exozodi)][0]
+        prepared_sources = []
+
+        if has_planet_signal:
+            for index_planet, planet in enumerate(planets):
+                planet.prepare(
+                    simulation_wavelength_bin_centers,
+                    grid_size,
+                    star_distance=star.distance,
+                    time_steps=simulation_time_steps,
+                    has_planet_orbital_motion=has_planet_orbital_motion,
+                    star_mass=star.mass,
+                    number_of_wavelength_steps=len(simulation_wavelength_bin_centers)
+                )
+                prepared_sources.append(planet)
+        if has_stellar_leakage:
+            star.prepare(
+                simulation_wavelength_bin_centers,
+                grid_size,
+                number_of_wavelength_steps=len(simulation_wavelength_bin_centers)
+            )
+            prepared_sources.append(star)
+        if has_local_zodi_leakage:
+            local_zodi.prepare(
+                simulation_wavelength_bin_centers,
+                grid_size,
+                field_of_view=field_of_view,
+                star_right_ascension=star.right_ascension,
+                star_declination=star.declination,
+                solar_ecliptic_latitude=solar_ecliptic_latitude,
+                number_of_wavelength_steps=len(simulation_wavelength_bin_centers)
+            )
+            prepared_sources.append(local_zodi)
+        if has_exozodi_leakage:
+            exozodi.prepare(
+                simulation_wavelength_bin_centers,
+                grid_size,
+                field_of_view=field_of_view,
+                star_distance=star.distance,
+                star_luminosity=star.luminosity)
+            prepared_sources.append(exozodi)
+
+        return prepared_sources
+
     def run(self):
         """Run the director. This includes the following steps:
         - Calculate simulation and instrument time steps
@@ -238,7 +354,7 @@ class Director():
         self.field_of_view = self._wavelength_bin_centers / self._aperture_diameter
 
         # Calculate the nulling baseline
-        self.nulling_baseline = get_nulling_baseline(
+        self.nulling_baseline = self._get_nulling_baseline(
             self._star.habitable_zone_central_angular_radius,
             self._optimized_star_separation,
             self._optimized_differential_output,
@@ -248,33 +364,40 @@ class Director():
             self._set_at_max_mod_eff
         )
 
-        # Calculate the instrument perturbations
-        self.amplitude_perturbations = calculate_amplitude_perturbations(
-            self._number_of_inputs,
-            self.simulation_time_steps,
-            self._amplitude_perturbation_lower_limit,
-            self._amplitude_perturbation_upper_limit,
-            self._has_amplitude_perturbations
+        # Calculate amplitude perturbations
+        self.amplitude_perturbations = self._amplitude_perturbation_lower_limit + (
+                self._amplitude_perturbation_upper_limit - self._amplitude_perturbation_lower_limit) * torch.rand(
+            (self._number_of_inputs, len(self.simulation_time_steps)),
+            dtype=torch.float32) if self._has_amplitude_perturbations else torch.ones(
+            (self._number_of_inputs, len(self.simulation_time_steps))
         )
-        self.phase_perturbations = calculate_phase_perturbations(
+
+        # Calculate phase perturbations
+        self.phase_perturbations = get_perturbation_time_series(
             self._number_of_inputs,
             self._detector_integration_time,
-            self.simulation_time_steps,
+            len(self.simulation_time_steps),
             self._phase_perturbation_rms,
             self._phase_falloff_exponent,
-            self._has_phase_perturbations
+        ) if self._has_phase_perturbations else torch.zeros(
+            (self._number_of_inputs, len(self.simulation_time_steps)),
+            dtype=torch.float32
         )
-        self.polarization_perturbations = calculate_polarization_perturbations(
+
+        # Calculate polarization perturbations
+        self.polarization_perturbations = get_perturbation_time_series(
             self._number_of_inputs,
             self._detector_integration_time,
-            self.simulation_time_steps,
+            len(self.simulation_time_steps),
             self._polarization_perturbation_rms,
-            self._polarization_falloff_exponent,
-            self._has_polarization_perturbations
+            self._polarization_perturbation_rms,
+        ) if self._has_polarization_perturbations else torch.zeros(
+            (self._number_of_inputs, len(self.simulation_time_steps)),
+            dtype=torch.float32
         )
 
         # Calculate the spectral flux densities, coordinates and brightness distributions of all sources in the scene
-        self._sources = prepare_modeled_sources(
+        self._sources = self._prepare_sources(
             self._sources,
             self.simulation_time_steps,
             self._wavelength_bin_centers,
@@ -391,7 +514,7 @@ class Director():
                     )
                 )
 
-                diff_counts[i] += (torch.poisson(counts_1) - torch.poisson(counts_2))
+                diff_counts[i] += (get_photon_noise(counts_1) - get_photon_noise(counts_2))
 
         # # Bin data to from simulation time steps detector time steps
         binning_factor = int(round(len(self.simulation_time_steps) / len(self._detector_time_steps), 0))

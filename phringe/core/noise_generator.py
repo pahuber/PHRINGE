@@ -20,6 +20,7 @@
 
 import numpy as np
 import torch
+from torch import Tensor
 
 
 class NoiseGenerator:
@@ -195,6 +196,11 @@ class NoiseGenerator:
             x_f[-1] = np.abs(x_f[-1])
 
         return f, x_f
+
+
+def get_photon_noise(counts: Tensor) -> Tensor:
+    """Return the photon noise."""
+    return torch.poisson(counts)
 
 
 def get_perturbation_time_series(number_of_input_beams: int,
