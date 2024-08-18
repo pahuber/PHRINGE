@@ -9,6 +9,7 @@ from torch import Tensor
 
 from phringe.core.entities.observation import Observation
 from phringe.core.entities.observatory import Observatory
+from phringe.core.entities.perturbations.noise_generator import get_perturbation_time_series, get_photon_noise
 from phringe.core.entities.photon_sources.base_photon_source import BasePhotonSource
 from phringe.core.entities.photon_sources.exozodi import Exozodi
 from phringe.core.entities.photon_sources.local_zodi import LocalZodi
@@ -16,7 +17,6 @@ from phringe.core.entities.photon_sources.planet import Planet
 from phringe.core.entities.photon_sources.star import Star
 from phringe.core.entities.scene import Scene
 from phringe.core.entities.settings import Settings
-from phringe.core.noise_generator import get_perturbation_time_series, get_photon_noise
 
 
 class Director():
