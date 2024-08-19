@@ -32,7 +32,7 @@ class PolarizationPerturbation(BasePerturbation, BaseModel):
 
         for k in range(number_of_inputs):
             time_series[k] = noise_generator.generate(
-                dt=simulation_time_step_size.numpy(),
+                dt=simulation_time_step_size,
                 n=number_of_simulation_time_steps,
                 colour=color
             )

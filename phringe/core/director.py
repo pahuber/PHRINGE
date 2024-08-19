@@ -217,7 +217,7 @@ class Director():
             )
         else:
             self.phase_pert_time_series = torch.zeros(
-                (self._number_of_inputs, len(self.simulation_time_steps)),
+                (self._number_of_inputs, len(self._wavelength_bin_centers), len(self.simulation_time_steps)),
                 dtype=torch.float32
             )
 
