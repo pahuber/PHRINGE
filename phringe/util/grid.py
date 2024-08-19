@@ -1,4 +1,4 @@
-from typing import Tuple, Any
+from typing import Tuple
 
 import numpy as np
 import torch
@@ -46,13 +46,3 @@ def get_index_of_closest_value(array: Tensor, value: Tensor):
     :return: The index of the closest value
     """
     return torch.abs(array - value).argmin()
-
-
-def get_number_of_instances_in_list(list: list, instance_type: Any) -> int:
-    """Return the number of objects of a given instance in a list.
-
-    :param list: The list
-    :param instance_type: The type of instance
-    :return: The number of objects
-    """
-    return len([value for value in list if isinstance(value, instance_type)])
