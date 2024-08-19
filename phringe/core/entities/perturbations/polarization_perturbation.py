@@ -8,8 +8,8 @@ from pydantic_core.core_schema import ValidationInfo
 from torch import Tensor
 
 from phringe.core.entities.perturbations.base_perturbation import BasePerturbation
-from phringe.core.entities.perturbations.noise_generator import NoiseGenerator
 from phringe.io.validators import validate_quantity_units
+from phringe.util.noise_generator import NoiseGenerator
 
 
 class PolarizationPerturbation(BasePerturbation, BaseModel):
@@ -22,7 +22,8 @@ class PolarizationPerturbation(BasePerturbation, BaseModel):
             self,
             number_of_inputs: int,
             simulation_time_step_size: float,
-            number_of_simulation_time_steps: int
+            number_of_simulation_time_steps: int,
+            **kwargs
     ) -> Tensor:
         time_series = np.zeros((number_of_inputs, number_of_simulation_time_steps))
 
@@ -31,7 +32,7 @@ class PolarizationPerturbation(BasePerturbation, BaseModel):
 
         for k in range(number_of_inputs):
             time_series[k] = noise_generator.generate(
-                dt=simulation_time_step_size,
+                dt=simulation_time_step_size.numpy(),
                 n=number_of_simulation_time_steps,
                 colour=color
             )

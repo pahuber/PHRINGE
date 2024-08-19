@@ -212,7 +212,8 @@ class Director():
             self.phase_pert_time_series = phase_perturbation.get_time_series(
                 self._number_of_inputs,
                 self._detector_integration_time,
-                len(self.simulation_time_steps)
+                len(self.simulation_time_steps),
+                wavelengths=self._wavelength_bin_centers
             )
         else:
             self.phase_pert_time_series = torch.zeros(
@@ -491,7 +492,7 @@ class Director():
                             *[amplitude for _ in range(self._number_of_inputs)],
                             *[self.amplitude_pert_time_series[k][None, :, None, None] for k in
                               range(self._number_of_inputs)],
-                            *[self.phase_pert_time_series[k][None, :, None, None] for k in
+                            *[self.phase_pert_time_series[k][:, :, None, None] for k in
                               range(self._number_of_inputs)],
                             *[torch.tensor(0, device=self._device) for _ in range(self._number_of_inputs)],
                             *[self.polarization_pert_time_series[k][None, :, None, None] for k in
@@ -516,7 +517,7 @@ class Director():
                             *[amplitude for _ in range(self._number_of_inputs)],
                             *[self.amplitude_pert_time_series[k][None, :, None, None] for k in
                               range(self._number_of_inputs)],
-                            *[self.phase_pert_time_series[k][None, :, None, None] for k in
+                            *[self.phase_pert_time_series[k][:, :, None, None] for k in
                               range(self._number_of_inputs)],
                             *[torch.tensor(0, device=self._device) for _ in range(self._number_of_inputs)],
                             *[self.polarization_pert_time_series[k][None, :, None, None] for k in

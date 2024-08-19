@@ -5,7 +5,7 @@ from pydantic import BaseModel, field_validator
 from pydantic_core.core_schema import ValidationInfo
 from torch import Tensor
 
-from phringe.core.entities.perturbations.noise_generator import NoiseGenerator
+from phringe.util.noise_generator import NoiseGenerator
 
 
 class BasePerturbation(ABC, BaseModel):
@@ -29,7 +29,8 @@ class BasePerturbation(ABC, BaseModel):
             self,
             number_of_inputs: int,
             simulation_time_step_size: float,
-            number_of_simulation_time_steps: int
+            number_of_simulation_time_steps: int,
+            **kwargs
     ) -> Tensor:
         pass
 
