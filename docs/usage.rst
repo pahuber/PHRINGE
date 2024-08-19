@@ -9,14 +9,9 @@ Usage
 Required User Input
 -------------------
 
-`PHRINGE` requires certain user input to configure the `simulation settings`, `observation strategy`, `observatory hardware` and `astrophysical scene`. Usually, this input is provided through the following files:
+`PHRINGE` requires a :ref:`configuration file <configuration>` to configure the simulation, the observation mode, the instrument and the scene.
+Alternatively, the input can also be given manually by creating the required objects (see :doc:`advanced example <tutorials/example_advanced>`).
 
-* A :ref:`configuration file <configuration>` to configure the simulation settings, observation strategy and observatory hardware
-* An :ref:`exoplanetary system file <exoplanetary_system>` to specify the observed exoplanetary system including the stellar, planetary and exozodi properties
-* Optional: A :ref:`spectrum file <spectrum>` that contains the spectra of the planets in the system in W/sr/m2/um
-
-.. note::
-    If no spectrum is provided for a planet, a blackbody spectrum will be created from the planetary properties specified in the exoplanetary system file.
 
 Using Within Python Module
 --------------------------
@@ -31,10 +26,9 @@ Using Within Python Module
     phringe = PHRINGE()
     phringe.run(
         config_file_path=Path('path_to_config_file'),
-        exoplanetary_system_file_path=Path('path_to_exoplanetary_system_file')
     )
 
-The input can either be given through input files (as done here; see :doc:`basic example <tutorials/example_basic>`) or by manually creating the required objects (see :doc:`advanced example <tutorials/example_advanced>`).
+Alternatively to using configuration files (as done here; see :doc:`basic example <tutorials/example_basic>`), the input can also be manually given by creating the required objects (see :doc:`advanced example <tutorials/example_advanced>`).
 
 Using Command Line Interface (CLI)
 -----------------------------------
@@ -43,7 +37,7 @@ Using Command Line Interface (CLI)
 
 .. code-block:: console
 
-    phringe [OPTIONS] CONFIG EXOPLANETARY_SYSTEM [FLAGS]
+    phringe [OPTIONS] CONFIG [FLAGS]
 
 Arguments
 ~~~~~~~~~
@@ -57,9 +51,6 @@ Arguments
    * - ``CONFIG``
      - PATH
      - Path to the configuration file
-   * - ``EXOPLANETARY_SYSTEM``
-     - PATH
-     - Path to the exoplanetary system file
 
 Options
 ~~~~~~~
@@ -76,9 +67,6 @@ Options
    * - ``-g``, ``--gpus``
      - INTEGER
      - Indices if the GPUs to use; option can be used multiple times for usage of multiple GPUs
-   * - ``-o``, ``--output-dir``
-     - PATH
-     - Path to the output directory
    * - ``-f``, ``--fits-suffix``
      - TEXT
      - Suffix for the FITS file name
@@ -101,8 +89,6 @@ Flags
 
    * - Flag
      - Description
-   * - ``--detailed``/``--no-detailed``
-     - Run in detailed mode; default is false
    * - ``--fits``/``--no-fits``
      - Save the generated data to a FITS file; default is true
    * - ``--copy``/``--no-copy``

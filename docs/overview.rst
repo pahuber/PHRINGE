@@ -3,16 +3,15 @@
 Overview
 ========
 
-`PHRINGE` is a Python-based tool to generate synthetic photometry data for nulling interferometers. It is being developed in the context of the `Large Interferometer For Exoplanets (LIFE) <https://www.life-space-mission.com>`_ and used for the data generation part of `LIFEsimMC <https://www.github.com/pahuber/lifesimmc>`_.
+`PHRINGE` is a Python-based tool to generate synthetic (photoelectron counts) data for nulling interferometers. It is being developed in the context of the `Large Interferometer For Exoplanets (LIFE) <https://www.life-space-mission.com>`_ and used for the data generation part of `LIFEsimMC <https://www.github.com/pahuber/lifesimmc>`_.
 
 Features
 --------
 
 `PHRINGE` includes the following features:
 
-* Model different array architectures including different array configurations (X-Array, Triangle, Pentagon) and different beam combination schemes (double Bracewell, Kernel)
-* Model noise contributions from astrophysical sources including stellar, local zodi and exozodi leakage
-* Model noise contributions from instrumental perturbations including amplitude, phase (OPD) and polarization rotation perturbations
-* Configure the observation strategy and the observatory hardware with all major parameters
-* Configure the observed exoplanetary system including the star, planets and exozodi
-* Export the synthetic photometry data as a FITS file
+* Symbolic input of complex amplitude transfer matrix and array positions, ensuring maximum flexibility in architecture modeling
+* Symbolic calculation of instrument intensity response
+* Noise models for astrophysical noise sources including stellar, local zodi and exozodi leakage
+* Noise models for instrumental perturbations including amplitude, phase (OPD) and polarization rotation perturbations
+* Export of synthetic data as a FITS file
