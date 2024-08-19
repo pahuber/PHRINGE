@@ -11,7 +11,8 @@ class TXTReader:
     """Class representation of a text file reader.
     """
 
-    def read(self, file_path: Path) -> (np.ndarray):
+    @staticmethod
+    def read(file_path: Path) -> (np.ndarray):
         """Read a text file containing a spectrum and return the fluxes and wavelengths.
 
         :param file_path: The path to the text file
