@@ -126,14 +126,6 @@ class Star(BasePhotonSource, BaseModel):
         radius_outer = np.sqrt(self.luminosity / incident_stellar_flux_outer)
         return ((radius_outer + radius_inner) / 2 * u.au).si.value
 
-    def _get_spectral_flux_density(
-            self,
-            wavelength_steps: Tensor,
-            grid_size: int,
-            **kwargs
-    ) -> Tensor:
-        return create_blackbody_spectrum(self.temperature, wavelength_steps) * self.solid_angle
-
     def _get_sky_brightness_distribution(self, grid_size: int, **kwargs) -> np.ndarray:
         number_of_wavelength_steps = kwargs['number_of_wavelength_steps']
         sky_brightness_distribution = torch.zeros((number_of_wavelength_steps, grid_size, grid_size))
@@ -162,3 +154,11 @@ class Star(BasePhotonSource, BaseModel):
         :return: The solid angle
         """
         return np.pi * (self.radius / self.distance) ** 2
+
+    def _get_spectral_flux_density(
+            self,
+            wavelength_steps: Tensor,
+            grid_size: int,
+            **kwargs
+    ) -> Tensor:
+        return create_blackbody_spectrum(self.temperature, wavelength_steps) * self.solid_angle

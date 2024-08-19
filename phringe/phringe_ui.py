@@ -88,8 +88,7 @@ class PHRINGE():
                 'declination': None,
             },
             'exozodi': {
-                'level': None,
-                'inclination': None,
+                'level': None
             },
             'planets': [
                 {

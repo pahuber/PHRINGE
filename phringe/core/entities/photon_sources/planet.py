@@ -130,45 +130,6 @@ class Planet(BasePhotonSource, BaseModel):
         """
         return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.deg,)).si.value
 
-    def _get_spectral_flux_density(self, wavelength_bin_centers: Tensor, grid_size: int, **kwargs) -> Tensor:
-        """Calculate the spectral flux density of the planet in units of ph s-1 m-3. Use the previously generated
-        reference spectrum in units of ph s-1 m-3 sr-1 and the solid angle to calculate it and bin it to the
-        simulation wavelength bin centers.
-
-        :param wavelength_bin_centers: The wavelength bin centers
-        :param grid_size: The grid size
-        :param kwargs: The keyword arguments
-        :return: The binned mean spectral flux density in units of ph s-1 m-3
-        """
-        if self.path_to_spectrum:
-            fluxes, wavelengths = TXTReader.read(self.path_to_spectrum)
-            binned_spectral_flux_density = spectres.spectres(
-                wavelength_bin_centers.numpy(),
-                wavelengths.numpy(),
-                fluxes.numpy(),
-                fill=0,
-                verbose=False
-            ) * self.solid_angle
-            return torch.asarray(binned_spectral_flux_density, dtype=torch.float32)
-        else:
-            binned_spectral_flux_density = torch.asarray(
-                create_blackbody_spectrum(
-                    self.temperature,
-                    wavelength_bin_centers
-                )
-                , dtype=torch.float32) * self.solid_angle
-            return binned_spectral_flux_density
-
-        # binned_spectral_flux_density = spectres.spectres(
-        #     wavelength_bin_centers.numpy(),
-        #     reference_wavelength_bin_centers.numpy(),
-        #     reference_spectrum.numpy(),
-        #     fill=0,
-        #     verbose=False
-        # ) * self.solid_angle
-        #
-        # return torch.asarray(binned_spectral_flux_density, dtype=torch.float32)
-
     def _get_sky_brightness_distribution(self, grid_size: int, **kwargs) -> np.ndarray:
         """Calculate and return the sky brightness distribution.
 
@@ -250,6 +211,35 @@ class Planet(BasePhotonSource, BaseModel):
         """
         star_distance = kwargs.get('star_distance')
         return torch.pi * (self.radius / star_distance) ** 2
+
+    def _get_spectral_flux_density(self, wavelength_bin_centers: Tensor, grid_size: int, **kwargs) -> Tensor:
+        """Calculate the spectral flux density of the planet in units of ph s-1 m-3. Use the previously generated
+        reference spectrum in units of ph s-1 m-3 sr-1 and the solid angle to calculate it and bin it to the
+        simulation wavelength bin centers.
+
+        :param wavelength_bin_centers: The wavelength bin centers
+        :param grid_size: The grid size
+        :param kwargs: The keyword arguments
+        :return: The binned mean spectral flux density in units of ph s-1 m-3
+        """
+        if self.path_to_spectrum:
+            fluxes, wavelengths = TXTReader.read(self.path_to_spectrum)
+            binned_spectral_flux_density = spectres.spectres(
+                wavelength_bin_centers.numpy(),
+                wavelengths.numpy(),
+                fluxes.numpy(),
+                fill=0,
+                verbose=False
+            ) * self.solid_angle
+            return torch.asarray(binned_spectral_flux_density, dtype=torch.float32)
+        else:
+            binned_spectral_flux_density = torch.asarray(
+                create_blackbody_spectrum(
+                    self.temperature,
+                    wavelength_bin_centers
+                )
+                , dtype=torch.float32) * self.solid_angle
+            return binned_spectral_flux_density
 
     def _get_coordinates(
             self,

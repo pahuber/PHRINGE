@@ -16,39 +16,20 @@ class LocalZodi(BasePhotonSource, BaseModel):
     """Class representation of a local zodi."""
     name: str = 'LocalZodi'
 
-    def _get_spectral_flux_density(
-            self,
-            wavelength_steps: np.ndarray,
-            grid_size: int,
-            **kwargs
-    ) -> np.ndarray:
-        """Calculate the mean spectral flux density of the local zodi as described in Dannert et al. 2022.
+    def _get_ecliptic_coordinates(self, star_right_ascension, star_declination, solar_ecliptic_latitude) -> Tuple:
+        """Return the ecliptic latitude and relative ecliptic longitude that correspond to the star position in the sky.
 
-        :param wavelength_steps: The wavelength steps
+        :param star_right_ascension: The right ascension of the star
+        :param star_declination: The declination of the star
+        :param solar_ecliptic_latitude: The ecliptic latitude of the sun
+        :return: Tuple containing the two coordinates
         """
-        star_right_ascension = kwargs['star_right_ascension']
-        star_declination = kwargs['star_declination']
-        solar_ecliptic_latitude = kwargs['solar_ecliptic_latitude']
-        variable_tau = 4e-8
-        variable_a = 0.22
-        ecliptic_latitude, relative_ecliptic_longitude = self._get_ecliptic_coordinates(
-            star_right_ascension,
-            star_declination,
-            solar_ecliptic_latitude
-        )
-        mean_spectral_flux_density = (
-                variable_tau *
-                (
-                        create_blackbody_spectrum(265, wavelength_steps) * self.solid_angle
-                        + variable_a
-                        * create_blackbody_spectrum(5778, wavelength_steps) * self.solid_angle
-                        * ((1 * u.Rsun).to(u.au) / (1.5 * u.au)).value ** 2
-                ) *
-                ((torch.pi / torch.arccos(torch.cos(torch.tensor(relative_ecliptic_longitude)) * torch.cos(
-                    torch.tensor(ecliptic_latitude))))
-                 / (torch.sin(torch.tensor(ecliptic_latitude)) ** 2 + 0.6 * (wavelength_steps / (11)) ** (
-                            -0.4) * torch.cos(torch.tensor(ecliptic_latitude)) ** 2)) ** 0.5)
-        return mean_spectral_flux_density
+        coordinates = SkyCoord(ra=star_right_ascension, dec=star_declination, frame='icrs')
+        coordinates_ecliptic = coordinates.transform_to(GeocentricTrueEcliptic)
+        ecliptic_latitude = coordinates_ecliptic.lat.to(u.rad).value
+        ecliptic_longitude = coordinates_ecliptic.lon.to(u.rad).value
+        relative_ecliptic_longitude = ecliptic_longitude - solar_ecliptic_latitude
+        return ecliptic_latitude, relative_ecliptic_longitude
 
     def _get_sky_brightness_distribution(self, grid_size: int, **kwargs) -> np.ndarray:
         grid = torch.ones((grid_size, grid_size), dtype=torch.float32)
@@ -74,17 +55,36 @@ class LocalZodi(BasePhotonSource, BaseModel):
         """
         return kwargs['field_of_view'] ** 2
 
-    def _get_ecliptic_coordinates(self, star_right_ascension, star_declination, solar_ecliptic_latitude) -> Tuple:
-        """Return the ecliptic latitude and relative ecliptic longitude that correspond to the star position in the sky.
+    def _get_spectral_flux_density(
+            self,
+            wavelength_steps: np.ndarray,
+            grid_size: int,
+            **kwargs
+    ) -> np.ndarray:
+        """Calculate the mean spectral flux density of the local zodi as described in Dannert et al. 2022.
 
-        :param star_right_ascension: The right ascension of the star
-        :param star_declination: The declination of the star
-        :param solar_ecliptic_latitude: The ecliptic latitude of the sun
-        :return: Tuple containing the two coordinates
+        :param wavelength_steps: The wavelength steps
         """
-        coordinates = SkyCoord(ra=star_right_ascension, dec=star_declination, frame='icrs')
-        coordinates_ecliptic = coordinates.transform_to(GeocentricTrueEcliptic)
-        ecliptic_latitude = coordinates_ecliptic.lat.to(u.rad).value
-        ecliptic_longitude = coordinates_ecliptic.lon.to(u.rad).value
-        relative_ecliptic_longitude = ecliptic_longitude - solar_ecliptic_latitude
-        return ecliptic_latitude, relative_ecliptic_longitude
+        star_right_ascension = kwargs['star_right_ascension']
+        star_declination = kwargs['star_declination']
+        solar_ecliptic_latitude = kwargs['solar_ecliptic_latitude']
+        variable_tau = 4e-8
+        variable_a = 0.22
+        ecliptic_latitude, relative_ecliptic_longitude = self._get_ecliptic_coordinates(
+            star_right_ascension,
+            star_declination,
+            solar_ecliptic_latitude
+        )
+        spectral_flux_density = (
+                variable_tau *
+                (
+                        create_blackbody_spectrum(265, wavelength_steps) * self.solid_angle
+                        + variable_a
+                        * create_blackbody_spectrum(5778, wavelength_steps) * self.solid_angle
+                        * ((1 * u.Rsun).to(u.au) / (1.5 * u.au)).value ** 2
+                ) *
+                ((torch.pi / torch.arccos(torch.cos(torch.tensor(relative_ecliptic_longitude)) * torch.cos(
+                    torch.tensor(ecliptic_latitude))))
+                 / (torch.sin(torch.tensor(ecliptic_latitude)) ** 2 + 0.6 * (wavelength_steps / (11)) ** (
+                            -0.4) * torch.cos(torch.tensor(ecliptic_latitude)) ** 2)) ** 0.5)
+        return spectral_flux_density
