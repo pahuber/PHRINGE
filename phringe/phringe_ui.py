@@ -26,7 +26,7 @@ class PHRINGE():
     """
 
     config = {
-        'settings': {
+        'simulation': {
             'grid_size': None,
             'time_step_size': None,
             'has_planet_orbital_motion': None,
@@ -43,9 +43,6 @@ class PHRINGE():
             'total_integration_time': None,
             'detector_integration_time': None,
             'modulation_period': None,
-            'baseline_ratio': None,
-            'baseline_maximum': None,
-            'baseline_minimum': None,
             'optimized_differential_output': None,
             'optimized_star_separation': None,
             'optimized_wavelength': None,
@@ -56,17 +53,28 @@ class PHRINGE():
             'differential_outputs': None,
             'sep_at_max_mod_eff': None,
             'aperture_diameter': None,
+            'baseline_ratio': None,
+            'baseline_maximum': None,
+            'baseline_minimum': None,
             'spectral_resolving_power': None,
             'wavelength_range_lower_limit': None,
             'wavelength_range_upper_limit': None,
             'throughput': None,
             'quantum_efficiency': None,
-            'amplitude_perturbation_lower_limit': None,
-            'amplitude_perturbation_upper_limit': None,
-            'phase_perturbation_rms': None,
-            'phase_falloff_exponent': None,
-            'polarization_perturbation_rms': None,
-            'polarization_falloff_exponent': None,
+            'perturbations': {
+                'amplitude_perturbation': {
+                    'rms': None,
+                    'color': None,
+                },
+                'phase_perturbation': {
+                    'rms': None,
+                    'color': None,
+                },
+                'polarization_perturbation': {
+                    'rms': None,
+                    'color': None,
+                },
+            }
         },
         'scene': {
             'star': {
@@ -194,7 +202,8 @@ class PHRINGE():
         simulation = Simulation(**config_dict['simulation']) if not simulation else simulation
         instrument = Instrument(**config_dict['instrument']) if not instrument else instrument
         observation_mode = ObservationMode(
-            **config_dict['observation_mode']) if not observation_mode else observation_mode
+            **config_dict['observation_mode']
+        ) if not observation_mode else observation_mode
         scene = Scene(**config_dict['scene']) if not scene else scene
 
         self._director = Director(simulation, instrument, observation_mode, scene, gpu, detailed, normalize)
