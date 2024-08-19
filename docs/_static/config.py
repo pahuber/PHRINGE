@@ -106,7 +106,7 @@ config = {
                 'raan': '0 deg',
                 'argument_of_periapsis': '0 deg',
                 'true_anomaly': '0 deg',
-                'path_to_spectrum': None
+                'path_to_spectrum': 'spectrum.txt'
             },
         ],
     },
