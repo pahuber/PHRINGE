@@ -377,7 +377,7 @@ class Director():
                 r[j],
                 [torch_func_dict]
             )
-        self.intensity_response = r
+        self._intensity_response = r
 
         ################################################################################################################
         # Numerical calculations

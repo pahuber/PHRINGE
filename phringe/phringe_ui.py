@@ -176,6 +176,10 @@ class PHRINGE():
         N_spec_channels x N_observation_time_steps.
 
         :param config_file_path: The path to the configuration file
+        :param simulation: The simulation object
+        :param instrument: The instrument object
+        :param observation_mode: The observation mode object
+        :param scene: The scene object
         :param gpu: Index of the GPU to use
         :param fits_suffix: The suffix for the FITS file
         :param detailed: Whether to run in detailed mode. If detailed mode is used, the intensity responses are saved during the data generation
