@@ -40,14 +40,11 @@ on [phringe.readthedocs.io](https://phringe.readthedocs.io/en/latest/).
 
 ## Features
 
-- Model different array architectures including different array configurations (Emma-X, Triangle, Pentagon) and
-  different nulling schemes (double Bracewell, Kernel)
-- Model noise contributions from astrophysical sources including stellar, local zodi and exozodi leakage
-- Model noise contributions from systematic instrument perturbations including amplitude, phase (OPD) and polarization
-  rotation perturbations
-- Configure the osbervation and the observatory with all major parameters
-- Configure the observed planetary system including the star, planets and exozodi
-- Export the photometry data as a FITS file
+- Symbolic input of complex amplitude transfer matrix and array positions, ensuring maximum flexibility in architecture modeling
+- Symbolic calculation of instrument intensity response
+- Noise models for astrophysical noise sources including stellar, local zodi and exozodi leakage
+- Noise models for instrumental perturbations including amplitude, phase (OPD) and polarization rotation perturbations
+- Export of synthetic data as a FITS file
 
 ## Contributing
 
