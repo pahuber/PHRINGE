@@ -235,6 +235,7 @@ class PHRINGE():
         scene = Scene(**config_dict['scene']) if not scene else scene
 
         self._director = Director(simulation, instrument, observation_mode, scene, gpu, normalize)
+
         self._director.run()
 
         if (write_fits or create_copy) and create_directory:

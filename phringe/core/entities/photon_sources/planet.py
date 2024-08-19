@@ -14,7 +14,7 @@ from torch import Tensor
 from phringe.core.entities.photon_sources.base_photon_source import BasePhotonSource
 from phringe.io.txt_reader import TXTReader
 from phringe.io.validators import validate_quantity_units
-from phringe.util.grid import get_index_of_closest_value, get_meshgrid, get_index_of_closest_value_numpy
+from phringe.util.grid import get_index_of_closest_value, get_meshgrid
 from phringe.util.spectrum import create_blackbody_spectrum
 
 
