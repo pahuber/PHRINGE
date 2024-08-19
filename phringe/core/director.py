@@ -355,12 +355,19 @@ class Director():
                 th[k] + dth[k])
 
         # Define intensity response
+        def _torch_sqrt(x):
+            # Ensure x is a tensor before applying torch.sqrt
+            if not isinstance(x, torch.Tensor):
+                x = torch.tensor(x)
+            return torch.sqrt(x)
+
         torch_func_dict = {
             'sin': torch.sin,
             'cos': torch.cos,
             'exp': torch.exp,
             'log': torch.log,
-            'sqrt': torch.sqrt,
+            'sqrt': _torch_sqrt,
+
         }
         r = {}
         rx = {}
@@ -446,7 +453,7 @@ class Director():
                 self._device)
 
         # Calculate amplitude (assumed to be identical for each collector)
-        amplitude = self._aperture_diameter / 2 * torch.sqrt(
+        self._amplitude = self._aperture_diameter / 2 * torch.sqrt(
             torch.tensor(self._throughput * self._quantum_efficiency, device=self._device))
 
         # Calculate differential counts for all sources
@@ -496,7 +503,7 @@ class Director():
                             sky_coordinates_y,
                             torch.tensor(self._modulation_period, device=self._device),
                             torch.tensor(self.nulling_baseline, device=self._device),
-                            *[amplitude for _ in range(self._number_of_inputs)],
+                            *[self._amplitude for _ in range(self._number_of_inputs)],
                             *[self.amplitude_pert_time_series[k][None, :, None, None] for k in
                               range(self._number_of_inputs)],
                             *[self.phase_pert_time_series[k][:, :, None, None] for k in
@@ -521,7 +528,7 @@ class Director():
                             sky_coordinates_y,
                             torch.tensor(self._modulation_period, device=self._device),
                             torch.tensor(self.nulling_baseline, device=self._device),
-                            *[amplitude for _ in range(self._number_of_inputs)],
+                            *[self._amplitude for _ in range(self._number_of_inputs)],
                             *[self.amplitude_pert_time_series[k][None, :, None, None] for k in
                               range(self._number_of_inputs)],
                             *[self.phase_pert_time_series[k][:, :, None, None] for k in

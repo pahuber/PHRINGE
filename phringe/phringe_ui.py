@@ -4,11 +4,15 @@ from datetime import datetime
 from pathlib import Path
 from typing import overload
 
+import torch
 from torch import Tensor
 
 from phringe.core.director import Director
 from phringe.core.entities.instrument import Instrument
 from phringe.core.entities.observation_mode import ObservationMode
+from phringe.core.entities.photon_sources.exozodi import Exozodi
+from phringe.core.entities.photon_sources.local_zodi import LocalZodi
+from phringe.core.entities.photon_sources.planet import Planet
 from phringe.core.entities.scene import Scene
 from phringe.core.entities.simulation import Simulation
 from phringe.io.fits_writer import FITSWriter
@@ -112,12 +116,47 @@ class PHRINGE():
         """
         return self._director.field_of_view
 
-    def get_intensity_response(self) -> Tensor:
+    def get_intensity_response(self, source_name: str) -> Tensor:
         """Return the intensity response.
 
         :return: The intensity response
         """
-        return self._director._intensity_response
+        source = [source for source in self._director._sources if source.name == source_name][0]
+
+        if isinstance(source, LocalZodi) or isinstance(source, Exozodi):
+            sky_coordinates_x = source.sky_coordinates[0][:, None, :, :]
+            sky_coordinates_y = source.sky_coordinates[1][:, None, :, :]
+        elif isinstance(source, Planet) and self._director._has_planet_orbital_motion:
+            sky_coordinates_x = source.sky_coordinates[0][None, :, :, :]
+            sky_coordinates_y = source.sky_coordinates[1][None, :, :, :]
+        else:
+            sky_coordinates_x = source.sky_coordinates[0][None, None, :, :]
+            sky_coordinates_y = source.sky_coordinates[1][None, None, :, :]
+
+        num_in = self._director._number_of_inputs
+        num_out = self._director._number_of_outputs
+        time = self._director.simulation_time_steps[None, :, None, None]
+        wavelength = self._director._wavelength_bin_centers[:, None, None, None]
+        modulation_period = torch.tensor(self._director._modulation_period)
+        nulling_basline = torch.tensor(self._director.nulling_baseline)
+        amplitude = self._director._amplitude
+        amplitude_pert = self._director.amplitude_pert_time_series
+        phase_pert = self._director.phase_pert_time_series
+        polarization_pert = self._director.polarization_pert_time_series
+
+        return torch.stack([self._director._intensity_response[j](
+            time,
+            wavelength,
+            sky_coordinates_x,
+            sky_coordinates_y,
+            modulation_period,
+            nulling_basline,
+            *[amplitude for _ in range(num_in)],
+            *[amplitude_pert[k][None, :, None, None] for k in range(num_in)],
+            *[phase_pert[k][:, :, None, None] for k in range(num_in)],
+            *[torch.tensor(0) for _ in range(num_in)],
+            *[polarization_pert[k][None, :, None, None] for k in range(num_in)]
+        ) for j in range(num_out)]).cpu().numpy()
 
     def get_wavelength_bin_centers(self) -> Tensor:
         """Return the wavelength bin centers.
