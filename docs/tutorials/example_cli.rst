@@ -14,17 +14,7 @@ Open a terminal and enter the following command to download the configuration fi
 
 .. code-block:: console
 
-    wget -O config.yaml https://raw.githubusercontent.com/pahuber/PHRINGE/main/docs/_static/config.yaml
-
-
-Download the Exoplanetary System File
-----------------------------------
-
-In the terminal, enter the following command to download the exoplanetary system file:
-
-.. code-block:: console
-
-    wget -O exoplanetary_system.yaml https://raw.githubusercontent.com/pahuber/PHRINGE/main/docs/_static/exoplanetary_system.yaml
+    wget -O config.py https://raw.githubusercontent.com/pahuber/PHRINGE/main/docs/_static/config.py
 
 Run PHRINGE
 --------
@@ -33,7 +23,7 @@ To generate the synthetic data run the following command in the terminal:
 
 .. code-block:: console
 
-    phringe config.yaml exoplanetary_system.yaml
+    phringe config.py
 
 
 Output

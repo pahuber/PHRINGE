@@ -22,28 +22,22 @@ The UI contains the :ref:`PHRINGE <class.phringe>` class, which serves as an int
 
 Processing
 ~~~~~~~~~~
-The processing component contains the :ref:`Director <class.director>` and :ref:`DataGenerator <class.data_generator>` classes. The ``Director`` class is responsible for coordinating the simulation, i.e. preparing all objects needed by the ``DataGenerator`` and then running the latter.
+The processing component contains the :ref:`Director <class.director>`, which is responsible for coordinating the simulation.
 This includes the following steps:
 
+* Calculate the symbolic instrument response.
 * Calculate the simulation time steps.
-* Calculate the simulation wavelength bins.
 * Calculate the field of view of the observatory.
 * Calculate the nulling baseline.
 * Calculate the instrument perturbation time series, if applicable.
-* Calculate the array coordinates for all time steps.
 * Calculate the spectral flux density, brightness distributions and coordinates of all sources in the scene.
-
-The ``DataGenerator`` class is responsible for generating the photon count data. This includes the following steps:
-
-* Calculate the complex amplitudes at the collectors.
-* Calculate the intensity responses using the complex amplitudes and the beam combination transfer matrix.
-* Calculate the photon counts using the intensity response and the sources in the scene.
+* Calculate the differential counts using the intensity response and the sources in the scene.
 
 IO
 ~~
 
-The IO component contains the ``TXTReader``, ``FITSWriter`` and ``YAMLHandler`` classes to read text files, write FITS files and handle YAML files, respectively.
+The IO component contains the ``TXTReader`` and ``FITSWriter``classes to read text and write FITS files.
 
 Entities
 ~~~~~~~~
-The entities are the classes that represent the objects in the simulation. The main objects are the :ref:`Settings <class.settings>`, :ref:`Observation <class.observation>`, :ref:`Observatory <class.observatory>` and :ref:`Scene <class.scene>` classes.
+The entities are the classes that represent the objects in the simulation. The main objects are the :ref:`Simulation <class.simulation>`, :ref:`ObservationMode <class.observation_mode>`, :ref:`Instrument <class.instrument>` and :ref:`Scene <class.scene>` classes.

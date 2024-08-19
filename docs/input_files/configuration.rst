@@ -6,24 +6,26 @@ Configuration File
 File Structure
 --------------
 
-The configuration file is a YAML file that is used to configure the simulation settings, the observation strategy and
-the observatory hardware. A typical configuration file looks like this:
+The configuration file is a Python file that is used to configure the simulation settings, the observation mode, the instrument and the scene.
+A typical configuration file looks like this:
 
-.. include:: ../_static/config.yaml
+.. include:: ../_static/config.py
    :literal:
 
-Note that the file has three main keys: `settings`, `observation` and `observatory`.
+First, the array configuration matrix and the complex amplitude transfer matrix are defined using ``sympy`` symbolic math.
+Then, all parameters requried for the data generation are specified in the ``config`` dictionary. Note that the four main keys:
+``simulation``, ``observation_mode`` ``instrument`` and ``scene``. A more detailed description of all parameters is given below.
 
 
-YAML Keys
----------
+Dictionary Keys
+---------------
 
-Settings
+Simulation
 ~~~~~~~~~~~~~~~~~~~
-The *settings* key contains several other keys that are used to configure the simulation. The key names, value types,
+The ``simulation`` key contains several other keys that are used to configure the simulation. The key names, value types,
 accepted values and meanings are given in the table below:
 
-.. list-table:: Settings Keys
+.. list-table:: Simulation Keys
    :widths: 26 7 20 7 40
    :header-rows: 1
 
@@ -39,7 +41,7 @@ accepted values and meanings are given in the table below:
      - Grid size used for the calculations
    * - time_step_size
      - str*
-     - e.g. 1 s
+     - e.g. '1 s'
      - Time
      - Time step size used for the calculations
    * - has_planet_orbital_motion
@@ -85,12 +87,12 @@ accepted values and meanings are given in the table below:
 
 \* String consisting of a number and a unit that can be parsed by astropy.units
 
-Observation
-~~~~~~~~~~~~~~~~~~~
-The *observation* key contains several other keys that are used to configure the observation strategy. The key names, value types,
+Observation Mode
+~~~~~~~~~~~~~~~~
+The ``observation_mode`` key contains several other keys that are used to configure the observation mode. The key names, value types,
 accepted values and meanings are given in the table below:
 
-.. list-table:: Observation Keys
+.. list-table:: Observation Mode Keys
    :widths: 26 7 20 7 40
    :header-rows: 1
 
@@ -101,39 +103,24 @@ accepted values and meanings are given in the table below:
      - Description
    * - solar_ecliptic_latitude
      - str*
-     - e.g. 0 deg
+     - e.g. '0 deg'
      - Angle
      - Solar ecliptic latitude used to calculate the contribution of the local zodiacal light
    * - total_integration_time
      - str*
-     - e.g. 1 d
+     - e.g. '1 d'
      - Time
      - Total integration time of the observation
    * - detector_integration_time
      - str*
-     - e.g. 0.01 d
+     - e.g. '0.01 d'
      - Time
      - Detector integration time; can not be smaller than 1 minute
    * - modulation_period
      - str*
-     - e.g. 1 d
+     - e.g. '1 d'
      - Time
      - Duration to complete a modulation cycle of the array
-   * - baseline_ratio
-     - int
-     - e.g. 6
-     - 1
-     - Ratio of the imaging and the nulling baselines
-   * - baseline_maximum
-     - str*
-     - e.g. 600 m
-     - Length
-     - Maximum allowed baseline length
-   * - baseline_minimum
-     - str*
-     - e.g. 10 m
-     - Length
-     - Minimum allowed baseline length
    * - optimized_differential_output
      - int
      - e.g. 0
@@ -141,12 +128,12 @@ accepted values and meanings are given in the table below:
      - Index corresponding to the :math:`n`\ th differential output of the array that the baselines should be optimized for
    * - optimized_star_separation
      - str/str*
-     - habitable-zone/e.g. 0.1 arcsec
+     - 'habitable-zone'/e.g. '0.1 arcsec'
      - \-/Angle
      - Angular separation between the star and the planet that the baselines should be optimized for; 'habitable-zone' is also a valid input and will optimize for the habitable zone of the star
    * - optimized_wavelength
      - str*
-     - e.g. 10 um
+     - e.g. '10 um'
      - Length
      - Wavelength that the baselines should be optimized for
 
@@ -159,10 +146,10 @@ accepted values and meanings are given in the table below:
 
 Observatory
 ~~~~~~~~~~~~~~~~~~~
-The *observatory* key contains several other keys that are used to configure the observatory hardware. The key names, value types,
+The ``instrument`` key contains several other keys that are used to configure the instrument. The key names, value types,
 accepted values and meanings are given in the table below:
 
-.. list-table:: Observatory Keys
+.. list-table:: Instrument Keys
    :widths: 26 7 20 7 40
    :header-rows: 1
 
@@ -171,21 +158,46 @@ accepted values and meanings are given in the table below:
      - Accepted Values
      - Dimension
      - Description
-   * - array_configuration
-     - str
-     - emma-x-circular-rotation, equilateral-triangle-circular-rotation, regular-pentagon-circular-rotation
+   * - array_configuration_matrix
+     - ``sympy`` expression
+     - valid ``sympy`` expression using symbols ``t``, ``tm`` and ``b``
      - \-
-     - Array configuration type
-   * - beam_combination_scheme
-     - str
-     - double-bracewell, kernel-3, kernel-4, kernel-5
+     - Array configuration matrix
+   * - complex_amplitude_transfer_matrix
+     - ``sympy`` expression
+     - valid ``sympy`` expression
      - \-
-     - Beam combination scheme; must be compatible with the array configuration type
+     - Complex amplitude transfer matrix
+   * - differential_outputs
+     - list of tuples
+     - e.g. [(2, 3)]
+     - \-
+     - List indicating the pair of tuples whose difference correspond to the indices of the differential outputs
+   * - sep_at_max_mod_eff
+     - list
+     - e.g. [0.6]
+     - \-
+     - List indicating the separation in lambda/D at which the maximum modulation efficiency is achieved for the respective differential output
    * - aperture_diameter
      - str*
-     - e.g. 2 m
+     - e.g. '2 m'
      - Length
      - Aperture diameter of the collectors
+   * - baseline_ratio
+     - int
+     - e.g. 6
+     - 1
+     - Ratio of the imaging and the nulling baselines
+   * - baseline_maximum
+     - str*
+     - e.g. '600 m'
+     - Length
+     - Maximum allowed baseline length
+   * - baseline_minimum
+     - str*
+     - e.g. '10 m'
+     - Length
+     - Minimum allowed baseline length
    * - spectral_resolving_power
      - int
      - e.g. 100
@@ -193,48 +205,212 @@ accepted values and meanings are given in the table below:
      - Spectral resolving power of the instrument
    * - wavelength_range_lower_limit
      - str*
-     - e.g. 4 um
+     - e.g. '4 um'
      - Length
      - Lower limit of the wavelength range
    * - wavelength_range_upper_limit
      - str*
-     - e.g. 18 um
+     - e.g. '18 um'
      - Length
      - Upper limit of the wavelength range
-   * - unperturbed_instrument_throughput
+   * - throughput
      - float
-     - e.g. 0.1
+     - e.g. 0.05
      - 1
      - Throughput of the unperturbed instrument
-   * - amplitude_perturbation_lower_limit
+   * - quantum_efficiency
      - float
      - e.g. 0.7
      - 1
-     - Minimum value of the amplitude perturbation
-   * - amplitude_perturbation_upper_limit
-     - int
-     - e.g. 0.9
-     - 1
-     - Maximum value of the amplitude perturbation
-   * - phase_perturbation_rms
-     - str*
-     - e.g. 1 nm
-     - Length
+     - Quantum efficiency of the detector
+   * - amplitude_perturbation > rms
+     - str
+     - e.g. '0.1 %'
+     - %
+     - RMS of the amplitude perturbation in percent
+   * - amplitude_perturbation > color
+     - str
+     - 'white', pink', 'brown'
+     - \-
+     - Color of the power spectrum
+   * - phase_perturbation > rms
+     - str
+     - e.g. '1 nm'
+     - %
      - RMS of the phase perturbation
-   * - phase_falloff_exponent
-     - int
-     - e.g. 1
-     - 1
-     - Falloff exponent of the phase perturbation power spectrum
-   * - polarization_perturbation_rms
+   * - phase_perturbation > color
+     - str
+     - 'white', pink', 'brown'
+     - \-
+     - Color of the power spectrum
+   * - polarization_perturbation > rms
+     - str
+     - e.g. '0.001 rad'
+     - %
+     - RMS of the polarization perturbation in percent
+   * - polarization_perturbation > color
+     - str
+     - 'white', pink', 'brown'
+     - \-
+     - Color of the power spectrum
+
+\* String consisting of a number and a unit that can be parsed by astropy.units
+
+Scene
+~~~~~
+
+
+*Star*
+
+
+The *star* key contains several other keys that are used to define the star of the exoplanetary system. The key names,
+value types, accepted values and meanings are given in the table below:
+
+.. list-table:: Star Keys
+   :widths: 26 7 20 7 40
+   :header-rows: 1
+
+   * - Name
+     - Type
+     - Accepted Values
+     - Dimension
+     - Description
+   * - name
+     - str
+     - e.g. 'Sun'
+     - \-
+     - Name of the star
+   * - distance
      - str*
-     - e.g. 1 rad
+     - e.g. '10 pc'
+     - Length
+     - Distance to the star from the observatory
+   * - mass
+     - str*
+     - e.g. '1 Msun'
+     - Mass
+     - Mass of the star
+   * - radius
+     - str*
+     - e.g. '1 Rsun'
+     - Length
+     - Radius of the star
+   * - temperature
+     - str*
+     - e.g. '5700 K'
+     - Temperature
+     - Effective temperature of the star
+   * - luminosity
+     - str*
+     - e.g. '1 Lsun'
+     - Watts
+     - Luminosity of the star
+   * - right_ascension
+     - str*
+     - e.g. '0 h'
+     - Time (~Angle)
+     - Right ascension of the star
+   * - declination
+     - str*
+     - e.g. '-75 deg'
      - Angle
-     - RMS of the polarization perturbation
-   * - polarization_falloff_exponent
-     - int
-     - e.g. 1
+     - Declination of the star
+
+\* String consisting of a number and a unit that can be parsed by astropy.units
+
+
+
+
+
+*Exozodi*
+
+The *exozodi* key contains several other keys that are used to define the zodi of the exoplanetary system (=exozodi).
+The key names, value types, accepted values and meanings are given in the table below:
+
+.. list-table:: Exozodi Keys
+   :widths: 26 7 20 7 40
+   :header-rows: 1
+
+   * - Name
+     - Type
+     - Accepted Values
+     - Dimension
+     - Description
+   * - level
+     - float
+     - e.g. 3.0
      - 1
-     - Falloff exponent of the polarization perturbation power spectrum
+     - Amount of zodiacal dust in units of solar system zodi levels
+
+
+
+
+
+
+Planets
+~~~~~~~~~~~~~~~~~~~
+
+The *planets* key contains a list of several other keys that are used to define the planets of the exoplanetary system.
+The key names, value types, accepted values and meanings are given in the table below:
+
+.. list-table:: Planets Keys
+   :widths: 26 7 20 7 40
+   :header-rows: 1
+
+   * - Name
+     - Type
+     - Accepted Values
+     - Dimension
+     - Description
+   * - name
+     - str
+     - e.g. 'Earth'
+     - \-
+     - Name of the planet
+   * - mass
+     - str*
+     - e.g. '1 Mearth'
+     - Mass
+     - Mass of the planet
+   * - radius
+     - str*
+     - e.g. '1 Rearth'
+     - Length
+     - Radius of the planet
+   * - temperature
+     - str*
+     - e.g. '300 K'
+     - Temperature
+     - Effective temperature of the planet
+   * - semi_major_axis
+     - str*
+     - e.g. '1 au'
+     - Length
+     - Semi-major axis of the planet
+   * - eccentricity
+     - float
+     - e.g. 0.0
+     - 1
+     - Eccentricity of the planet
+   * - inclination
+     - str*
+     - e.g. '180 deg'
+     - Angle
+     - Inclination of the planet
+   * - raan
+     - str*
+     - e.g. '0 deg'
+     - Angle
+     - Right ascension of the ascending node of the planet
+   * - argument_of_periapsis
+     - str*
+     - e.g. '0 deg'
+     - Angle
+     - Argument of periapsis of the planet
+   * - true_anomaly
+     - str*
+     - e.g. '0 deg'
+     - Angle
+     - True anomaly of the planet
 
 \* String consisting of a number and a unit that can be parsed by astropy.units

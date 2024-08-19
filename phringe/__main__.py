@@ -30,7 +30,6 @@ from phringe.phringe_ui import PHRINGE
     default='',
     required=False
 )
-@click.option('--detailed/--no-detailed', default=False, help="Run in detailed mode.")
 @click.option('--fits/--no-fits', default=True, help="Write data to FITS file.")
 @click.option('--copy/--no-copy', default=True, help="Write copy of input files to output directory.")
 @click.option('--dir/--no-dir', default=True, help="Create a new directory in the output directory for each run.")
@@ -40,7 +39,6 @@ def main(
         config: Path,
         gpu: tuple = None,
         fits_suffix: str = '',
-        detailed: bool = False,
         fits: bool = True,
         copy: bool = True,
         dir: bool = True,
@@ -55,7 +53,6 @@ def main(
         config_file_path=Path(config),
         gpu=gpu,
         fits_suffix=fits_suffix,
-        detailed=detailed,
         write_fits=fits,
         create_copy=copy,
         create_directory=dir,

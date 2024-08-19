@@ -21,12 +21,6 @@ from phringe.io.utils import load_config
 
 class PHRINGE():
     """Main class of PHRINGE.
-
-    :param _data: The data
-    :param _settings: The settings
-    :param _observation: The observation
-    :param _observatory: The observatory
-    :param _scene: The scene
     """
 
     config = {
@@ -178,7 +172,6 @@ class PHRINGE():
             config_file_path: Path,
             gpu: int = None,
             fits_suffix: str = '',
-            detailed: bool = False,
             write_fits: bool = True,
             create_copy: bool = True,
             create_directory: bool = True,
@@ -194,7 +187,6 @@ class PHRINGE():
             observation_mode: ObservationMode,
             scene: Scene,
             gpu: int = None,
-            detailed: bool = False,
             write_fits: bool = True,
             fits_suffix: str = '',
             create_copy: bool = True,
@@ -212,7 +204,6 @@ class PHRINGE():
             scene: Scene = None,
             gpu: int = None,
             fits_suffix: str = '',
-            detailed: bool = False,
             write_fits: bool = True,
             create_copy: bool = True,
             create_directory: bool = True,
@@ -228,7 +219,6 @@ class PHRINGE():
         :param scene: The scene object
         :param gpu: Index of the GPU to use
         :param fits_suffix: The suffix for the FITS file
-        :param detailed: Whether to run in detailed mode. If detailed mode is used, the intensity responses are saved during the data generation
         :param write_fits: Whether to write the data to a FITS file
         :param create_copy: Whether to copy the input files to the output directory
         :param create_directory: Whether to create a new directory in the output directory for each run
@@ -244,7 +234,7 @@ class PHRINGE():
         ) if not observation_mode else observation_mode
         scene = Scene(**config_dict['scene']) if not scene else scene
 
-        self._director = Director(simulation, instrument, observation_mode, scene, gpu, detailed, normalize)
+        self._director = Director(simulation, instrument, observation_mode, scene, gpu, normalize)
         self._director.run()
 
         if (write_fits or create_copy) and create_directory:
