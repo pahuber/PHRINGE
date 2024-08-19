@@ -16,7 +16,7 @@ class LocalZodi(BasePhotonSource, BaseModel):
     """Class representation of a local zodi."""
     name: str = 'LocalZodi'
 
-    def _calculate_spectral_flux_density(
+    def _get_spectral_flux_density(
             self,
             wavelength_steps: np.ndarray,
             grid_size: int,
@@ -50,11 +50,11 @@ class LocalZodi(BasePhotonSource, BaseModel):
                             -0.4) * torch.cos(torch.tensor(ecliptic_latitude)) ** 2)) ** 0.5)
         return mean_spectral_flux_density
 
-    def _calculate_sky_brightness_distribution(self, grid_size: int, **kwargs) -> np.ndarray:
+    def _get_sky_brightness_distribution(self, grid_size: int, **kwargs) -> np.ndarray:
         grid = torch.ones((grid_size, grid_size), dtype=torch.float32)
         return torch.einsum('i, jk ->ijk', self.spectral_flux_density, grid)
 
-    def _calculate_sky_coordinates(self, grid_size, **kwargs) -> Coordinates:
+    def _get_sky_coordinates(self, grid_size, **kwargs) -> Coordinates:
         number_of_wavelength_steps = kwargs['number_of_wavelength_steps']
         field_of_view = kwargs['field_of_view']
 
@@ -66,7 +66,7 @@ class LocalZodi(BasePhotonSource, BaseModel):
                 (sky_coordinates_at_fov[0], sky_coordinates_at_fov[1]))
         return sky_coordinates
 
-    def _calculate_solid_angle(self, **kwargs) -> float:
+    def _get_solid_angle(self, **kwargs) -> float:
         """Calculate and return the solid angle of the local zodi.
 
         :param kwargs: Additional keyword arguments

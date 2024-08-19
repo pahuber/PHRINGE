@@ -460,14 +460,21 @@ class Director():
         for source in self._sources:
 
             # Broadcast sky coordinates to the correct shape
-            if isinstance(source, LocalZodi):
-                sky_coordinates_x = source.sky_coordinates[0][:, None]
-                sky_coordinates_y = source.sky_coordinates[1][:, None]
+            if isinstance(source, LocalZodi) or isinstance(source, Exozodi):
+                sky_coordinates_x = source.sky_coordinates[0][:, None, :, :]
+                sky_coordinates_y = source.sky_coordinates[1][:, None, :, :]
+            elif isinstance(source, Planet) and self._has_planet_orbital_motion:
+                sky_coordinates_x = source.sky_coordinates[0][None, :, :, :]
+                sky_coordinates_y = source.sky_coordinates[1][None, :, :, :]
             else:
-                sky_coordinates_x = source.sky_coordinates[0]
-                sky_coordinates_y = source.sky_coordinates[1]
+                sky_coordinates_x = source.sky_coordinates[0][None, None, :, :]
+                sky_coordinates_y = source.sky_coordinates[1][None, None, :, :]
 
             # Broadcast sky brightness distribution to the correct shape
+            if isinstance(source, Planet) and self._has_planet_orbital_motion:
+                sky_brightness_distribution = source.sky_brightness_distribution.swapaxes(0, 1)
+            else:
+                sky_brightness_distribution = source.sky_brightness_distribution[:, None, :, :]
 
             # Define normalization
             if isinstance(source, Planet):
@@ -498,7 +505,7 @@ class Director():
                             *[self.polarization_pert_time_series[k][None, :, None, None] for k in
                               range(self._number_of_inputs)]
                         )
-                        * source.sky_brightness_distribution[:, None, :, :]
+                        * sky_brightness_distribution
                         / normalization
                         * self._simulation_time_step_size
                         * self._wavelength_bin_widths[:, None, None, None], axis=(2, 3)
@@ -523,7 +530,7 @@ class Director():
                             *[self.polarization_pert_time_series[k][None, :, None, None] for k in
                               range(self._number_of_inputs)]
                         )
-                        * source.sky_brightness_distribution[:, None, :, :]
+                        * sky_brightness_distribution
                         / normalization
                         * self._simulation_time_step_size
                         * self._wavelength_bin_widths[:, None, None, None], axis=(2, 3)

@@ -130,7 +130,7 @@ class Planet(BasePhotonSource, BaseModel):
         """
         return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.deg,)).si.value
 
-    def _calculate_spectral_flux_density(self, wavelength_bin_centers: Tensor, grid_size: int, **kwargs) -> Tensor:
+    def _get_spectral_flux_density(self, wavelength_bin_centers: Tensor, grid_size: int, **kwargs) -> Tensor:
         """Calculate the spectral flux density of the planet in units of ph s-1 m-3. Use the previously generated
         reference spectrum in units of ph s-1 m-3 sr-1 and the solid angle to calculate it and bin it to the
         simulation wavelength bin centers.
@@ -169,7 +169,7 @@ class Planet(BasePhotonSource, BaseModel):
         #
         # return torch.asarray(binned_spectral_flux_density, dtype=torch.float32)
 
-    def _calculate_sky_brightness_distribution(self, grid_size: int, **kwargs) -> np.ndarray:
+    def _get_sky_brightness_distribution(self, grid_size: int, **kwargs) -> np.ndarray:
         """Calculate and return the sky brightness distribution.
 
         :param context: The context
@@ -208,7 +208,7 @@ class Planet(BasePhotonSource, BaseModel):
             sky_brightness_distribution[:, index_x, index_y] = self.spectral_flux_density
         return sky_brightness_distribution
 
-    def _calculate_sky_coordinates(self, grid_size, **kwargs) -> np.ndarray:
+    def _get_sky_coordinates(self, grid_size, **kwargs) -> np.ndarray:
         """Calculate and return the sky coordinates of the planet. Choose the maximum extent of the sky coordinates such
         that a circle with the radius of the planet's separation lies well (i.e. + 2x 20%) within the map. The construction
         of such a circle will be important to estimate the noise during signal extraction.
@@ -242,7 +242,7 @@ class Planet(BasePhotonSource, BaseModel):
             return self._get_coordinates(grid_size, time_steps[0], 0, has_planet_orbital_motion, star_distance,
                                          star_mass)
 
-    def _calculate_solid_angle(self, **kwargs) -> float:
+    def _get_solid_angle(self, **kwargs) -> float:
         """Calculate and return the solid angle of the planet.
 
         :param kwargs: The keyword arguments
