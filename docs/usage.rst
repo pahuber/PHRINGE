@@ -9,13 +9,9 @@ Usage
 Required User Input
 -------------------
 
-`PHRINGE` requires certain user input to configure the `simulation settings`, `observation strategy`, `observatory hardware` and `astrophysical scene`. Usually, this input is provided through the following files:
+`PHRINGE` requires a :ref:`configuration file <configuration>` to configure the simulation, the observation mode, the instrument and the scene.
+Alternatively, the input can also be given manually by creating the required objects (see :doc:`advanced example <tutorials/example_advanced>`).
 
-* A :ref:`configuration file <configuration>` to configure the simulation, the observation mode, the instrument and the scene
-* Optional: A :ref:`spectrum file <spectrum>` that contains the spectra of the planets in the scene in W/sr/m2/um
-
-.. note::
-    If no spectrum is provided for a planet, a blackbody spectrum will be created from the planetary properties specified in the configuration file.
 
 Using Within Python Module
 --------------------------
