@@ -8,11 +8,21 @@ from pydantic import BaseModel, field_validator
 from pydantic_core.core_schema import ValidationInfo
 from torch import Tensor
 
+from phringe.core.entities.perturbations.amplitude_perturbation import AmplitudePerturbation
+from phringe.core.entities.perturbations.base_perturbation import BasePerturbation
+from phringe.core.entities.perturbations.phase_perturbation import PhasePerturbation
+from phringe.core.entities.perturbations.polarization_perturbation import PolarizationPerturbation
 from phringe.io.validators import validate_quantity_units
 
 
-class Observatory(BaseModel):
-    """Class representing the observatory.
+class _Perturbations(BaseModel):
+    amplitude_perturbation: AmplitudePerturbation
+    phase_perturbation: PhasePerturbation
+    polarization_perturbation: PolarizationPerturbation
+
+
+class Instrument(BaseModel):
+    """Class representing the instrument.
 
     :param amplitude_perturbation_lower_limit: The lower limit of the amplitude perturbation
     :param amplitude_perturbation_upper_limit: The upper limit of the amplitude perturbation
@@ -25,6 +35,9 @@ class Observatory(BaseModel):
     :param throughput: The unperturbed instrument throughput
     :param phase_perturbation_rms: The phase perturbation rms
     :param phase_falloff_exponent: The phase falloff exponent
+    :param baseline_ratio: The baseline ratio
+    :param baseline_maximum: The maximum baseline
+    :param baseline_minimum: The minimum baseline
     :param polarization_perturbation_rms: The polarization perturbation rms
     :param polarization_falloff_exponent: The polarization falloff exponent
     :param field_of_view: The field of view
@@ -33,11 +46,14 @@ class Observatory(BaseModel):
     :param polarization_perturbation_time_series: The polarization perturbation time series
     """
 
-    amplitude_perturbation_lower_limit: float
-    amplitude_perturbation_upper_limit: float
+    # amplitude_perturbation_lower_limit: float
+    # amplitude_perturbation_upper_limit: float
     array_configuration_matrix: Any
     complex_amplitude_transfer_matrix: Any
     differential_outputs: Any
+    baseline_ratio: int
+    baseline_maximum: str
+    baseline_minimum: str
     sep_at_max_mod_eff: Any
     aperture_diameter: str
     spectral_resolving_power: int
@@ -45,48 +61,8 @@ class Observatory(BaseModel):
     wavelength_range_upper_limit: str
     throughput: float
     quantum_efficiency: float
-    phase_perturbation_rms: str
-    phase_falloff_exponent: float
-    polarization_perturbation_rms: str
-    polarization_falloff_exponent: float
+    perturbations: _Perturbations
     field_of_view: Any = None
-    amplitude_perturbation_time_series: Any = None
-    phase_perturbation_time_series: Any = None
-    polarization_perturbation_time_series: Any = None
-
-    # def __init__(self, **data):
-    #     """Constructor method.
-    #     """
-    #     super().__init__(**data)
-    #     # self.array_configuration_matrix = self._load_array(self.array_configuration_matrix)
-    #     # self.complex_amplitude_transfer_matrix = self._load_beam_combiner(self.complex_amplitude_transfer_matrix)
-
-    @field_validator('amplitude_perturbation_lower_limit')
-    def _validate_amplitude_perturbation_lower_limit(cls, value: Any, info: ValidationInfo) -> Tensor:
-        """Validate the amplitude perturbation lower limit input.
-
-        :param value: Value given as input
-        :param info: ValidationInfo object
-        :return: The amplitude perturbation lower limit
-        """
-        if value < 0:
-            raise ValueError(f'{value} is not a valid input for {info.field_name}. Can not be negative.')
-        return torch.tensor(value, dtype=torch.float32)
-
-    @field_validator('amplitude_perturbation_upper_limit')
-    def _validate_amplitude_perturbation_upper_limit(cls, value: Any, info: ValidationInfo) -> Tensor:
-        """Validate the amplitude perturbation upper limit input.
-
-        :param value: Value given as input
-        :param info: ValidationInfo object
-        :return: The amplitude perturbation upper limit
-        """
-        if value < 0:
-            raise ValueError(f'{value} is not a valid input for {info.field_name}. Can not be negative.')
-        if value <= info.data['amplitude_perturbation_lower_limit']:
-            raise ValueError(f'{value} is not a valid input for {info.field_name}. Must be greater than '
-                             f'{info.data["amplitude_perturbation_lower_limit"]}.')
-        return torch.tensor(value, dtype=torch.float32)
 
     @field_validator('aperture_diameter')
     def _validate_aperture_diameter(cls, value: Any, info: ValidationInfo) -> Tensor:
@@ -101,25 +77,25 @@ class Observatory(BaseModel):
             dtype=torch.float32
         )
 
-    @field_validator('phase_perturbation_rms')
-    def _validate_phase_perturbation_rms(cls, value: Any, info: ValidationInfo) -> float:
-        """Validate the phase perturbation rms input.
+    @field_validator('baseline_minimum')
+    def _validate_baseline_minimum(cls, value: Any, info: ValidationInfo) -> float:
+        """Validate the baseline minimum input.
 
         :param value: Value given as input
         :param info: ValidationInfo object
-        :return: The phase perturbation rms in units of length
+        :return: The minimum baseline in units of length
         """
         return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,)).si.value
 
-    @field_validator('polarization_perturbation_rms')
-    def _validate_polarization_perturbation_rms(cls, value: Any, info: ValidationInfo) -> float:
-        """Validate the polarization perturbation rms input.
+    @field_validator('baseline_maximum')
+    def _validate_baseline_maximum(cls, value: Any, info: ValidationInfo) -> float:
+        """Validate the baseline maximum input.
 
         :param value: Value given as input
         :param info: ValidationInfo object
-        :return: The polarization perturbation rms in units of radians
+        :return: The maximum baseline in units of length
         """
-        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.rad,)).si.value
+        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,)).si.value
 
     @field_validator('wavelength_range_lower_limit')
     def _validate_wavelength_range_lower_limit(cls, value: Any, info: ValidationInfo) -> float:
@@ -195,3 +171,14 @@ class Observatory(BaseModel):
                 break
         return torch.asarray(wavelength_bin_centers, dtype=torch.float32), torch.asarray(wavelength_bin_widths,
                                                                                          dtype=torch.float32)
+
+    def get_all_perturbations(self) -> list[BasePerturbation]:
+        """Return all perturbations.
+
+        :return: A list containing all perturbations
+        """
+        return [
+            self.perturbations.amplitude_perturbation,
+            self.perturbations.phase_perturbation,
+            self.perturbations.polarization_perturbation
+        ]

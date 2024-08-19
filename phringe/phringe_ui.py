@@ -7,10 +7,10 @@ from typing import overload
 from torch import Tensor
 
 from phringe.core.director import Director
-from phringe.core.entities.observation import Observation
-from phringe.core.entities.observatory import Observatory
+from phringe.core.entities.instrument import Instrument
+from phringe.core.entities.observation_mode import ObservationMode
 from phringe.core.entities.scene import Scene
-from phringe.core.entities.settings import Settings
+from phringe.core.entities.simulation import Simulation
 from phringe.io.fits_writer import FITSWriter
 from phringe.io.utils import load_config
 
@@ -143,9 +143,9 @@ class PHRINGE():
     @overload
     def run(
             self,
-            settings: Settings,
-            observatory: Observatory,
-            observation: Observation,
+            simulation: Simulation,
+            instrument: Instrument,
+            observation_mode: ObservationMode,
             scene: Scene,
             gpu: int = None,
             detailed: bool = False,
@@ -160,9 +160,9 @@ class PHRINGE():
     def run(
             self,
             config_file_path: Path = None,
-            settings: Settings = None,
-            observatory: Observatory = None,
-            observation: Observation = None,
+            simulation: Simulation = None,
+            instrument: Instrument = None,
+            observation_mode: ObservationMode = None,
             scene: Scene = None,
             gpu: int = None,
             fits_suffix: str = '',
@@ -187,12 +187,13 @@ class PHRINGE():
         """
         config_dict = load_config(config_file_path) if config_file_path else None
 
-        settings = Settings(**config_dict['settings']) if not settings else settings
-        observatory = Observatory(**config_dict['observatory']) if not observatory else observatory
-        observation = Observation(**config_dict['observation']) if not observation else observation
+        simulation = Simulation(**config_dict['simulation']) if not simulation else simulation
+        instrument = Instrument(**config_dict['instrument']) if not instrument else instrument
+        observation_mode = ObservationMode(
+            **config_dict['observation_mode']) if not observation_mode else observation_mode
         scene = Scene(**config_dict['scene']) if not scene else scene
 
-        self._director = Director(settings, observatory, observation, scene, gpu, detailed, normalize)
+        self._director = Director(simulation, instrument, observation_mode, scene, gpu, detailed, normalize)
         self._director.run()
 
         if (write_fits or create_copy) and create_directory:

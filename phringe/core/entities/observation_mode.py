@@ -7,8 +7,8 @@ from pydantic_core.core_schema import ValidationInfo
 from phringe.io.validators import validate_quantity_units
 
 
-class Observation(BaseModel):
-    """Class representing the observation.
+class ObservationMode(BaseModel):
+    """Class representing the observation mode.
 
     :param solar_ecliptic_latitude: The solar ecliptic latitude
     :param total_integration_time: The total integration time
@@ -25,32 +25,9 @@ class Observation(BaseModel):
     total_integration_time: str
     detector_integration_time: str
     modulation_period: str
-    baseline_ratio: int
-    baseline_maximum: str
-    baseline_minimum: str
     optimized_differential_output: int
     optimized_star_separation: str
     optimized_wavelength: str
-
-    @field_validator('baseline_minimum')
-    def _validate_baseline_minimum(cls, value: Any, info: ValidationInfo) -> float:
-        """Validate the baseline minimum input.
-
-        :param value: Value given as input
-        :param info: ValidationInfo object
-        :return: The minimum baseline in units of length
-        """
-        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,)).si.value
-
-    @field_validator('baseline_maximum')
-    def _validate_baseline_maximum(cls, value: Any, info: ValidationInfo) -> float:
-        """Validate the baseline maximum input.
-
-        :param value: Value given as input
-        :param info: ValidationInfo object
-        :return: The maximum baseline in units of length
-        """
-        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,)).si.value
 
     @field_validator('detector_integration_time')
     def _validate_detector_integration_time(cls, value: Any, info: ValidationInfo) -> float:

@@ -7,16 +7,18 @@ from skimage.measure import block_reduce
 from sympy import Symbol, exp, I, pi, cos, sin, Abs, symbols
 from torch import Tensor
 
-from phringe.core.entities.observation import Observation
-from phringe.core.entities.observatory import Observatory
-from phringe.core.entities.perturbations.noise_generator import get_perturbation_time_series, get_photon_noise
+from phringe.core.entities.instrument import Instrument
+from phringe.core.entities.observation_mode import ObservationMode
+from phringe.core.entities.perturbations.amplitude_perturbation import AmplitudePerturbation
+from phringe.core.entities.perturbations.phase_perturbation import PhasePerturbation
+from phringe.core.entities.perturbations.polarization_perturbation import PolarizationPerturbation
 from phringe.core.entities.photon_sources.base_photon_source import BasePhotonSource
 from phringe.core.entities.photon_sources.exozodi import Exozodi
 from phringe.core.entities.photon_sources.local_zodi import LocalZodi
 from phringe.core.entities.photon_sources.planet import Planet
 from phringe.core.entities.photon_sources.star import Star
 from phringe.core.entities.scene import Scene
-from phringe.core.entities.settings import Settings
+from phringe.core.entities.simulation import Simulation
 
 
 class Director():
@@ -70,9 +72,9 @@ class Director():
 
     def __init__(
             self,
-            settings: Settings,
-            observatory: Observatory,
-            observation: Observation,
+            simulation: Simulation,
+            instrument: Instrument,
+            observation_mode: ObservationMode,
             scene: Scene,
             gpu: int = None,
             detailed: bool = False,
@@ -80,61 +82,56 @@ class Director():
     ):
         """Constructor method.
 
-        :param settings: The settings
-        :param observatory: The observatory
-        :param observation: The observation
+        :param simulation: The simulation
+        :param instrument: The instrument
+        :param observation_mode: The observation mode
         :param scene: The scene
         :param gpu: The GPU
         :param detailed: Whether to run in detailed mode
         :param normalize: Whether to normalize the data to unit RMS along the time axis
         """
-        self._amplitude_perturbation_lower_limit = observatory.amplitude_perturbation_lower_limit
-        self._amplitude_perturbation_upper_limit = observatory.amplitude_perturbation_upper_limit
-        self._aperture_diameter = observatory.aperture_diameter
-        self._array_configuration_matrix = observatory.array_configuration_matrix
-        self._baseline_maximum = observation.baseline_maximum
-        self._baseline_minimum = observation.baseline_minimum
-        self._baseline_ratio = observation.baseline_ratio
-        self._complex_amplitude_transfer_matrix = observatory.complex_amplitude_transfer_matrix
+        self._aperture_diameter = instrument.aperture_diameter
+        self._array_configuration_matrix = instrument.array_configuration_matrix
+        self._baseline_maximum = instrument.baseline_maximum
+        self._baseline_minimum = instrument.baseline_minimum
+        self._baseline_ratio = instrument.baseline_ratio
+        self._complex_amplitude_transfer_matrix = instrument.complex_amplitude_transfer_matrix
         self._detailed = detailed
-        self._detector_integration_time = observation.detector_integration_time
+        self._detector_integration_time = observation_mode.detector_integration_time
         self._device = self._get_device(gpu)
-        self._differential_outputs = observatory.differential_outputs
+        self._differential_outputs = instrument.differential_outputs
         self._gpu = gpu
-        self._grid_size = settings.grid_size
-        self._has_amplitude_perturbations = settings.has_amplitude_perturbations
-        self._has_exozodi_leakage = settings.has_exozodi_leakage
-        self._has_local_zodi_leakage = settings.has_local_zodi_leakage
-        self._has_phase_perturbations = settings.has_phase_perturbations
-        self._has_planet_orbital_motion = settings.has_planet_orbital_motion
-        self._has_planet_signal = settings.has_planet_signal
-        self._has_polarization_perturbations = settings.has_polarization_perturbations
-        self._has_stellar_leakage = settings.has_stellar_leakage
-        self._set_at_max_mod_eff = observatory.sep_at_max_mod_eff
-        self._modulation_period = observation.modulation_period
+        self._grid_size = simulation.grid_size
+        self._has_amplitude_perturbations = simulation.has_amplitude_perturbations
+        self._has_exozodi_leakage = simulation.has_exozodi_leakage
+        self._has_local_zodi_leakage = simulation.has_local_zodi_leakage
+        self._has_phase_perturbations = simulation.has_phase_perturbations
+        self._has_planet_orbital_motion = simulation.has_planet_orbital_motion
+        self._has_planet_signal = simulation.has_planet_signal
+        self._has_polarization_perturbations = simulation.has_polarization_perturbations
+        self._has_stellar_leakage = simulation.has_stellar_leakage
+        self._set_at_max_mod_eff = instrument.sep_at_max_mod_eff
+        self._modulation_period = observation_mode.modulation_period
         self._normalize = normalize
         self._number_of_inputs = self._complex_amplitude_transfer_matrix.shape[1]
         self._number_of_outputs = self._complex_amplitude_transfer_matrix.shape[0]
-        self._observatory_wavelength_range_lower_limit = observatory.wavelength_range_lower_limit
-        self._observatory_wavelength_range_upper_limit = observatory.wavelength_range_upper_limit
-        self._optimized_differential_output = observation.optimized_differential_output
-        self._optimized_star_separation = observation.optimized_star_separation
-        self._optimized_wavelength = observation.optimized_wavelength
-        self._phase_falloff_exponent = observatory.phase_falloff_exponent
-        self._phase_perturbation_rms = observatory.phase_perturbation_rms
+        self._optimized_differential_output = observation_mode.optimized_differential_output
+        self._optimized_star_separation = observation_mode.optimized_star_separation
+        self._optimized_wavelength = observation_mode.optimized_wavelength
+        self._perturbations = instrument.get_all_perturbations()
         self._planets = scene.planets
-        self._polarization_falloff_exponent = observatory.polarization_falloff_exponent
-        self._polarization_perturbation_rms = observatory.polarization_perturbation_rms
-        self._quantum_efficiency = observatory.quantum_efficiency
-        self._simulation_time_step_size = settings.time_step_size
-        self._solar_ecliptic_latitude = observation.solar_ecliptic_latitude
+        self._quantum_efficiency = instrument.quantum_efficiency
+        self._simulation_time_step_size = simulation.time_step_size
+        self._solar_ecliptic_latitude = observation_mode.solar_ecliptic_latitude
         self._sources = scene.get_all_sources()
         self._star = scene.star
-        self._throughput = observatory.throughput
-        self._total_integration_time = observation.total_integration_time
-        self._wavelength_bin_centers = observatory.wavelength_bin_centers
-        self._wavelength_bin_edges = observatory.wavelength_bin_edges
-        self._wavelength_bin_widths = observatory.wavelength_bin_widths
+        self._throughput = instrument.throughput
+        self._total_integration_time = observation_mode.total_integration_time
+        self._wavelength_bin_centers = instrument.wavelength_bin_centers
+        self._wavelength_bin_edges = instrument.wavelength_bin_edges
+        self._wavelength_bin_widths = instrument.wavelength_bin_widths
+        self._wavelength_range_lower_limit = instrument.wavelength_range_lower_limit
+        self._wavelength_range_upper_limit = instrument.wavelength_range_upper_limit
 
     def _get_device(self, gpu: int) -> torch.device:
         """Get the device.
@@ -187,6 +184,53 @@ class Director():
         raise ValueError(
             f"Nulling baseline of {nulling_baseline} is not within allowed ranges of baselines {baseline_minimum}-{baseline_maximum}"
         )
+
+    def _prepare_perturbations(self):
+        """Prepare the perturbations.
+        """
+        amplitude_perturbation = \
+            [perturbation for perturbation in self._perturbations if isinstance(perturbation, AmplitudePerturbation)][0]
+        phase_perturbation = \
+            [perturbation for perturbation in self._perturbations if isinstance(perturbation, PhasePerturbation)][0]
+        polarization_perturbation = \
+            [perturbation for perturbation in self._perturbations if
+             isinstance(perturbation, PolarizationPerturbation)][0]
+
+        if self._has_amplitude_perturbations:
+            self.amplitude_pert_time_series = amplitude_perturbation.get_time_series(
+                self._number_of_inputs,
+                self._simulation_time_step_size,
+                len(self.simulation_time_steps)
+            )
+        else:
+            self.amplitude_pert_time_series = torch.ones(
+                (self._number_of_inputs, len(self.simulation_time_steps)),
+                dtype=torch.float32
+            )
+
+        if self._has_phase_perturbations:
+            self.phase_pert_time_series = phase_perturbation.get_time_series(
+                self._number_of_inputs,
+                self._detector_integration_time,
+                len(self.simulation_time_steps)
+            )
+        else:
+            self.phase_pert_time_series = torch.zeros(
+                (self._number_of_inputs, len(self.simulation_time_steps)),
+                dtype=torch.float32
+            )
+
+        if self._has_polarization_perturbations:
+            self.polarization_pert_time_series = polarization_perturbation.get_time_series(
+                self._number_of_inputs,
+                self._detector_integration_time,
+                len(self.simulation_time_steps)
+            )
+        else:
+            self.polarization_pert_time_series = torch.zeros(
+                (self._number_of_inputs, len(self.simulation_time_steps)),
+                dtype=torch.float32
+            )
 
     def _prepare_sources(
             self,
@@ -364,37 +408,8 @@ class Director():
             self._set_at_max_mod_eff
         )
 
-        # Calculate amplitude perturbations
-        self.amplitude_perturbations = self._amplitude_perturbation_lower_limit + (
-                self._amplitude_perturbation_upper_limit - self._amplitude_perturbation_lower_limit) * torch.rand(
-            (self._number_of_inputs, len(self.simulation_time_steps)),
-            dtype=torch.float32) if self._has_amplitude_perturbations else torch.ones(
-            (self._number_of_inputs, len(self.simulation_time_steps))
-        )
-
-        # Calculate phase perturbations
-        self.phase_perturbations = get_perturbation_time_series(
-            self._number_of_inputs,
-            self._detector_integration_time,
-            len(self.simulation_time_steps),
-            self._phase_perturbation_rms,
-            self._phase_falloff_exponent,
-        ) if self._has_phase_perturbations else torch.zeros(
-            (self._number_of_inputs, len(self.simulation_time_steps)),
-            dtype=torch.float32
-        )
-
-        # Calculate polarization perturbations
-        self.polarization_perturbations = get_perturbation_time_series(
-            self._number_of_inputs,
-            self._detector_integration_time,
-            len(self.simulation_time_steps),
-            self._polarization_perturbation_rms,
-            self._polarization_perturbation_rms,
-        ) if self._has_polarization_perturbations else torch.zeros(
-            (self._number_of_inputs, len(self.simulation_time_steps)),
-            dtype=torch.float32
-        )
+        # Prepare perturbation time series
+        self._prepare_perturbations()
 
         # Calculate the spectral flux densities, coordinates and brightness distributions of all sources in the scene
         self._sources = self._prepare_sources(
@@ -417,9 +432,9 @@ class Director():
         self._wavelength_bin_centers = self._wavelength_bin_centers.to(self._device)
         self._wavelength_bin_widths = self._wavelength_bin_widths.to(self._device)
         self._wavelength_bin_edges = self._wavelength_bin_edges.to(self._device)
-        self.amplitude_perturbations = self.amplitude_perturbations.to(self._device)
-        self.phase_perturbations = self.phase_perturbations.to(self._device)
-        self.polarization_perturbations = self.polarization_perturbations.to(self._device)
+        self.amplitude_pert_time_series = self.amplitude_pert_time_series.to(self._device)
+        self.phase_pert_time_series = self.phase_pert_time_series.to(self._device)
+        self.polarization_pert_time_series = self.polarization_pert_time_series.to(self._device)
         self._simulation_time_step_size = self._simulation_time_step_size.to(self._device)
         self.simulation_time_steps = self.simulation_time_steps.to(self._device)
 
@@ -474,12 +489,12 @@ class Director():
                             torch.tensor(self._modulation_period, device=self._device),
                             torch.tensor(self.nulling_baseline, device=self._device),
                             *[amplitude for _ in range(self._number_of_inputs)],
-                            *[self.amplitude_perturbations[k][None, :, None, None] for k in
+                            *[self.amplitude_pert_time_series[k][None, :, None, None] for k in
                               range(self._number_of_inputs)],
-                            *[self.phase_perturbations[k][None, :, None, None] for k in
+                            *[self.phase_pert_time_series[k][None, :, None, None] for k in
                               range(self._number_of_inputs)],
                             *[torch.tensor(0, device=self._device) for _ in range(self._number_of_inputs)],
-                            *[self.polarization_perturbations[k][None, :, None, None] for k in
+                            *[self.polarization_pert_time_series[k][None, :, None, None] for k in
                               range(self._number_of_inputs)]
                         )
                         * source.sky_brightness_distribution[:, None, :, :]
@@ -499,12 +514,12 @@ class Director():
                             torch.tensor(self._modulation_period, device=self._device),
                             torch.tensor(self.nulling_baseline, device=self._device),
                             *[amplitude for _ in range(self._number_of_inputs)],
-                            *[self.amplitude_perturbations[k][None, :, None, None] for k in
+                            *[self.amplitude_pert_time_series[k][None, :, None, None] for k in
                               range(self._number_of_inputs)],
-                            *[self.phase_perturbations[k][None, :, None, None] for k in
+                            *[self.phase_pert_time_series[k][None, :, None, None] for k in
                               range(self._number_of_inputs)],
                             *[torch.tensor(0, device=self._device) for _ in range(self._number_of_inputs)],
-                            *[self.polarization_perturbations[k][None, :, None, None] for k in
+                            *[self.polarization_pert_time_series[k][None, :, None, None] for k in
                               range(self._number_of_inputs)]
                         )
                         * source.sky_brightness_distribution[:, None, :, :]
@@ -514,7 +529,7 @@ class Director():
                     )
                 )
 
-                diff_counts[i] += (get_photon_noise(counts_1) - get_photon_noise(counts_2))
+                diff_counts[i] += (torch.poisson(counts_1) - torch.poisson(counts_2))
 
         # # Bin data to from simulation time steps detector time steps
         binning_factor = int(round(len(self.simulation_time_steps) / len(self._detector_time_steps), 0))
