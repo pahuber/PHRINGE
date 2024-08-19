@@ -9,8 +9,8 @@ from torch import tensor
 from phringe.io.validators import validate_quantity_units
 
 
-class Settings(BaseModel):
-    """Class representing the simulation settings.
+class Simulation(BaseModel):
+    """Class representing the simulation.
 
     :param grid_size: The size of the grid
     :param time_step_size: The time step size

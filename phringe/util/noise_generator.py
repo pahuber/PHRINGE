@@ -19,7 +19,6 @@
 # SOFTWARE.
 
 import numpy as np
-import torch
 
 
 class NoiseGenerator:
@@ -195,50 +194,3 @@ class NoiseGenerator:
             x_f[-1] = np.abs(x_f[-1])
 
         return f, x_f
-
-
-def get_perturbation_time_series(number_of_input_beams: int,
-                                 sample_time: float,
-                                 number_of_samples: int,
-                                 rms: float,
-                                 color_exponent: int) -> np.ndarray:
-    """Return a time series of perturbations. The shape of the underlying power spectrum is created using the power
-    law 1/frequency^exponent.
-
-    :param number_of_input_beams: The number of input beams
-    :param sample_time: The sample time
-    :param number_of_samples: The number of samples
-    :param rms: The root mean square value
-    :param color_exponent: The color exponent
-    :return: The distribution
-    """
-    noise_generator = NoiseGenerator()
-    perturbation_distributions = np.zeros((number_of_input_beams, number_of_samples))
-    sample_time = 1 / 10000  # Corresponds to 10kHz
-
-    # TODO: make perturbation distributions chromatic
-    # TODO: use correct cutoff frequency
-    for i in range(number_of_input_beams):
-        match color_exponent:
-            case 0:
-                perturbation_distributions[i] = noise_generator.generate(
-                    dt=sample_time,
-                    n=number_of_samples,
-                    colour=noise_generator.white()
-                )
-            case 1:
-                perturbation_distributions[i] = noise_generator.generate(
-                    dt=sample_time,
-                    n=number_of_samples,
-                    colour=noise_generator.pink()
-                )
-            case 2:
-                perturbation_distributions[i] = noise_generator.generate(
-                    dt=sample_time,
-                    n=number_of_samples,
-                    colour=noise_generator.brown()
-                )
-
-        perturbation_distributions[i] *= rms / np.sqrt(
-            np.mean(perturbation_distributions[i] ** 2))
-    return torch.asarray(perturbation_distributions, dtype=torch.float32)

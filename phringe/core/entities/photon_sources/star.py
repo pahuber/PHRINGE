@@ -126,15 +126,7 @@ class Star(BasePhotonSource, BaseModel):
         radius_outer = np.sqrt(self.luminosity / incident_stellar_flux_outer)
         return ((radius_outer + radius_inner) / 2 * u.au).si.value
 
-    def _calculate_spectral_flux_density(
-            self,
-            wavelength_steps: Tensor,
-            grid_size: int,
-            **kwargs
-    ) -> Tensor:
-        return create_blackbody_spectrum(self.temperature, wavelength_steps) * self.solid_angle
-
-    def _calculate_sky_brightness_distribution(self, grid_size: int, **kwargs) -> np.ndarray:
+    def _get_sky_brightness_distribution(self, grid_size: int, **kwargs) -> np.ndarray:
         number_of_wavelength_steps = kwargs['number_of_wavelength_steps']
         sky_brightness_distribution = torch.zeros((number_of_wavelength_steps, grid_size, grid_size))
         radius_map = (torch.sqrt(self.sky_coordinates[0] ** 2 + self.sky_coordinates[1] ** 2) <= self.angular_radius)
@@ -145,7 +137,7 @@ class Star(BasePhotonSource, BaseModel):
 
         return sky_brightness_distribution
 
-    def _calculate_sky_coordinates(self, grid_size, **kwargs) -> Coordinates:
+    def _get_sky_coordinates(self, grid_size, **kwargs) -> Coordinates:
         """Return the sky coordinate maps of the source. The intensity responses are calculated in a resolution that
         allows the source to fill the grid, thus, each source needs to define its own sky coordinate map. Add 10% to the
         angular radius to account for rounding issues and make sure the source is fully covered within the map.
@@ -156,9 +148,17 @@ class Star(BasePhotonSource, BaseModel):
         sky_coordinates = get_meshgrid(2 * (1.05 * self.angular_radius), grid_size)
         return torch.stack((sky_coordinates[0], sky_coordinates[1]))
 
-    def _calculate_solid_angle(self, **kwargs) -> float:
+    def _get_solid_angle(self, **kwargs) -> float:
         """Return the solid angle of the source object.
 
         :return: The solid angle
         """
         return np.pi * (self.radius / self.distance) ** 2
+
+    def _get_spectral_flux_density(
+            self,
+            wavelength_steps: Tensor,
+            grid_size: int,
+            **kwargs
+    ) -> Tensor:
+        return create_blackbody_spectrum(self.temperature, wavelength_steps) * self.solid_angle
