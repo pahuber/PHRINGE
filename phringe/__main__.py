@@ -2,7 +2,7 @@ from pathlib import Path
 
 import click
 
-from phringe.phringe_ui import PHRINGE
+from phringe.api import PHRINGE
 
 
 @click.command()

@@ -327,10 +327,10 @@ class Director():
             raise ValueError('The simulation time step size must be smaller than the detector integration time.')
 
         ################################################################################################################
-        # Analytical calculations
+        # Symbolic expressions
         ################################################################################################################
 
-        # Define symbols for analytical calculations
+        # Define symbols for symbolic expressions
         catm = self._complex_amplitude_transfer_matrix
         acm = self._array_configuration_matrix
         ex = {}
@@ -354,9 +354,22 @@ class Director():
             ey[k] = a[k] * da[k] * exp(I * (2 * pi / l * (acm[0, k] * alpha + acm[1, k] * beta) + dphi[k])) * sin(
                 th[k] + dth[k])
 
-        # Define intensity response
+        # Define intensity response and save the symbolic expression
+        r = {}
+        rx = {}
+        ry = {}
+        self._symbolic_intensity_response = {}
+        for j in range(self._number_of_outputs):
+            rx[j] = 0
+            ry[j] = 0
+            for k in range(self._number_of_inputs):
+                rx[j] += catm[j, k] * ex[k]
+                ry[j] += catm[j, k] * ey[k]
+            r[j] = Abs(rx[j]) ** 2 + Abs(ry[j]) ** 2
+            self._symbolic_intensity_response[j] = r[j]
+
+        # Compile the intensity response functions for numerical calculations and save the lambdified functions
         def _torch_sqrt(x):
-            # Ensure x is a tensor before applying torch.sqrt
             if not isinstance(x, torch.Tensor):
                 x = torch.tensor(x)
             return torch.sqrt(x)
@@ -366,24 +379,24 @@ class Director():
             'cos': torch.cos,
             'exp': torch.exp,
             'log': torch.log,
-            'sqrt': _torch_sqrt,
-
+            'sqrt': _torch_sqrt
         }
-        r = {}
-        rx = {}
-        ry = {}
+
+        self._diff_intensity_response = {}
+        for i in range(len(self._differential_outputs)):
+            self._diff_intensity_response[i] = sympy.lambdify(
+                [t, l, alpha, beta, tm, b, *a.values(), *da.values(), *dphi.values(), *th.values(), *dth.values(), ],
+                r[self._differential_outputs[i][0]] - r[self._differential_outputs[i][1]],
+                [torch_func_dict]
+            )
+
         for j in range(self._number_of_outputs):
-            rx[j] = 0
-            ry[j] = 0
-            for k in range(self._number_of_inputs):
-                rx[j] += catm[j, k] * ex[k]
-                ry[j] += catm[j, k] * ey[k]
-            r[j] = Abs(rx[j]) ** 2 + Abs(ry[j]) ** 2
             r[j] = sympy.lambdify(
                 [t, l, alpha, beta, tm, b, *a.values(), *da.values(), *dphi.values(), *th.values(), *dth.values(), ],
                 r[j],
                 [torch_func_dict]
             )
+
         self._intensity_response = r
 
         ################################################################################################################

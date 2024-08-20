@@ -131,9 +131,6 @@ class PHRINGE():
         num_out = self._director._number_of_outputs
         time = self._director.simulation_time_steps[None, :, None, None]
         wavelength = self._director._wavelength_bin_centers[:, None, None, None]
-        modulation_period = torch.tensor(self._director._modulation_period)
-        nulling_basline = torch.tensor(self._director.nulling_baseline)
-        amplitude = self._director._amplitude
         amplitude_pert = self._director.amplitude_pert_time_series
         phase_pert = self._director.phase_pert_time_series
         polarization_pert = self._director.polarization_pert_time_series
@@ -143,21 +140,53 @@ class PHRINGE():
             wavelength,
             sky_coordinates_x,
             sky_coordinates_y,
-            modulation_period,
-            nulling_basline,
-            *[amplitude for _ in range(num_in)],
+            torch.tensor(self._director._modulation_period),
+            torch.tensor(self._director.nulling_baseline),
+            *[self._director._amplitude for _ in range(num_in)],
             *[amplitude_pert[k][None, :, None, None] for k in range(num_in)],
             *[phase_pert[k][:, :, None, None] for k in range(num_in)],
             *[torch.tensor(0) for _ in range(num_in)],
             *[polarization_pert[k][None, :, None, None] for k in range(num_in)]
-        ) for j in range(num_out)]).cpu().numpy()
+        ) for j in range(num_out)])
 
-    def get_wavelength_bin_centers(self) -> Tensor:
-        """Return the wavelength bin centers.
+    def get_spectral_flux_density(self, source_name: str) -> Tensor:
+        source = [source for source in self._director._sources if source.name == source_name][0]
+        return source.spectral_flux_density
 
-        :return: The wavelength bin centers
+    def get_symbolic_intensity_response(self):
+        """Return the intensity response.
+
+        :return: The intensity response
         """
-        return self._director._wavelength_bin_centers.cpu()
+        return self._director._symbolic_intensity_response
+
+    def get_template(self, time: Tensor, wavelength: Tensor, pos_x: Tensor, pos_y: Tensor, flux: Tensor) -> Tensor:
+        """Return the template for a planet at position (pos_x, pos_y) in units of photoelectron counts.
+
+        :return: The template
+        """
+        num_in = self._director._number_of_inputs
+        time = time[None, :, None, None]
+        wavelength = wavelength[:, None, None, None]
+
+        diff_intensity_response = torch.stack([self._director._diff_intensity_response[i](
+            time,
+            wavelength,
+            pos_x,
+            pos_y,
+            torch.tensor(self._director._modulation_period),
+            torch.tensor(self._director.nulling_baseline),
+            *[self._director._amplitude for _ in range(num_in)],
+            *[torch.tensor(1) for _ in range(num_in)],
+            *[torch.tensor(0) for _ in range(num_in)],
+            *[torch.tensor(0) for _ in range(num_in)],
+            *[torch.tensor(0) for _ in range(num_in)],
+        ) for i in range(len(self._director._differential_outputs))])
+
+        diff_intensity_response = diff_intensity_response[:, :, :, 0, 0]
+
+        return (flux[None, :, None] * diff_intensity_response * self._director._detector_integration_time
+                * self._director._wavelength_bin_widths[None, :, None])
 
     def get_time_steps(self) -> Tensor:
         """Return the detector time steps.
@@ -165,6 +194,13 @@ class PHRINGE():
         :return: The detector time steps
         """
         return self._director._detector_time_steps.cpu()
+
+    def get_wavelength_bin_centers(self) -> Tensor:
+        """Return the wavelength bin centers.
+
+        :return: The wavelength bin centers
+        """
+        return self._director._wavelength_bin_centers.cpu()
 
     @overload
     def run(
