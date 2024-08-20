@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from sympy import Matrix, sqrt, sin, exp, pi, I, cos, symbols
 
 ########################################################################################################################
@@ -31,7 +33,7 @@ sep_at_max_mod_eff = [0.6]
 
 config = {
     'simulation': {
-        'grid_size': 100,
+        'grid_size': 20,
         'time_step_size': '1 d',
         'has_planet_orbital_motion': False,
         'has_planet_signal': True,
@@ -106,7 +108,7 @@ config = {
                 'raan': '0 deg',
                 'argument_of_periapsis': '0 deg',
                 'true_anomaly': '0 deg',
-                'path_to_spectrum': 'spectrum.txt'
+                'path_to_spectrum': Path(r'C:\Users\huber\Desktop\PHRINGE\docs\_static\spectrum.txt')
             },
         ],
     },
