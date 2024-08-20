@@ -36,14 +36,6 @@ phringe.io.validators module
    :undoc-members:
    :show-inheritance:
 
-phringe.io.yaml\_handler module
--------------------------------
-
-.. automodule:: phringe.io.yaml_handler
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 Module contents
 ---------------
 

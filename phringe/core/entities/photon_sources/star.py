@@ -138,9 +138,9 @@ class Star(BasePhotonSource, BaseModel):
         return sky_brightness_distribution
 
     def _get_sky_coordinates(self, grid_size, **kwargs) -> Coordinates:
-        """Return the sky coordinate maps of the source. The intensity responses are calculated in a resolution that
-        allows the source to fill the grid, thus, each source needs to define its own sky coordinate map. Add 10% to the
-        angular radius to account for rounding issues and make sure the source is fully covered within the map.
+        """Return the sky coordinate maps of the source1. The intensity responses are calculated in a resolution that
+        allows the source1 to fill the grid, thus, each source1 needs to define its own sky coordinate map. Add 10% to the
+        angular radius to account for rounding issues and make sure the source1 is fully covered within the map.
 
         :param grid_size: The grid size
         :return: A coordinates object containing the x- and y-sky coordinate maps
@@ -149,7 +149,7 @@ class Star(BasePhotonSource, BaseModel):
         return torch.stack((sky_coordinates[0], sky_coordinates[1]))
 
     def _get_solid_angle(self, **kwargs) -> float:
-        """Return the solid angle of the source object.
+        """Return the solid angle of the source1 object.
 
         :return: The solid angle
         """

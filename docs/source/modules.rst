@@ -1,7 +1,7 @@
-PHRINGE
+phringe
 =======
 
 .. toctree::
-   :maxdepth: 3
+   :maxdepth: 4
 
    phringe

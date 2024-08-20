@@ -7,18 +7,24 @@ Subpackages
 .. toctree::
    :maxdepth: 4
 
-   phringe.core.entities.observatory
+   phringe.core.entities.perturbations
    phringe.core.entities.photon_sources
 
 Submodules
 ----------
 
-phringe.core.entities.observation module
-----------------------------------------
+phringe.core.entities.instrument module
+---------------------------------------
 
-.. _class.observation:
+.. automodule:: phringe.core.entities.instrument
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
-.. automodule:: phringe.core.entities.observation
+phringe.core.entities.observation\_mode module
+----------------------------------------------
+
+.. automodule:: phringe.core.entities.observation_mode
    :members:
    :undoc-members:
    :show-inheritance:
@@ -26,19 +32,15 @@ phringe.core.entities.observation module
 phringe.core.entities.scene module
 ----------------------------------
 
-.. _class.scene:
-
 .. automodule:: phringe.core.entities.scene
    :members:
    :undoc-members:
    :show-inheritance:
 
-phringe.core.entities.settings module
--------------------------------------
+phringe.core.entities.simulation module
+---------------------------------------
 
-.. _class.settings:
-
-.. automodule:: phringe.core.entities.settings
+.. automodule:: phringe.core.entities.simulation
    :members:
    :undoc-members:
    :show-inheritance:

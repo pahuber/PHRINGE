@@ -9,7 +9,7 @@ Class Diagram
 The simplified class diagram of PHRINGE shown below gives an overview of the software architecture. The key components
 are a **user interface (UI)**, a **processing** component, an **input/output (IO)** component and the **entities**.
 
-.. image:: _static/architecture.jpg
+.. image:: _static/architecture.png
     :alt: Architecture
     :width: 100%
 

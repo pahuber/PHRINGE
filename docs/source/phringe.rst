@@ -1,4 +1,4 @@
-PHRINGE Package
+phringe package
 ===============
 
 Subpackages
@@ -14,12 +14,10 @@ Subpackages
 Submodules
 ----------
 
-.. _class.phringe:
+phringe.api module
+------------------
 
-phringe.phringe\_ui module
---------------------------
-
-.. automodule:: phringe.phringe_ui
+.. automodule:: phringe.api
    :members:
    :undoc-members:
    :show-inheritance:

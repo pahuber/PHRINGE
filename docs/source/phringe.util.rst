@@ -20,14 +20,6 @@ phringe.util.helpers module
    :undoc-members:
    :show-inheritance:
 
-phringe.util.matrix module
---------------------------
-
-.. automodule:: phringe.util.matrix
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 phringe.util.noise\_generator module
 ------------------------------------
 
