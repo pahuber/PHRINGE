@@ -210,6 +210,8 @@ class PHRINGE():
         else:
             flux = flux[None, :, None, None, None]
 
+        amplitude = self._director._amplitude.cpu().numpy()
+
         diff_intensity_response = np.concatenate([self._director._diff_ir_numpy[i](
             time,
             wavelength_bin_center,
@@ -217,7 +219,7 @@ class PHRINGE():
             pos_y,
             self._director._modulation_period,
             self._director.nulling_baseline,
-            *[self._director._amplitude for _ in range(num_in)],
+            *[amplitude for _ in range(num_in)],
             *[1 for _ in range(num_in)],
             *[0 for _ in range(num_in)],
             *[0 for _ in range(num_in)],
