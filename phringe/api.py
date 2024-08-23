@@ -2,8 +2,9 @@ import pprint
 import shutil
 from datetime import datetime
 from pathlib import Path
-from typing import overload
+from typing import overload, Union
 
+import numpy as np
 import torch
 from torch import Tensor
 
@@ -96,21 +97,25 @@ class PHRINGE():
         },
     }
 
-    def get_data(self) -> Tensor:
+    def get_data(self, as_numpy: bool) -> Union[np.ndarray, Tensor]:
         """Return the generated data.
 
         :return: The generated data
         """
+        if as_numpy:
+            return self._director._data.cpu().numpy()
         return self._director._data
 
-    def get_field_of_view(self) -> Tensor:
+    def get_field_of_view(self, as_numpy: bool) -> Union[np.ndarray, Tensor]:
         """Return the field of view.
 
         :return: The field of view
         """
+        if as_numpy:
+            return self._director.field_of_view.cpu().numpy()
         return self._director.field_of_view
 
-    def get_intensity_response(self, source_name: str) -> Tensor:
+    def get_intensity_response_torch(self, source_name: str) -> Tensor:
         """Return the intensity response.
 
         :return: The intensity response
@@ -135,7 +140,7 @@ class PHRINGE():
         phase_pert = self._director.phase_pert_time_series
         polarization_pert = self._director.polarization_pert_time_series
 
-        return torch.stack([self._director._intensity_response[j](
+        return torch.stack([self._director._intensity_response_torch[j](
             time,
             wavelength,
             sky_coordinates_x,
@@ -149,8 +154,11 @@ class PHRINGE():
             *[polarization_pert[k][None, :, None, None] for k in range(num_in)]
         ) for j in range(num_out)])
 
-    def get_spectral_flux_density(self, source_name: str) -> Tensor:
+    def get_spectral_flux_density(self, source_name: str, as_numpy: bool) -> Union[np.ndarray, Tensor]:
         source = [source for source in self._director._sources if source.name == source_name][0]
+
+        if as_numpy:
+            return source.spectral_flux_density.cpu().numpy()
         return source.spectral_flux_density
 
     def get_symbolic_intensity_response(self):
@@ -160,18 +168,131 @@ class PHRINGE():
         """
         return self._director._symbolic_intensity_response
 
-    def get_template(self, time: Tensor, wavelength: Tensor, pos_x: Tensor, pos_y: Tensor, flux: Tensor) -> Tensor:
-        """Return the template for a planet at position (pos_x, pos_y) in units of photoelectron counts.
+    def get_template_numpy(
+            self,
+            time: np.ndarray,
+            wavelength_bin_center: np.ndarray,
+            wavelength_bin_width: np.ndarray,
+            pos_x: np.ndarray,
+            pos_y: np.ndarray,
+            flux: np.ndarray
+    ):
+        num_in = self._director._number_of_inputs
+
+        # Ensure that the input tensors have the correct dimensions
+        if time.size == 1:
+            time = time[None, None, None, None]
+        else:
+            time = time[None, :, None, None]
+
+        if wavelength_bin_center.size == 1:
+            wavelength_bin_center = wavelength_bin_center[None, None, None, None]
+        else:
+            wavelength_bin_center = wavelength_bin_center[:, None, None, None]
+
+        if wavelength_bin_width.size == 1:
+            wavelength_bin_width = wavelength_bin_width[None, None, None, None, None]
+        else:
+            wavelength_bin_width = wavelength_bin_width[None, :, None, None, None]
+
+        if pos_x.size == 1:
+            pos_x = pos_x[None, None, None, None]
+        else:
+            pos_x = pos_x[None, None, :, :]
+
+        if pos_y.size == 1:
+            pos_y = pos_y[None, None, None, None]
+        else:
+            pos_y = pos_y[None, None, :, :]
+
+        if flux.size == 1:
+            flux = flux[None, None, None, None, None]
+        else:
+            flux = flux[None, :, None, None, None]
+
+        diff_intensity_response = np.concatenate([self._director._diff_ir_numpy[i](
+            time,
+            wavelength_bin_center,
+            pos_x,
+            pos_y,
+            self._director._modulation_period,
+            self._director.nulling_baseline,
+            *[self._director._amplitude for _ in range(num_in)],
+            *[1 for _ in range(num_in)],
+            *[0 for _ in range(num_in)],
+            *[0 for _ in range(num_in)],
+            *[0 for _ in range(num_in)],
+        ) for i in range(len(self._director._differential_outputs))])
+
+        return (
+                flux
+                * diff_intensity_response
+                * self._director._detector_integration_time
+                * wavelength_bin_width
+        )
+
+    def get_template_torch(
+            self,
+            time: Tensor,
+            wavelength_bin_center: Tensor,
+            wavelength_bin_width: Tensor,
+            pos_x: Tensor,
+            pos_y: Tensor,
+            flux: Tensor
+    ) -> Tensor:
+        """Return the un-normalized template for a planet at position (pos_x, pos_y) in units of photoelectron counts.
+        The dimension of the output is N_diff_outputs x N_lambda x N_time x N_pos_x x N_pos_y.
 
         :return: The template
         """
         num_in = self._director._number_of_inputs
-        time = time[None, :, None, None]
-        wavelength = wavelength[:, None, None, None]
 
-        diff_intensity_response = torch.stack([self._director._diff_intensity_response[i](
+        # Ensure that the input tensors have the correct dimensions
+        if time.dim() == 0:
+            time = time[None, None, None, None]
+        elif time.dim() == 1:
+            time = time[None, :, None, None]
+        else:
+            raise ValueError('Time must be a scalar or a 1D tensor.')
+
+        if wavelength_bin_center.dim() == 0:
+            wavelength_bin_center = wavelength_bin_center[None, None, None, None]
+        elif wavelength_bin_center.dim() == 1:
+            wavelength_bin_center = wavelength_bin_center[:, None, None, None]
+        else:
+            raise ValueError('Wavelength bin center must be a scalar or a 1D tensor.')
+
+        if wavelength_bin_width.dim() == 0:
+            wavelength_bin_width = wavelength_bin_width[None, None, None, None, None]
+        elif wavelength_bin_width.dim() == 1:
+            wavelength_bin_width = wavelength_bin_width[None, :, None, None, None]
+        else:
+            raise ValueError('Wavelength bin width must be a scalar or a 1D tensor.')
+
+        if pos_x.dim() == 0:
+            pos_x = pos_x[None, None, None, None]
+        elif pos_x.dim() == 2:
+            pos_x = pos_x[None, None, :, :]
+        else:
+            raise ValueError('Position x must be a scalar or a 2D tensor.')
+
+        if pos_y.dim() == 0:
+            pos_y = pos_y[None, None, None, None]
+        elif pos_y.dim() == 2:
+            pos_y = pos_y[None, None, :, :]
+        else:
+            raise ValueError('Position y must be a scalar or a 2D tensor.')
+
+        if flux.dim() == 0:
+            flux = flux[None, None, None, None, None]
+        elif flux.dim() == 1:
+            flux = flux[None, :, None, None, None]
+        else:
+            raise ValueError('Flux must be a scalar or a 1D tensor.')
+
+        diff_intensity_response = torch.stack([self._director._diff_ir_torch[i](
             time,
-            wavelength,
+            wavelength_bin_center,
             pos_x,
             pos_y,
             torch.tensor(self._director._modulation_period),
@@ -183,24 +304,39 @@ class PHRINGE():
             *[torch.tensor(0) for _ in range(num_in)],
         ) for i in range(len(self._director._differential_outputs))])
 
-        diff_intensity_response = diff_intensity_response[:, :, :, 0, 0]
+        return (
+                flux
+                * diff_intensity_response
+                * self._director._detector_integration_time
+                * wavelength_bin_width
+        )
 
-        return (flux[None, :, None] * diff_intensity_response * self._director._detector_integration_time
-                * self._director._wavelength_bin_widths[None, :, None])
-
-    def get_time_steps(self) -> Tensor:
+    def get_time_steps(self, as_numpy: bool) -> Union[np.ndarray, Tensor]:
         """Return the detector time steps.
 
         :return: The detector time steps
         """
-        return self._director._detector_time_steps.cpu()
+        if as_numpy:
+            return self._director._detector_time_steps.cpu().numpy()
+        return self._director._detector_time_steps
 
-    def get_wavelength_bin_centers(self) -> Tensor:
+    def get_wavelength_bin_centers(self, as_numpy: bool) -> Union[np.ndarray, Tensor]:
         """Return the wavelength bin centers.
 
         :return: The wavelength bin centers
         """
-        return self._director._wavelength_bin_centers.cpu()
+        if as_numpy:
+            return self._director._wavelength_bin_centers.cpu().numpy()
+        return self._director._wavelength_bin_centers
+
+    def get_wavelength_bin_widths(self, as_numpy: bool) -> Union[np.ndarray, Tensor]:
+        """Return the wavelength bin widths.
+
+        :return: The wavelength bin widths
+        """
+        if as_numpy:
+            return self._director._wavelength_bin_widths.cpu().numpy()
+        return self._director._wavelength_bin_widths
 
     @overload
     def run(

@@ -358,6 +358,9 @@ class Director():
         r = {}
         rx = {}
         ry = {}
+        r_torch = {}
+        r_numpy = {}
+
         self._symbolic_intensity_response = {}
         for j in range(self._number_of_outputs):
             rx[j] = 0
@@ -382,22 +385,33 @@ class Director():
             'sqrt': _torch_sqrt
         }
 
-        self._diff_intensity_response = {}
+        self._diff_ir_torch = {}
+        self._diff_ir_numpy = {}
+
         for i in range(len(self._differential_outputs)):
-            self._diff_intensity_response[i] = sympy.lambdify(
+            # Lambdify differential output for torch
+            self._diff_ir_torch[i] = sympy.lambdify(
                 [t, l, alpha, beta, tm, b, *a.values(), *da.values(), *dphi.values(), *th.values(), *dth.values(), ],
                 r[self._differential_outputs[i][0]] - r[self._differential_outputs[i][1]],
                 [torch_func_dict]
             )
 
+            # Lambdify differential output for numpy
+            self._diff_ir_numpy[i] = sympy.lambdify(
+                [t, l, alpha, beta, tm, b, *a.values(), *da.values(), *dphi.values(), *th.values(), *dth.values(), ],
+                r[self._differential_outputs[i][0]] - r[self._differential_outputs[i][1]],
+                'numpy'
+            )
+
         for j in range(self._number_of_outputs):
+            # Lambdify intensity response for torch
             r[j] = sympy.lambdify(
                 [t, l, alpha, beta, tm, b, *a.values(), *da.values(), *dphi.values(), *th.values(), *dth.values(), ],
                 r[j],
                 [torch_func_dict]
             )
 
-        self._intensity_response = r
+        self._intensity_response_torch = r
 
         ################################################################################################################
         # Numerical calculations
