@@ -491,63 +491,70 @@ class Director():
              len(self.simulation_time_steps)),
             device=self._device
         )
-        ####################
 
-        # empirical_factor = 4.17
-        data_size = self._grid_size ** 2 * len(self.simulation_time_steps) * len(
-            self._wavelength_bin_centers) * self._number_of_outputs * 2 * len(self._sources)
+        # Estimate the data size and slice the time steps to fit the calculations into memory
+        data_size = (self._grid_size ** 2
+                     * len(self.simulation_time_steps)
+                     * len(self._wavelength_bin_centers)
+                     * self._number_of_outputs
+                     * 2
+                     * len(self._sources))
 
         available_memory = get_available_memory(self._device)
 
         # Divisor with 10% safety margin
         divisor = int(np.ceil(data_size / (available_memory * 0.9)))
 
-        # Create a list of time step indices containing the indices of the simulation time steps, with
+        time_step_indices = torch.arange(
+            0,
+            len(self.simulation_time_steps) + 1,
+            len(self.simulation_time_steps) // divisor
+        )
 
-        time_step_indices = torch.arange(0, len(self.simulation_time_steps) + 1,
-                                         len(self.simulation_time_steps) // divisor)
+        # Add the last index if it is not already included due to rounding issues
         if time_step_indices[-1] != len(self.simulation_time_steps):
             time_step_indices = torch.cat((time_step_indices, torch.tensor([len(self.simulation_time_steps)])))
 
-        ###################
+        # Calculate differential counts
+        for index, it in tqdm(enumerate(time_step_indices), total=len(time_step_indices) - 1):
 
-        for source in self._sources:
-
-            # Broadcast sky coordinates to the correct shape
-            if isinstance(source, LocalZodi) or isinstance(source, Exozodi):
-                sky_coordinates_x = source.sky_coordinates[0][:, None, :, :]
-                sky_coordinates_y = source.sky_coordinates[1][:, None, :, :]
-            elif isinstance(source, Planet) and self._has_planet_orbital_motion:
-                sky_coordinates_x = source.sky_coordinates[0][None, :, :, :]
-                sky_coordinates_y = source.sky_coordinates[1][None, :, :, :]
+            # Calculate the indices of the time slices
+            if index <= len(time_step_indices) - 2:
+                it_low = it
+                it_high = time_step_indices[index + 1]
             else:
-                sky_coordinates_x = source.sky_coordinates[0][None, None, :, :]
-                sky_coordinates_y = source.sky_coordinates[1][None, None, :, :]
+                break
 
-            # Broadcast sky brightness distribution to the correct shape
-            if isinstance(source, Planet) and self._has_planet_orbital_motion:
-                sky_brightness_distribution = source.sky_brightness_distribution.swapaxes(0, 1)
-            else:
-                sky_brightness_distribution = source.sky_brightness_distribution[:, None, :, :]
+            for source in self._sources:
 
-            # Define normalization
-            if isinstance(source, Planet):
-                normalization = 1
-            elif isinstance(source, Star):
-                normalization = len(source.sky_brightness_distribution[0][source.sky_brightness_distribution[0] > 0])
-            else:
-                normalization = self._grid_size ** 2
-
-            # Calculate differential counts of shape (N_outputs x N_wavelengths x N_time_steps) for all time step slices
-            # Within torch.sum, the shape is (N_wavelengths x N_time_steps x N_pix x N_pix)
-            for index, it in tqdm(enumerate(time_step_indices), total=len(time_step_indices) - 1):
-
-                if index <= len(time_step_indices) - 2:
-                    it_low = it
-                    it_high = time_step_indices[index + 1]
+                # Broadcast sky coordinates to the correct shape
+                if isinstance(source, LocalZodi) or isinstance(source, Exozodi):
+                    sky_coordinates_x = source.sky_coordinates[0][:, None, :, :]
+                    sky_coordinates_y = source.sky_coordinates[1][:, None, :, :]
+                elif isinstance(source, Planet) and self._has_planet_orbital_motion:
+                    sky_coordinates_x = source.sky_coordinates[0][None, it_low:it_high, :, :]
+                    sky_coordinates_y = source.sky_coordinates[1][None, it_low:it_high, :, :]
                 else:
-                    break
+                    sky_coordinates_x = source.sky_coordinates[0][None, None, :, :]
+                    sky_coordinates_y = source.sky_coordinates[1][None, None, :, :]
 
+                # Broadcast sky brightness distribution to the correct shape
+                if isinstance(source, Planet) and self._has_planet_orbital_motion:
+                    sky_brightness_distribution = source.sky_brightness_distribution.swapaxes(0, 1)
+                else:
+                    sky_brightness_distribution = source.sky_brightness_distribution[:, None, :, :]
+
+                # Define normalization
+                if isinstance(source, Planet):
+                    normalization = 1
+                elif isinstance(source, Star):
+                    normalization = len(
+                        source.sky_brightness_distribution[0][source.sky_brightness_distribution[0] > 0])
+                else:
+                    normalization = self._grid_size ** 2
+
+                # Calculate differential counts of shape (N_outputs x N_wavelengths x N_time_steps) for all time step slices
+                # Within torch.sum, the shape is (N_wavelengths x N_time_steps x N_pix x N_pix)
                 for i in range(len(self._differential_outputs)):
                     counts_1 = (
                         torch.sum(
