@@ -94,7 +94,6 @@ class Director():
         self._array_configuration_matrix = instrument.array_configuration_matrix
         self._baseline_maximum = instrument.baseline_maximum
         self._baseline_minimum = instrument.baseline_minimum
-        self._baseline_ratio = instrument.baseline_ratio
         self._complex_amplitude_transfer_matrix = instrument.complex_amplitude_transfer_matrix
         self._detailed = detailed
         self._detector_integration_time = observation_mode.detector_integration_time

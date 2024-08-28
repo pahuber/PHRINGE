@@ -35,7 +35,6 @@ class Instrument(BaseModel):
     :param throughput: The unperturbed instrument throughput
     :param phase_perturbation_rms: The phase perturbation rms
     :param phase_falloff_exponent: The phase falloff exponent
-    :param baseline_ratio: The baseline ratio
     :param baseline_maximum: The maximum baseline
     :param baseline_minimum: The minimum baseline
     :param polarization_perturbation_rms: The polarization perturbation rms
@@ -51,7 +50,6 @@ class Instrument(BaseModel):
     array_configuration_matrix: Any
     complex_amplitude_transfer_matrix: Any
     differential_outputs: Any
-    baseline_ratio: int
     baseline_maximum: str
     baseline_minimum: str
     sep_at_max_mod_eff: Any
