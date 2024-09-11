@@ -203,7 +203,7 @@ class Director():
         if self._has_amplitude_perturbations:
             self.amplitude_pert_time_series = amplitude_perturbation.get_time_series(
                 self._number_of_inputs,
-                self._simulation_time_step_size,
+                self._total_integration_time,
                 len(self.simulation_time_steps)
             )
         else:
@@ -215,7 +215,6 @@ class Director():
         if self._has_phase_perturbations:
             self.phase_pert_time_series = phase_perturbation.get_time_series(
                 self._number_of_inputs,
-                # self._detector_integration_time,
                 self._total_integration_time,
                 len(self.simulation_time_steps),
                 wavelengths=self._wavelength_bin_centers
@@ -229,7 +228,7 @@ class Director():
         if self._has_polarization_perturbations:
             self.polarization_pert_time_series = polarization_perturbation.get_time_series(
                 self._number_of_inputs,
-                self._detector_integration_time,
+                self._total_integration_time,
                 len(self.simulation_time_steps)
             )
         else:

@@ -5,8 +5,6 @@ from pydantic import BaseModel, field_validator
 from pydantic_core.core_schema import ValidationInfo
 from torch import Tensor
 
-from phringe.util.noise_generator import NoiseGenerator
-
 
 class BasePerturbation(ABC, BaseModel):
     rms: str
@@ -28,18 +26,18 @@ class BasePerturbation(ABC, BaseModel):
     def get_time_series(
             self,
             number_of_inputs: int,
-            simulation_time_step_size: float,
+            total_integration_time: float,
             number_of_simulation_time_steps: int,
             **kwargs
     ) -> Tensor:
         pass
 
-    def _get_color(self, noise_generator: NoiseGenerator):
+    def _get_color_coeff(self) -> int:
         match self.color:
             case 'white':
-                color = noise_generator.white()
+                coeff = 0
             case 'pink':
-                color = noise_generator.pink()
+                coeff = 1
             case 'brown':
-                color = noise_generator.brown()
-        return color
+                coeff = 2
+        return coeff
