@@ -85,7 +85,7 @@ class LocalZodi(BasePhotonSource, BaseModel):
                 ) *
                 ((torch.pi / torch.arccos(torch.cos(torch.tensor(relative_ecliptic_longitude)) * torch.cos(
                     torch.tensor(ecliptic_latitude))))
-                 / (torch.sin(torch.tensor(ecliptic_latitude)) ** 2 + 0.6 * (wavelength_steps / (11)) ** (
+                 / (torch.sin(torch.tensor(ecliptic_latitude)) ** 2 + 0.6 * (wavelength_steps / (11e-6)) ** (
                             -0.4) * torch.cos(
-                            torch.tensor(ecliptic_latitude)) ** 2)) ** 0.5)  # TODO: check 11 and not 11e-6
+                            torch.tensor(ecliptic_latitude)) ** 2)) ** 0.5)
         return spectral_flux_density
