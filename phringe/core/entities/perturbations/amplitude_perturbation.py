@@ -33,7 +33,7 @@ class AmplitudePerturbation(BasePerturbation, BaseModel):
         for k in range(number_of_inputs):
             time_series[k] = noise.sample(number_of_simulation_time_steps - 1)
             time_series[k] *= self.rms / np.sqrt(
-                np.mean(time_series[k] ** 2)) * 1.4  # x (empirical) 1.4 to match the final rms value
+                np.mean(time_series[k] ** 2)) * 2.6  # x (empirical) 1.4 to match the final rms value
             time_series[k] = 1 + time_series[k]
             time_series[k] = np.clip(time_series[k], None, 1)
 
