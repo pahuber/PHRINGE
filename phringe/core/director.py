@@ -111,7 +111,7 @@ class Director():
         self._has_planet_signal = simulation.has_planet_signal
         self._has_polarization_perturbations = simulation.has_polarization_perturbations
         self._has_stellar_leakage = simulation.has_stellar_leakage
-        self._set_at_max_mod_eff = instrument.sep_at_max_mod_eff
+        self._sep_at_max_mod_eff = instrument.sep_at_max_mod_eff
         self._modulation_period = observation_mode.modulation_period
         self._normalize = normalize
         self._number_of_inputs = self._complex_amplitude_transfer_matrix.shape[1]
@@ -177,8 +177,11 @@ class Director():
 
         # Get the optimal baseline and check if it is within the allowed range
 
-        nulling_baseline = max_modulation_efficiency[
-                               optimized_differential_output] * optimized_wavelength / optimized_star_separation
+        nulling_baseline = (
+                max_modulation_efficiency[optimized_differential_output]
+                * optimized_wavelength
+                / optimized_star_separation
+        )
 
         if baseline_minimum <= nulling_baseline and nulling_baseline <= baseline_maximum:
             return nulling_baseline
@@ -212,7 +215,8 @@ class Director():
         if self._has_phase_perturbations:
             self.phase_pert_time_series = phase_perturbation.get_time_series(
                 self._number_of_inputs,
-                self._detector_integration_time,
+                # self._detector_integration_time,
+                self._total_integration_time,
                 len(self.simulation_time_steps),
                 wavelengths=self._wavelength_bin_centers
             )
@@ -441,7 +445,7 @@ class Director():
             self._optimized_wavelength,
             self._baseline_maximum,
             self._baseline_minimum,
-            self._set_at_max_mod_eff
+            self._sep_at_max_mod_eff
         )
 
         # Prepare perturbation time series
@@ -607,6 +611,16 @@ class Director():
                     )
 
                     diff_counts[i, :, it_low:it_high] += (torch.poisson(counts_1) - torch.poisson(counts_2))
+                    # print(self._amplitude)
+                    # imax = torch.sum(
+                    #     self._amplitude
+                    #     * sky_brightness_distribution
+                    #     / normalization
+                    #     * self._simulation_time_step_size
+                    #     * self._wavelength_bin_widths[:, None, None, None], axis=(2, 3)
+                    # )
+                    #
+                    # self._null_depth = abs(diff_counts / imax.repeat(1, 1000)[None, :, :])
 
         # # Bin data to from simulation time steps detector time steps
         binning_factor = int(round(len(self.simulation_time_steps) / len(self._detector_time_steps), 0))
