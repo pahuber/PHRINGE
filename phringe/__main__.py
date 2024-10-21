@@ -35,6 +35,8 @@ from phringe.api import PHRINGE
 @click.option('--dir/--no-dir', default=True, help="Create a new directory in the output directory for each run.")
 @click.option('--normalize/--no-normalize', default=False,
               help="Whether to normalize the data to unit RMS along the time axis.")
+@click.option('--detailed/--no-detailed', default=False,
+              help="Whether to run in detailed mode.")
 def main(
         config: Path,
         gpu: tuple = None,
@@ -42,7 +44,8 @@ def main(
         fits: bool = True,
         copy: bool = True,
         dir: bool = True,
-        normalize: bool = False
+        normalize: bool = False,
+        detailed: bool = False
 ):
     """PHRINGE. PHotoelectron counts generatoR for nullING intErferometers.
 
@@ -56,5 +59,6 @@ def main(
         write_fits=fits,
         create_copy=copy,
         create_directory=dir,
-        normalize=normalize
+        normalize=normalize,
+        detailed=detailed
     )

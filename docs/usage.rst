@@ -97,6 +97,8 @@ Flags
      - Create a new directory in the output directory for each run; default is true
    * - ``--normalize``/``--no-normalize``
      - Whether to normalize the data to unit RMS along the time axis; default is false
+   * - ``--detailed``/``--no-detailed``
+     - Whether to run in detailed mode; default is false
 
 
 

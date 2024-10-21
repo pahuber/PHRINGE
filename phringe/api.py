@@ -97,6 +97,15 @@ class PHRINGE():
         },
     }
 
+    def get_counts(self, as_numpy: bool) -> Union[np.ndarray, Tensor]:
+        """Return the counts.
+
+        :return: The counts
+        """
+        if as_numpy:
+            return self._director._counts.cpu().numpy()
+        return self._director._counts
+
     def get_data(self, as_numpy: bool) -> Union[np.ndarray, Tensor]:
         """Return the generated data.
 
@@ -349,7 +358,8 @@ class PHRINGE():
             write_fits: bool = True,
             create_copy: bool = True,
             create_directory: bool = True,
-            normalize: bool = False
+            normalize: bool = False,
+            detailed: bool = False
     ):
         ...
 
@@ -365,7 +375,8 @@ class PHRINGE():
             fits_suffix: str = '',
             create_copy: bool = True,
             create_directory: bool = True,
-            normalize: bool = False
+            normalize: bool = False,
+            detailed: bool = False
     ):
         ...
 
@@ -381,7 +392,8 @@ class PHRINGE():
             write_fits: bool = True,
             create_copy: bool = True,
             create_directory: bool = True,
-            normalize: bool = False
+            normalize: bool = False,
+            detailed: bool = False
     ):
         """Generate synthetic photometry data and return the total data as an array of shape N_diff_outputs x
         N_spec_channels x N_observation_time_steps.
@@ -397,6 +409,7 @@ class PHRINGE():
         :param create_copy: Whether to copy the input files to the output directory
         :param create_directory: Whether to create a new directory in the output directory for each run
         :param normalize: Whether to normalize the data to unit RMS along the time axis
+        :param detailed: Whether to run in detailed mode, i.e. return all the interferometric outputs
         :return: The data as an array or a dictionary of arrays if enable_stats is True
         """
         config_dict = load_config(config_file_path) if config_file_path else None
@@ -408,7 +421,7 @@ class PHRINGE():
         ) if not observation_mode else observation_mode
         scene = Scene(**config_dict['scene']) if not scene else scene
 
-        self._director = Director(simulation, instrument, observation_mode, scene, gpu, normalize)
+        self._director = Director(simulation, instrument, observation_mode, scene, gpu, normalize, detailed)
 
         self._director.run()
 

@@ -79,8 +79,8 @@ class Director():
             observation_mode: ObservationMode,
             scene: Scene,
             gpu: int = None,
-            detailed: bool = False,
-            normalize: bool = False
+            normalize: bool = False,
+            detailed: bool = False
     ):
         """Constructor method.
 
@@ -556,73 +556,123 @@ class Director():
                 else:
                     normalization = self._grid_size ** 2
 
-                # Calculate differential counts of shape (N_outputs x N_wavelengths x N_time_steps) for all time step slices
-                # Within torch.sum, the shape is (N_wavelengths x N_time_steps x N_pix x N_pix)
-                for i in range(len(self._differential_outputs)):
-                    counts_1 = (
-                        torch.sum(
-                            r[self._differential_outputs[i][0]](
-                                self.simulation_time_steps[None, it_low:it_high, None, None],
-                                self._wavelength_bin_centers[:, None, None, None],
-                                sky_coordinates_x,
-                                sky_coordinates_y,
-                                torch.tensor(self._modulation_period, device=self._device),
-                                torch.tensor(self.nulling_baseline, device=self._device),
-                                *[self._amplitude for _ in range(self._number_of_inputs)],
-                                *[self.amplitude_pert_time_series[k][None, it_low:it_high, None, None] for k in
-                                  range(self._number_of_inputs)],
-                                *[self.phase_pert_time_series[k][:, it_low:it_high, None, None] for k in
-                                  range(self._number_of_inputs)],
-                                *[torch.tensor(0, device=self._device) for _ in range(self._number_of_inputs)],
-                                *[self.polarization_pert_time_series[k][None, it_low:it_high, None, None] for k in
-                                  range(self._number_of_inputs)]
-                            )
-                            * sky_brightness_distribution
-                            / normalization
-                            * self._simulation_time_step_size
-                            * self._wavelength_bin_widths[:, None, None, None], axis=(2, 3)
-                        )
+                if self._detailed:
+                    # Calculate counts of shape (N_outputs x N_wavelengths x N_time_steps) for all time step slices
+                    # Within torch.sum, the shape is (N_wavelengths x N_time_steps x N_pix x N_pix)
+                    counts = torch.zeros(
+                        (self._number_of_outputs,
+                         len(self._wavelength_bin_centers),
+                         len(self.simulation_time_steps)),
+                        device=self._device
                     )
 
-                    counts_2 = (
-                        torch.sum(
-                            r[self._differential_outputs[i][1]](
-                                self.simulation_time_steps[None, it_low:it_high, None, None],
-                                self._wavelength_bin_centers[:, None, None, None],
-                                sky_coordinates_x,
-                                sky_coordinates_y,
-                                torch.tensor(self._modulation_period, device=self._device),
-                                torch.tensor(self.nulling_baseline, device=self._device),
-                                *[self._amplitude for _ in range(self._number_of_inputs)],
-                                *[self.amplitude_pert_time_series[k][None, it_low:it_high, None, None] for k in
-                                  range(self._number_of_inputs)],
-                                *[self.phase_pert_time_series[k][:, it_low:it_high, None, None] for k in
-                                  range(self._number_of_inputs)],
-                                *[torch.tensor(0, device=self._device) for _ in range(self._number_of_inputs)],
-                                *[self.polarization_pert_time_series[k][None, it_low:it_high, None, None] for k in
-                                  range(self._number_of_inputs)]
+                    for i in range(self._number_of_outputs):
+                        counts[i] = (
+                            torch.sum(
+                                r[i](
+                                    self.simulation_time_steps[None, it_low:it_high, None, None],
+                                    self._wavelength_bin_centers[:, None, None, None],
+                                    sky_coordinates_x,
+                                    sky_coordinates_y,
+                                    torch.tensor(self._modulation_period, device=self._device),
+                                    torch.tensor(self.nulling_baseline, device=self._device),
+                                    *[self._amplitude for _ in range(self._number_of_inputs)],
+                                    *[self.amplitude_pert_time_series[k][None, it_low:it_high, None, None] for k in
+                                      range(self._number_of_inputs)],
+                                    *[self.phase_pert_time_series[k][:, it_low:it_high, None, None] for k in
+                                      range(self._number_of_inputs)],
+                                    *[torch.tensor(0, device=self._device) for _ in range(self._number_of_inputs)],
+                                    *[self.polarization_pert_time_series[k][None, it_low:it_high, None, None] for k in
+                                      range(self._number_of_inputs)]
+                                )
+                                * sky_brightness_distribution
+                                / normalization
+                                * self._simulation_time_step_size
+                                * self._wavelength_bin_widths[:, None, None, None], axis=(2, 3)
                             )
-                            * sky_brightness_distribution
-                            / normalization
-                            * self._simulation_time_step_size
-                            * self._wavelength_bin_widths[:, None, None, None], axis=(2, 3)
                         )
-                    )
 
-                    diff_counts[i, :, it_low:it_high] += (torch.poisson(counts_1) - torch.poisson(counts_2))
-                    # print(self._amplitude)
-                    # imax = torch.sum(
-                    #     self._amplitude
-                    #     * sky_brightness_distribution
-                    #     / normalization
-                    #     * self._simulation_time_step_size
-                    #     * self._wavelength_bin_widths[:, None, None, None], axis=(2, 3)
-                    # )
-                    #
-                    # self._null_depth = abs(diff_counts / imax.repeat(1, 1000)[None, :, :])
+                    for i in range(len(self._differential_outputs)):
+                        diff_counts[i, :, it_low:it_high] += (torch.poisson(counts[self._differential_outputs[i][0]]) -
+                                                              torch.poisson(counts[self._differential_outputs[i][1]]))
+                else:
+                    # Calculate counts of shape (N_outputs x N_wavelengths x N_time_steps) for all time step slices
+                    # Within torch.sum, the shape is (N_wavelengths x N_time_steps x N_pix x N_pix)
+                    for i in range(len(self._differential_outputs)):
+                        counts_1 = (
+                            torch.sum(
+                                r[self._differential_outputs[i][0]](
+                                    self.simulation_time_steps[None, it_low:it_high, None, None],
+                                    self._wavelength_bin_centers[:, None, None, None],
+                                    sky_coordinates_x,
+                                    sky_coordinates_y,
+                                    torch.tensor(self._modulation_period, device=self._device),
+                                    torch.tensor(self.nulling_baseline, device=self._device),
+                                    *[self._amplitude for _ in range(self._number_of_inputs)],
+                                    *[self.amplitude_pert_time_series[k][None, it_low:it_high, None, None] for k in
+                                      range(self._number_of_inputs)],
+                                    *[self.phase_pert_time_series[k][:, it_low:it_high, None, None] for k in
+                                      range(self._number_of_inputs)],
+                                    *[torch.tensor(0, device=self._device) for _ in range(self._number_of_inputs)],
+                                    *[self.polarization_pert_time_series[k][None, it_low:it_high, None, None] for k in
+                                      range(self._number_of_inputs)]
+                                )
+                                * sky_brightness_distribution
+                                / normalization
+                                * self._simulation_time_step_size
+                                * self._wavelength_bin_widths[:, None, None, None], axis=(2, 3)
+                            )
+                        )
+
+                        counts_2 = (
+                            torch.sum(
+                                r[self._differential_outputs[i][1]](
+                                    self.simulation_time_steps[None, it_low:it_high, None, None],
+                                    self._wavelength_bin_centers[:, None, None, None],
+                                    sky_coordinates_x,
+                                    sky_coordinates_y,
+                                    torch.tensor(self._modulation_period, device=self._device),
+                                    torch.tensor(self.nulling_baseline, device=self._device),
+                                    *[self._amplitude for _ in range(self._number_of_inputs)],
+                                    *[self.amplitude_pert_time_series[k][None, it_low:it_high, None, None] for k in
+                                      range(self._number_of_inputs)],
+                                    *[self.phase_pert_time_series[k][:, it_low:it_high, None, None] for k in
+                                      range(self._number_of_inputs)],
+                                    *[torch.tensor(0, device=self._device) for _ in range(self._number_of_inputs)],
+                                    *[self.polarization_pert_time_series[k][None, it_low:it_high, None, None] for k in
+                                      range(self._number_of_inputs)]
+                                )
+                                * sky_brightness_distribution
+                                / normalization
+                                * self._simulation_time_step_size
+                                * self._wavelength_bin_widths[:, None, None, None], axis=(2, 3)
+                            )
+                        )
+
+                        diff_counts[i, :, it_low:it_high] += (torch.poisson(counts_1) - torch.poisson(counts_2))
+                        # print(self._amplitude)
+                        # imax = torch.sum(
+                        #     self._amplitude
+                        #     * sky_brightness_distribution
+                        #     / normalization
+                        #     * self._simulation_time_step_size
+                        #     * self._wavelength_bin_widths[:, None, None, None], axis=(2, 3)
+                        # )
+                        #
+                        # self._null_depth = abs(diff_counts / imax.repeat(1, 1000)[None, :, :])
 
         # # Bin data to from simulation time steps detector time steps
         binning_factor = int(round(len(self.simulation_time_steps) / len(self._detector_time_steps), 0))
+
+        if self._detailed:
+            self._counts = torch.asarray(
+                block_reduce(
+                    counts.cpu().numpy(),
+                    (1, 1, binning_factor),
+                    np.sum
+                )
+            )
+
         self._data = torch.asarray(
             block_reduce(
                 diff_counts.cpu().numpy(),
