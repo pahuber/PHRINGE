@@ -80,7 +80,8 @@ class Director():
             scene: Scene,
             gpu: int = None,
             normalize: bool = False,
-            detailed: bool = False
+            detailed: bool = False,
+            extra_memory: bool = False
     ):
         """Constructor method.
 
@@ -91,6 +92,7 @@ class Director():
         :param gpu: The GPU
         :param detailed: Whether to run in detailed mode
         :param normalize: Whether to normalize the data to unit RMS along the time axis
+        :param extra_memory: Whether to use extra memory
         """
         self._aperture_diameter = instrument.aperture_diameter
         self._array_configuration_matrix = instrument.array_configuration_matrix
@@ -101,6 +103,7 @@ class Director():
         self._detector_integration_time = observation_mode.detector_integration_time
         self._device = self._get_device(gpu)
         self._differential_outputs = instrument.differential_outputs
+        self._extra_memory = extra_memory
         self._gpu = gpu
         self._grid_size = simulation.grid_size
         self._has_amplitude_perturbations = simulation.has_amplitude_perturbations
@@ -504,6 +507,9 @@ class Director():
                      * len(self._sources))
 
         available_memory = get_available_memory(self._device)
+
+        if self._extra_memory:
+            available_memory /= 2
 
         # Divisor with 10% safety margin
         divisor = int(np.ceil(data_size / (available_memory * 0.9)))
