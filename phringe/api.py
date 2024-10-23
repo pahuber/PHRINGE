@@ -360,7 +360,7 @@ class PHRINGE():
             create_directory: bool = True,
             normalize: bool = False,
             detailed: bool = False,
-            extra_memory: bool = False
+            extra_memory: int = 1
     ):
         ...
 
@@ -378,7 +378,7 @@ class PHRINGE():
             create_directory: bool = True,
             normalize: bool = False,
             detailed: bool = False,
-            extra_memory: bool = False
+            extra_memory: int = 1
     ):
         ...
 
@@ -396,7 +396,7 @@ class PHRINGE():
             create_directory: bool = True,
             normalize: bool = False,
             detailed: bool = False,
-            extra_memory: bool = False
+            extra_memory: int = 1
     ):
         """Generate synthetic photometry data and return the total data as an array of shape N_diff_outputs x
         N_spec_channels x N_observation_time_steps.
@@ -413,7 +413,7 @@ class PHRINGE():
         :param create_directory: Whether to create a new directory in the output directory for each run
         :param normalize: Whether to normalize the data to unit RMS along the time axis
         :param detailed: Whether to run in detailed mode, i.e. return all the interferometric outputs
-        :param extra_memory: Whether to use an extra margin for the GPU memory
+        :param extra_memory: Factor to split the calculations into smaller chunks to save memory
         :return: The data as an array or a dictionary of arrays if enable_stats is True
         """
         config_dict = load_config(config_file_path) if config_file_path else None

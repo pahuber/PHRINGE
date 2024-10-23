@@ -81,7 +81,7 @@ class Director():
             gpu: int = None,
             normalize: bool = False,
             detailed: bool = False,
-            extra_memory: bool = False
+            extra_memory: int = 1
     ):
         """Constructor method.
 
@@ -506,10 +506,7 @@ class Director():
                      * 2
                      * len(self._sources))
 
-        available_memory = get_available_memory(self._device)
-
-        if self._extra_memory:
-            available_memory /= 2
+        available_memory = get_available_memory(self._device) / self._extra_memory
 
         # Divisor with 10% safety margin
         divisor = int(np.ceil(data_size / (available_memory * 0.9)))
