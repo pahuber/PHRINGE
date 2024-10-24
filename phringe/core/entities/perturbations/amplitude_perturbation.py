@@ -22,6 +22,7 @@ class AmplitudePerturbation(BasePerturbation, BaseModel):
             number_of_inputs: int,
             modulation_period: float,
             number_of_simulation_time_steps: int,
+            seed: int = None,
             **kwargs
     ) -> Tensor:
         time_series = np.zeros((number_of_inputs, number_of_simulation_time_steps))
@@ -29,10 +30,12 @@ class AmplitudePerturbation(BasePerturbation, BaseModel):
         self.rms = 1 - self.rms
 
         for k in range(number_of_inputs):
+            seed = seed + k if seed is not None else None
             time_series[k] = self._calculate_time_series_from_psd(
                 color_coeff,
                 modulation_period,
                 number_of_simulation_time_steps,
+                seed,
                 zero_centered=False
             )
             time_series[k] = abs(time_series[k])

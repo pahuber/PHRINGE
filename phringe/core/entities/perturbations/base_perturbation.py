@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Any
 
 import numpy as np
+import numpy.random
 from numpy.fft import fftshift
 from numpy.random import normal
 from pydantic import BaseModel, field_validator
@@ -31,6 +32,7 @@ class BasePerturbation(ABC, BaseModel):
             number_of_inputs: int,
             modulation_period: float,
             number_of_simulation_time_steps: int,
+            seed: int = None,
             **kwargs
     ) -> Tensor:
         pass
@@ -50,6 +52,7 @@ class BasePerturbation(ABC, BaseModel):
             coeff: int,
             modulation_period: float,
             number_of_simulation_time_steps: int,
+            seed: int = None,
             zero_centered: bool = True
     ) -> np.ndarray:
 
@@ -57,6 +60,9 @@ class BasePerturbation(ABC, BaseModel):
         freq_cutoff_high = 10e3
         freq = np.linspace(freq_cutoff_low, freq_cutoff_high, number_of_simulation_time_steps)
         omega = 2 * np.pi * freq
+
+        if seed is not None:
+            numpy.random.seed(seed)
 
         ft = normal(loc=0, scale=(1 / omega) ** (coeff / 2)) + 1j * normal(loc=0, scale=(1 / omega) ** (coeff / 2))
 

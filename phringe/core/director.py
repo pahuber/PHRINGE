@@ -210,7 +210,8 @@ class Director():
             self.amplitude_pert_time_series = amplitude_perturbation.get_time_series(
                 self._number_of_inputs,
                 self._modulation_period,
-                len(self.simulation_time_steps)
+                len(self.simulation_time_steps),
+                self._seed
             )
         else:
             self.amplitude_pert_time_series = torch.ones(
@@ -223,6 +224,7 @@ class Director():
                 self._number_of_inputs,
                 self._modulation_period,
                 len(self.simulation_time_steps),
+                self._seed,
                 wavelengths=self._wavelength_bin_centers
             )
         else:
@@ -235,7 +237,8 @@ class Director():
             self.polarization_pert_time_series = polarization_perturbation.get_time_series(
                 self._number_of_inputs,
                 self._modulation_period,
-                len(self.simulation_time_steps)
+                len(self.simulation_time_steps),
+                self._seed
             )
         else:
             self.polarization_pert_time_series = torch.zeros(
@@ -493,7 +496,13 @@ class Director():
         self._amplitude = self._aperture_diameter / 2 * torch.sqrt(
             torch.tensor(self._throughput * self._quantum_efficiency, device=self._device))
 
-        # Calculate differential counts for all sources
+        # Prepare the output tensors
+        counts = torch.zeros(
+            (self._number_of_outputs,
+             len(self._wavelength_bin_centers),
+             len(self.simulation_time_steps)),
+            device=self._device
+        )
         diff_counts = torch.zeros(
             (len(self._differential_outputs),
              len(self._wavelength_bin_centers),
@@ -501,26 +510,15 @@ class Director():
             device=self._device
         )
 
-        if self._detailed:
-            counts = torch.zeros(
-                (self._number_of_outputs,
-                 len(self._wavelength_bin_centers),
-                 len(self.simulation_time_steps)),
-                device=self._device
-            )
-
         # Estimate the data size and slice the time steps to fit the calculations into memory
         data_size = (self._grid_size ** 2
                      * len(self.simulation_time_steps)
                      * len(self._wavelength_bin_centers)
                      * self._number_of_outputs
-                     * 10  # should be 2, but only works with 10 so there you go
+                     * 4  # should be 2, but only works with 6 so there you go
                      * len(self._sources))
 
         available_memory = get_available_memory(self._device) / self._extra_memory
-
-        print(f"Available memory: {available_memory / 1e9} GB")
-        print(f"Data size: {data_size / 1e9} GB")
 
         # Divisor with 10% safety margin
         divisor = int(np.ceil(data_size / (available_memory * 0.9)))
@@ -573,106 +571,46 @@ class Director():
                 else:
                     normalization = self._grid_size ** 2
 
-                if self._detailed:
-                    # Calculate counts of shape (N_outputs x N_wavelengths x N_time_steps) for all time step slices
-                    # Within torch.sum, the shape is (N_wavelengths x N_time_steps x N_pix x N_pix)
+                # Calculate counts of shape (N_outputs x N_wavelengths x N_time_steps) for all time step slices
+                # Within torch.sum, the shape is (N_wavelengths x N_time_steps x N_pix x N_pix)
+                for i in range(self._number_of_outputs):
 
-                    for i in range(self._number_of_outputs):
-                        counts[i, :, it_low:it_high] = torch.poisson((
-                            torch.sum(
-                                r[i](
-                                    self.simulation_time_steps[None, it_low:it_high, None, None],
-                                    self._wavelength_bin_centers[:, None, None, None],
-                                    sky_coordinates_x,
-                                    sky_coordinates_y,
-                                    torch.tensor(self._modulation_period, device=self._device),
-                                    torch.tensor(self.nulling_baseline, device=self._device),
-                                    *[self._amplitude for _ in range(self._number_of_inputs)],
-                                    *[self.amplitude_pert_time_series[k][None, it_low:it_high, None, None] for k in
-                                      range(self._number_of_inputs)],
-                                    *[self.phase_pert_time_series[k][:, it_low:it_high, None, None] for k in
-                                      range(self._number_of_inputs)],
-                                    *[torch.tensor(0, device=self._device) for _ in range(self._number_of_inputs)],
-                                    *[self.polarization_pert_time_series[k][None, it_low:it_high, None, None] for k in
-                                      range(self._number_of_inputs)]
-                                )
-                                * sky_brightness_distribution
-                                / normalization
-                                * self._simulation_time_step_size
-                                * self._wavelength_bin_widths[:, None, None, None], axis=(2, 3)
+                    # Calculate the counts of all outputs only in detailed mode. Else calculate only the ones needed to
+                    # calculate the differential outputs
+                    if not self._detailed and i not in self._differential_outputs.flatten():
+                        continue
+
+                    if self._seed is not None:
+                        torch.manual_seed(self._seed + i)
+
+                    counts[i, :, it_low:it_high] += torch.poisson((
+                        torch.sum(
+                            r[i](
+                                self.simulation_time_steps[None, it_low:it_high, None, None],
+                                self._wavelength_bin_centers[:, None, None, None],
+                                sky_coordinates_x,
+                                sky_coordinates_y,
+                                torch.tensor(self._modulation_period, device=self._device),
+                                torch.tensor(self.nulling_baseline, device=self._device),
+                                *[self._amplitude for _ in range(self._number_of_inputs)],
+                                *[self.amplitude_pert_time_series[k][None, it_low:it_high, None, None] for k in
+                                  range(self._number_of_inputs)],
+                                *[self.phase_pert_time_series[k][:, it_low:it_high, None, None] for k in
+                                  range(self._number_of_inputs)],
+                                *[torch.tensor(0, device=self._device) for _ in range(self._number_of_inputs)],
+                                *[self.polarization_pert_time_series[k][None, it_low:it_high, None, None] for k in
+                                  range(self._number_of_inputs)]
                             )
-                        ))
-
-                    for i in range(len(self._differential_outputs)):
-                        diff_counts[i, :, it_low:it_high] += (
-                                counts[self._differential_outputs[i][0], :, it_low:it_high] -
-                                counts[self._differential_outputs[i][1], :, it_low:it_high]
+                            * sky_brightness_distribution
+                            / normalization
+                            * self._simulation_time_step_size
+                            * self._wavelength_bin_widths[:, None, None, None], axis=(2, 3)
                         )
-                else:
-                    # Calculate counts of shape (N_outputs x N_wavelengths x N_time_steps) for all time step slices
-                    # Within torch.sum, the shape is (N_wavelengths x N_time_steps x N_pix x N_pix)
-                    for i in range(len(self._differential_outputs)):
-                        counts_1 = (
-                            torch.sum(
-                                r[self._differential_outputs[i][0]](
-                                    self.simulation_time_steps[None, it_low:it_high, None, None],
-                                    self._wavelength_bin_centers[:, None, None, None],
-                                    sky_coordinates_x,
-                                    sky_coordinates_y,
-                                    torch.tensor(self._modulation_period, device=self._device),
-                                    torch.tensor(self.nulling_baseline, device=self._device),
-                                    *[self._amplitude for _ in range(self._number_of_inputs)],
-                                    *[self.amplitude_pert_time_series[k][None, it_low:it_high, None, None] for k in
-                                      range(self._number_of_inputs)],
-                                    *[self.phase_pert_time_series[k][:, it_low:it_high, None, None] for k in
-                                      range(self._number_of_inputs)],
-                                    *[torch.tensor(0, device=self._device) for _ in range(self._number_of_inputs)],
-                                    *[self.polarization_pert_time_series[k][None, it_low:it_high, None, None] for k in
-                                      range(self._number_of_inputs)]
-                                )
-                                * sky_brightness_distribution
-                                / normalization
-                                * self._simulation_time_step_size
-                                * self._wavelength_bin_widths[:, None, None, None], axis=(2, 3)
-                            )
-                        )
+                    ))
 
-                        counts_2 = (
-                            torch.sum(
-                                r[self._differential_outputs[i][1]](
-                                    self.simulation_time_steps[None, it_low:it_high, None, None],
-                                    self._wavelength_bin_centers[:, None, None, None],
-                                    sky_coordinates_x,
-                                    sky_coordinates_y,
-                                    torch.tensor(self._modulation_period, device=self._device),
-                                    torch.tensor(self.nulling_baseline, device=self._device),
-                                    *[self._amplitude for _ in range(self._number_of_inputs)],
-                                    *[self.amplitude_pert_time_series[k][None, it_low:it_high, None, None] for k in
-                                      range(self._number_of_inputs)],
-                                    *[self.phase_pert_time_series[k][:, it_low:it_high, None, None] for k in
-                                      range(self._number_of_inputs)],
-                                    *[torch.tensor(0, device=self._device) for _ in range(self._number_of_inputs)],
-                                    *[self.polarization_pert_time_series[k][None, it_low:it_high, None, None] for k in
-                                      range(self._number_of_inputs)]
-                                )
-                                * sky_brightness_distribution
-                                / normalization
-                                * self._simulation_time_step_size
-                                * self._wavelength_bin_widths[:, None, None, None], axis=(2, 3)
-                            )
-                        )
-
-                        diff_counts[i, :, it_low:it_high] += (torch.poisson(counts_1) - torch.poisson(counts_2))
-                        # print(self._amplitude)
-                        # imax = torch.sum(
-                        #     self._amplitude
-                        #     * sky_brightness_distribution
-                        #     / normalization
-                        #     * self._simulation_time_step_size
-                        #     * self._wavelength_bin_widths[:, None, None, None], axis=(2, 3)
-                        # )
-                        #
-                        # self._null_depth = abs(diff_counts / imax.repeat(1, 1000)[None, :, :])
+        # Calculate differential outputs
+        for i in range(len(self._differential_outputs)):
+            diff_counts[i] = counts[self._differential_outputs[i][0]] - counts[self._differential_outputs[i][1]]
 
         # # Bin data to from simulation time steps detector time steps
         binning_factor = int(round(len(self.simulation_time_steps) / len(self._detector_time_steps), 0))

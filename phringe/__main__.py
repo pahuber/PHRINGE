@@ -13,6 +13,14 @@ from phringe.api import PHRINGE
     required=True,
 )
 @click.option(
+    '-s',
+    '--seed',
+    'seed',
+    type=int,
+    help="Seed to use for random number generation.",
+    required=False
+)
+@click.option(
     '-g',
     '--gpu',
     'gpu',
@@ -39,6 +47,7 @@ from phringe.api import PHRINGE
               help="Whether to run in detailed mode.")
 def main(
         config: Path,
+        seed: int = None,
         gpu: tuple = None,
         fits_suffix: str = '',
         fits: bool = True,
@@ -54,6 +63,7 @@ def main(
     phringe = PHRINGE()
     phringe.run(
         config_file_path=Path(config),
+        seed=seed,
         gpu=gpu,
         fits_suffix=fits_suffix,
         write_fits=fits,

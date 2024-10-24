@@ -353,6 +353,7 @@ class PHRINGE():
     def run(
             self,
             config_file_path: Path,
+            seed: int = None,
             gpu: int = None,
             fits_suffix: str = '',
             write_fits: bool = True,
@@ -371,6 +372,7 @@ class PHRINGE():
             instrument: Instrument,
             observation_mode: ObservationMode,
             scene: Scene,
+            seed: int = None,
             gpu: int = None,
             write_fits: bool = True,
             fits_suffix: str = '',
@@ -389,6 +391,7 @@ class PHRINGE():
             instrument: Instrument = None,
             observation_mode: ObservationMode = None,
             scene: Scene = None,
+            seed: int = None,
             gpu: int = None,
             fits_suffix: str = '',
             write_fits: bool = True,
@@ -406,6 +409,7 @@ class PHRINGE():
         :param instrument: The instrument object
         :param observation_mode: The observation mode object
         :param scene: The scene object
+        :param seed: The seed for the random number generator
         :param gpu: Index of the GPU to use
         :param fits_suffix: The suffix for the FITS file
         :param write_fits: Whether to write the data to a FITS file
@@ -430,6 +434,7 @@ class PHRINGE():
             instrument,
             observation_mode,
             scene,
+            seed,
             gpu,
             normalize,
             detailed,
