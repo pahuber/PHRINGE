@@ -78,6 +78,7 @@ class Director():
             instrument: Instrument,
             observation_mode: ObservationMode,
             scene: Scene,
+            seed: int = None,
             gpu: int = None,
             normalize: bool = False,
             detailed: bool = False,
@@ -89,6 +90,7 @@ class Director():
         :param instrument: The instrument
         :param observation_mode: The observation mode
         :param scene: The scene
+        :param seed: The seed
         :param gpu: The GPU
         :param detailed: Whether to run in detailed mode
         :param normalize: Whether to normalize the data to unit RMS along the time axis
@@ -125,6 +127,7 @@ class Director():
         self._perturbations = instrument.get_all_perturbations()
         self._planets = scene.planets
         self._quantum_efficiency = instrument.quantum_efficiency
+        self._seed = seed
         self._simulation_time_step_size = simulation.time_step_size
         self._solar_ecliptic_latitude = observation_mode.solar_ecliptic_latitude
         self._sources = scene.get_all_sources()
@@ -206,7 +209,7 @@ class Director():
         if self._has_amplitude_perturbations:
             self.amplitude_pert_time_series = amplitude_perturbation.get_time_series(
                 self._number_of_inputs,
-                self._total_integration_time,
+                self._modulation_period,
                 len(self.simulation_time_steps)
             )
         else:
@@ -218,7 +221,7 @@ class Director():
         if self._has_phase_perturbations:
             self.phase_pert_time_series = phase_perturbation.get_time_series(
                 self._number_of_inputs,
-                self._total_integration_time,
+                self._modulation_period,
                 len(self.simulation_time_steps),
                 wavelengths=self._wavelength_bin_centers
             )
@@ -231,7 +234,7 @@ class Director():
         if self._has_polarization_perturbations:
             self.polarization_pert_time_series = polarization_perturbation.get_time_series(
                 self._number_of_inputs,
-                self._total_integration_time,
+                self._modulation_period,
                 len(self.simulation_time_steps)
             )
         else:
@@ -498,15 +501,26 @@ class Director():
             device=self._device
         )
 
+        if self._detailed:
+            counts = torch.zeros(
+                (self._number_of_outputs,
+                 len(self._wavelength_bin_centers),
+                 len(self.simulation_time_steps)),
+                device=self._device
+            )
+
         # Estimate the data size and slice the time steps to fit the calculations into memory
         data_size = (self._grid_size ** 2
                      * len(self.simulation_time_steps)
                      * len(self._wavelength_bin_centers)
                      * self._number_of_outputs
-                     * 2
+                     * 10  # should be 2, but only works with 10 so there you go
                      * len(self._sources))
 
         available_memory = get_available_memory(self._device) / self._extra_memory
+
+        print(f"Available memory: {available_memory / 1e9} GB")
+        print(f"Data size: {data_size / 1e9} GB")
 
         # Divisor with 10% safety margin
         divisor = int(np.ceil(data_size / (available_memory * 0.9)))
@@ -562,15 +576,9 @@ class Director():
                 if self._detailed:
                     # Calculate counts of shape (N_outputs x N_wavelengths x N_time_steps) for all time step slices
                     # Within torch.sum, the shape is (N_wavelengths x N_time_steps x N_pix x N_pix)
-                    counts = torch.zeros(
-                        (self._number_of_outputs,
-                         len(self._wavelength_bin_centers),
-                         len(self.simulation_time_steps)),
-                        device=self._device
-                    )
 
                     for i in range(self._number_of_outputs):
-                        counts[i] = (
+                        counts[i, :, it_low:it_high] = (
                             torch.sum(
                                 r[i](
                                     self.simulation_time_steps[None, it_low:it_high, None, None],
@@ -596,8 +604,10 @@ class Director():
                         )
 
                     for i in range(len(self._differential_outputs)):
-                        diff_counts[i, :, it_low:it_high] += (torch.poisson(counts[self._differential_outputs[i][0]]) -
-                                                              torch.poisson(counts[self._differential_outputs[i][1]]))
+                        diff_counts[i, :, it_low:it_high] += (
+                                torch.poisson(counts[self._differential_outputs[i][0], :, it_low:it_high]) -
+                                torch.poisson(counts[self._differential_outputs[i][1], :, it_low:it_high])
+                        )
                 else:
                     # Calculate counts of shape (N_outputs x N_wavelengths x N_time_steps) for all time step slices
                     # Within torch.sum, the shape is (N_wavelengths x N_time_steps x N_pix x N_pix)

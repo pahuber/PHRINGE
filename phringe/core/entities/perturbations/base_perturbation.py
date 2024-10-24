@@ -1,6 +1,9 @@
 from abc import ABC, abstractmethod
 from typing import Any
 
+import numpy as np
+from numpy.fft import fftshift
+from numpy.random import normal
 from pydantic import BaseModel, field_validator
 from pydantic_core.core_schema import ValidationInfo
 from torch import Tensor
@@ -26,7 +29,7 @@ class BasePerturbation(ABC, BaseModel):
     def get_time_series(
             self,
             number_of_inputs: int,
-            total_integration_time: float,
+            modulation_period: float,
             number_of_simulation_time_steps: int,
             **kwargs
     ) -> Tensor:
@@ -41,3 +44,35 @@ class BasePerturbation(ABC, BaseModel):
             case 'brown':
                 coeff = 2
         return coeff
+
+    def _calculate_time_series_from_psd(
+            self,
+            coeff: int,
+            modulation_period: float,
+            number_of_simulation_time_steps: int,
+            zero_centered: bool = True
+    ) -> np.ndarray:
+
+        freq_cutoff_low = 1 / modulation_period
+        freq_cutoff_high = 10e3
+        freq = np.linspace(freq_cutoff_low, freq_cutoff_high, number_of_simulation_time_steps)
+        omega = 2 * np.pi * freq
+
+        ft = normal(loc=0, scale=(1 / omega) ** (coeff / 2)) + 1j * normal(loc=0, scale=(1 / omega) ** (coeff / 2))
+
+        ft_total = np.concatenate((np.conjugate(np.flip(ft)), ft))
+
+        time_series = np.fft.irfft(fftshift(ft_total), n=number_of_simulation_time_steps)
+
+        if not zero_centered:
+            time_series *= self.rms / np.sqrt(np.mean(time_series ** 2))
+        else:
+            time_series /= np.sqrt(np.mean(time_series ** 2))
+            if np.mean(time_series) > 0:
+                time_series -= 1
+            else:
+                time_series += 1
+            time_series /= np.sqrt(np.mean(time_series ** 2))
+            time_series *= self.rms
+
+        return time_series

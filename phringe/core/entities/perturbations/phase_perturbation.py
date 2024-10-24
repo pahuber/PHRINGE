@@ -5,7 +5,6 @@ import torch
 from astropy import units as u
 from pydantic import BaseModel, field_validator
 from pydantic_core.core_schema import ValidationInfo
-from stochastic.processes import ColoredNoise
 from torch import Tensor
 
 from phringe.core.entities.perturbations.base_perturbation import BasePerturbation
@@ -21,20 +20,21 @@ class PhasePerturbation(BasePerturbation, BaseModel):
     def get_time_series(
             self,
             number_of_inputs: int,
-            total_integration_time: float,
+            modulation_period: float,
             number_of_simulation_time_steps: int,
             **kwargs
     ) -> Tensor:
         wavelengths = kwargs['wavelengths']
         number_of_wavelengths = len(wavelengths)
         time_series = np.zeros((number_of_inputs, number_of_wavelengths, number_of_simulation_time_steps))
-
         color_coeff = self._get_color_coeff()
-        noise = ColoredNoise(color_coeff, total_integration_time)
 
         for k in range(number_of_inputs):
-            time_series[k] = noise.sample(number_of_simulation_time_steps - 1)
-            time_series[k] *= self.rms / np.sqrt(np.mean(time_series[k] ** 2))
+            time_series[k] = self._calculate_time_series_from_psd(
+                color_coeff,
+                modulation_period,
+                number_of_simulation_time_steps
+            )
 
         for il, l in enumerate(wavelengths):
             time_series[:, il] = 2 * np.pi * time_series[:, il] / wavelengths[il]
