@@ -578,7 +578,7 @@ class Director():
                     # Within torch.sum, the shape is (N_wavelengths x N_time_steps x N_pix x N_pix)
 
                     for i in range(self._number_of_outputs):
-                        counts[i, :, it_low:it_high] = (
+                        counts[i, :, it_low:it_high] = torch.poisson((
                             torch.sum(
                                 r[i](
                                     self.simulation_time_steps[None, it_low:it_high, None, None],
@@ -601,12 +601,12 @@ class Director():
                                 * self._simulation_time_step_size
                                 * self._wavelength_bin_widths[:, None, None, None], axis=(2, 3)
                             )
-                        )
+                        ))
 
                     for i in range(len(self._differential_outputs)):
                         diff_counts[i, :, it_low:it_high] += (
-                                torch.poisson(counts[self._differential_outputs[i][0], :, it_low:it_high]) -
-                                torch.poisson(counts[self._differential_outputs[i][1], :, it_low:it_high])
+                                counts[self._differential_outputs[i][0], :, it_low:it_high] -
+                                counts[self._differential_outputs[i][1], :, it_low:it_high]
                         )
                 else:
                     # Calculate counts of shape (N_outputs x N_wavelengths x N_time_steps) for all time step slices
