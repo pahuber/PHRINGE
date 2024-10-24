@@ -577,7 +577,7 @@ class Director():
 
                     # Calculate the counts of all outputs only in detailed mode. Else calculate only the ones needed to
                     # calculate the differential outputs
-                    if not self._detailed and i not in self._differential_outputs.flatten():
+                    if not self._detailed and i not in np.array(self._differential_outputs).flatten():
                         continue
 
                     if self._seed is not None:
