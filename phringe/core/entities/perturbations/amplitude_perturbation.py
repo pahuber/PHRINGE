@@ -27,7 +27,6 @@ class AmplitudePerturbation(BasePerturbation, BaseModel):
     ) -> Tensor:
         time_series = np.zeros((number_of_inputs, number_of_simulation_time_steps))
         color_coeff = self._get_color_coeff()
-        self.rms = 1 - self.rms
 
         for k in range(number_of_inputs):
             seed = seed + k if seed is not None else None
