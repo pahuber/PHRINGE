@@ -214,7 +214,7 @@ class Director():
                 self._seed
             )
         else:
-            self.amplitude_pert_time_series = torch.ones(
+            self.amplitude_pert_time_series = torch.zeros(
                 (self._number_of_inputs, len(self.simulation_time_steps)),
                 dtype=torch.float32
             )
