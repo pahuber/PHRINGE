@@ -35,7 +35,7 @@ class AmplitudePerturbation(BasePerturbation, BaseModel):
                 modulation_period,
                 number_of_simulation_time_steps,
                 seed,
-                zero_centered=False
+                zero_centered=True
             )
             time_series[k] = abs(time_series[k])
 

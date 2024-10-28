@@ -362,9 +362,9 @@ class Director():
             dphi[k] = Symbol(f'dphi_{k}', real=True)
             th[k] = Symbol(f'th_{k}', real=True)
             dth[k] = Symbol(f'dth_{k}', real=True)
-            ex[k] = a[k] * da[k] * exp(I * (2 * pi / l * (acm[0, k] * alpha + acm[1, k] * beta) + dphi[k])) * cos(
+            ex[k] = a[k] * (1 - da[k]) * exp(I * (2 * pi / l * (acm[0, k] * alpha + acm[1, k] * beta) + dphi[k])) * cos(
                 th[k] + dth[k])
-            ey[k] = a[k] * da[k] * exp(I * (2 * pi / l * (acm[0, k] * alpha + acm[1, k] * beta) + dphi[k])) * sin(
+            ey[k] = a[k] * (1 - da[k]) * exp(I * (2 * pi / l * (acm[0, k] * alpha + acm[1, k] * beta) + dphi[k])) * sin(
                 th[k] + dth[k])
 
         # Define intensity response and save the symbolic expression
@@ -495,6 +495,12 @@ class Director():
         # Calculate amplitude (assumed to be identical for each collector)
         self._amplitude = self._aperture_diameter / 2 * torch.sqrt(
             torch.tensor(self._throughput * self._quantum_efficiency, device=self._device))
+
+        # # Adjust amplitude perturbation to units of amplitude
+        # self.amplitude_pert_time_series = self.amplitude_pert_time_series * self._amplitude
+        # print(self._amplitude)
+        # plt.plot(self.amplitude_pert_time_series[0].cpu().numpy())
+        # plt.show()
 
         # Prepare the output tensors
         counts = torch.zeros(
