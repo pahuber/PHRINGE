@@ -224,7 +224,7 @@ class Director():
                 self._number_of_inputs,
                 self._modulation_period,
                 len(self.simulation_time_steps),
-                self._seed + self._number_of_inputs,
+                self._seed + self._number_of_inputs if self._seed is not None else None,
                 wavelengths=self._wavelength_bin_centers
             )
         else:
@@ -238,7 +238,7 @@ class Director():
                 self._number_of_inputs,
                 self._modulation_period,
                 len(self.simulation_time_steps),
-                self._seed + 2 * self._number_of_inputs
+                self._seed + 2 * self._number_of_inputs if self._seed is not None else None
             )
         else:
             self.polarization_pert_time_series = torch.zeros(
