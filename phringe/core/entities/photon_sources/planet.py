@@ -158,6 +158,8 @@ class Planet(BasePhotonSource, BaseModel):
             sky_brightness_distribution = torch.zeros(
                 (number_of_wavelength_steps, grid_size, grid_size))
             sky_brightness_distribution[:, self.grid_position[1], self.grid_position[0]] = self.spectral_flux_density
+            self.angular_separation_from_star_x = self.sky_coordinates[0, self.grid_position[1], self.grid_position[0]]
+            self.angular_separation_from_star_y = self.sky_coordinates[1, self.grid_position[1], self.grid_position[0]]
         else:
             sky_brightness_distribution = torch.zeros(
                 (number_of_wavelength_steps, grid_size, grid_size))
