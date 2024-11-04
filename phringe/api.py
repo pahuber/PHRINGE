@@ -433,6 +433,8 @@ class PHRINGE():
         # PHRINGE.run is called several times in a row
         if seed is None:
             seed = np.random.randint(0, 2 ** 32 - 1)
+            torch.manual_seed(seed)
+            np.random.seed(seed)
 
         self._director = Director(
             simulation,
