@@ -22,19 +22,16 @@ class PolarizationPerturbation(BasePerturbation, BaseModel):
             number_of_inputs: int,
             modulation_period: float,
             number_of_simulation_time_steps: int,
-            seed: int = None,
             **kwargs
     ) -> Tensor:
         time_series = np.zeros((number_of_inputs, number_of_simulation_time_steps))
         color_coeff = self._get_color_coeff()
 
         for k in range(number_of_inputs):
-            seed = seed + k if seed is not None else None
             time_series[k] = self._calculate_time_series_from_psd(
                 color_coeff,
                 modulation_period,
-                number_of_simulation_time_steps,
-                seed
+                number_of_simulation_time_steps
             )
 
         return torch.tensor(time_series, dtype=torch.float32)

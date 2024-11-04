@@ -2,7 +2,6 @@ from abc import ABC, abstractmethod
 from typing import Any
 
 import numpy as np
-import numpy.random
 from numpy.random import normal
 from pydantic import BaseModel, field_validator
 from pydantic_core.core_schema import ValidationInfo
@@ -51,17 +50,13 @@ class BasePerturbation(ABC, BaseModel):
             self,
             coeff: int,
             modulation_period: float,
-            number_of_simulation_time_steps: int,
-            seed: int = None
+            number_of_simulation_time_steps: int
     ) -> np.ndarray:
 
         freq_cutoff_low = 1 / modulation_period
         freq_cutoff_high = 1e3
         freq = np.linspace(freq_cutoff_low, freq_cutoff_high, number_of_simulation_time_steps)
         omega = 2 * np.pi * freq
-
-        if seed is not None:
-            numpy.random.seed(seed)
 
         ft = normal(loc=0, scale=(1 / omega) ** (coeff / 2)) + 1j * normal(loc=0, scale=(1 / omega) ** (coeff / 2))
 

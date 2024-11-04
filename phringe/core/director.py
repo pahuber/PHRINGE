@@ -78,7 +78,6 @@ class Director():
             instrument: Instrument,
             observation_mode: ObservationMode,
             scene: Scene,
-            seed: int = None,
             gpu: int = None,
             normalize: bool = False,
             detailed: bool = False,
@@ -127,7 +126,6 @@ class Director():
         self._perturbations = instrument.get_all_perturbations()
         self._planets = scene.planets
         self._quantum_efficiency = instrument.quantum_efficiency
-        self._seed = seed
         self._simulation_time_step_size = simulation.time_step_size
         self._solar_ecliptic_latitude = observation_mode.solar_ecliptic_latitude
         self._sources = scene.get_all_sources()
@@ -210,8 +208,7 @@ class Director():
             self.amplitude_pert_time_series = amplitude_perturbation.get_time_series(
                 self._number_of_inputs,
                 self._modulation_period,
-                len(self.simulation_time_steps),
-                self._seed
+                len(self.simulation_time_steps)
             )
         else:
             self.amplitude_pert_time_series = torch.zeros(
@@ -224,7 +221,6 @@ class Director():
                 self._number_of_inputs,
                 self._modulation_period,
                 len(self.simulation_time_steps),
-                self._seed + self._number_of_inputs if self._seed is not None else None,
                 wavelengths=self._wavelength_bin_centers
             )
         else:
@@ -238,7 +234,6 @@ class Director():
                 self._number_of_inputs,
                 self._modulation_period,
                 len(self.simulation_time_steps),
-                self._seed + 2 * self._number_of_inputs if self._seed is not None else None
             )
         else:
             self.polarization_pert_time_series = torch.zeros(
@@ -579,9 +574,6 @@ class Director():
                     # calculate the differential outputs
                     if not self._detailed and i not in np.array(self._differential_outputs).flatten():
                         continue
-
-                    if self._seed is not None:
-                        torch.manual_seed(self._seed + i)
 
                     counts[i, :, it_low:it_high] += torch.poisson((
                         torch.sum(
