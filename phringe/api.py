@@ -432,9 +432,9 @@ class PHRINGE():
         # If seed is None, set torch and numpy seeds to a random number to prevent the same seed from being used when
         # PHRINGE.run is called several times in a row
         if seed is None:
-            seed = np.random.randint(0, 2 ** 32 - 1)
-            torch.manual_seed(seed)
-            np.random.seed(seed)
+            random_number = np.random.randint(0, 2 ** 32 - 1)
+            torch.manual_seed(random_number)
+            np.random.seed(random_number)
 
         self._director = Director(
             simulation,
