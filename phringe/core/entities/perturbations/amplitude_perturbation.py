@@ -34,9 +34,7 @@ class AmplitudePerturbation(BasePerturbation, BaseModel):
                 color_coeff,
                 modulation_period,
                 number_of_simulation_time_steps,
-                seed,
-                zero_centered=False
+                seed
             )
-            time_series[k] = abs(time_series[k])
 
         return torch.tensor(time_series, dtype=torch.float32)
