@@ -429,6 +429,11 @@ class PHRINGE():
         ) if not observation_mode else observation_mode
         scene = Scene(**config_dict['scene']) if not scene else scene
 
+        # If seed is None, set torch and numpy seeds to a random number to prevent the same seed from being used when
+        # PHRINGE.run is called several times in a row
+        if seed is None:
+            seed = np.random.randint(0, 2 ** 32 - 1)
+
         self._director = Director(
             simulation,
             instrument,
