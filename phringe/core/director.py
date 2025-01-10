@@ -489,7 +489,8 @@ class Director():
 
         # Calculate amplitude (assumed to be identical for each collector)
         self._amplitude = self._aperture_diameter / 2 * torch.sqrt(
-            torch.tensor(self._throughput * self._quantum_efficiency, device=self._device))
+            torch.pi * torch.tensor(self._throughput * self._quantum_efficiency, device=self._device)
+        )
 
         # Prepare the output tensors
         counts = torch.zeros(
@@ -575,7 +576,10 @@ class Director():
                     if not self._detailed and i not in np.array(self._differential_outputs).flatten():
                         continue
 
-                    counts[i, :, it_low:it_high] += torch.poisson((
+                    if self._normalize:
+                        sky_brightness_distribution[sky_brightness_distribution > 0] = 1
+
+                    current_counts = (
                         torch.sum(
                             r[i](
                                 self.simulation_time_steps[None, it_low:it_high, None, None],
@@ -598,7 +602,11 @@ class Director():
                             * self._simulation_time_step_size
                             * self._wavelength_bin_widths[:, None, None, None], axis=(2, 3)
                         )
-                    ))
+                    )
+                    if not self._normalize:
+                        current_counts = torch.poisson(current_counts)
+
+                    counts[i, :, it_low:it_high] += current_counts
 
         # Calculate differential outputs
         for i in range(len(self._differential_outputs)):
@@ -625,5 +633,5 @@ class Director():
         )
         #
         # # Normalize data (used for template creation)
-        if self._normalize:
-            self._data = torch.einsum('ijk, ij->ijk', self._data, 1 / torch.sqrt(torch.mean(self._data ** 2, axis=2)))
+        # if self._normalize:
+        #     self._data = torch.einsum('ijk, ij->ijk', self._data, 1 / torch.sqrt(torch.mean(self._data ** 2, axis=2)))
