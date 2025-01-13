@@ -357,6 +357,7 @@ class PHRINGE():
             gpu: int = None,
             fits_suffix: str = '',
             write_fits: bool = True,
+            write_nifits: bool = False,
             create_copy: bool = True,
             create_directory: bool = True,
             normalize: bool = False,
@@ -375,6 +376,7 @@ class PHRINGE():
             seed: int = None,
             gpu: int = None,
             write_fits: bool = True,
+            write_nifits: bool = False,
             fits_suffix: str = '',
             create_copy: bool = True,
             create_directory: bool = True,
@@ -395,6 +397,7 @@ class PHRINGE():
             gpu: int = None,
             fits_suffix: str = '',
             write_fits: bool = True,
+            write_nifits: bool = False,
             create_copy: bool = True,
             create_directory: bool = True,
             normalize: bool = False,
@@ -413,6 +416,7 @@ class PHRINGE():
         :param gpu: Index of the GPU to use
         :param fits_suffix: The suffix for the FITS file
         :param write_fits: Whether to write the data to a FITS file
+        :param write_nifits: Whether to write the data to a NIFITS file
         :param create_copy: Whether to copy the input files to the output directory
         :param create_directory: Whether to create a new directory in the output directory for each run
         :param normalize: Whether to normalize the data to unit RMS along the time axis
@@ -432,7 +436,7 @@ class PHRINGE():
         # If seed is None, set torch and numpy seeds to a random number to prevent the same seed from being used when
         # PHRINGE.run is called several times in a row
         if seed is None:
-            seed = np.random.randint(0, 2 ** 32 - 1)
+            seed = np.random.randint(0, 2 ** 31 - 1)
         torch.manual_seed(seed)
         np.random.seed(seed)
 
@@ -449,7 +453,7 @@ class PHRINGE():
 
         self._director.run()
 
-        if (write_fits or create_copy) and create_directory:
+        if (write_fits or write_nifits or create_copy) and create_directory:
             output_dir = Path(f'out_{datetime.now().strftime("%Y%m%d_%H%M%S.%f")}')
             output_dir.mkdir(parents=True, exist_ok=True)
         else:
@@ -457,6 +461,9 @@ class PHRINGE():
 
         if write_fits:
             FITSWriter().write(self._director._data, output_dir, fits_suffix)
+
+        if write_nifits:
+            FITSWriter().write_to_nifits(self, output_dir, fits_suffix)
 
         if create_copy:
             if config_file_path:
