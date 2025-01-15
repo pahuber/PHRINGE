@@ -3,11 +3,10 @@
 Welcome to the PHRINGE Docs
 ===========================
 
-**PHRINGE** is a **PH**\ otoelectron counts generato\ **R** for null\ **ING** int\ **E**\ rferometers capable of
-generating synthetic data for space-based nulling interferometers observing exoplanetary systems. It is being developed
-in the context of the `Large Interferometer For Exoplanets (LIFE) <https://www.life-space-mission.com>`_ mission and
-used within `LIFEsimMC <https://www.github.com/pahuber/lifesimmc>`_. `PHRINGE` is written in Python
-and offers the following features:
+**PHRINGE** is a **PH**\ otoelectron counts generato\ **R** for null\ **ING** int\ **E**\ rferometers. It offers
+GPU-accelerated generation of synthetic data for space-based nulling interferometers observing exoplanetary systems.
+`PHRINGE` is being developed in the context of the `Large Interferometer For Exoplanets (LIFE) <https://www.life-space-mission.com>`_
+mission and used within `LIFEsimMC <https://www.github.com/pahuber/lifesimmc>`_. The following features are included:
 
 * Symbolic input of complex amplitude transfer matrix and array positions, ensuring maximum flexibility in instrument architecture modeling
 * Symbolic calculation of instrument intensity response
