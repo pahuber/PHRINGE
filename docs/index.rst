@@ -11,13 +11,11 @@ mission and is used within `LIFEsimMC <https://www.github.com/pahuber/lifesimmc>
 Features
 --------
 
-::
-    **Flexible Instrument Architecture Modeling:**
-    Support for symbolic input of beam combiner matrices and collector positions thanks to the integration of `sympy <https://www.sympy.org>`_
+| **Flexible Instrument Architecture Modeling:**
+| Support for symbolic input of beam combiner matrices and collector positions thanks to the integration of `sympy <https://www.sympy.org>`_
 
-::
-    **Detailed Instrumental Noise Modeling:**
-    Monte Carlo sampled instrument perturbations such as amplitude, phase and polarization rotation errors
+| **Detailed Instrumental Noise Modeling:**
+| Monte Carlo sampled instrument perturbations such as amplitude, phase and polarization rotation errors
 
 ::
     **Custom Astrophysical Scenes:**
