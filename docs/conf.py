@@ -26,7 +26,7 @@ copyright = f'2024, Philipp A. Huber'
 # }
 html_static_path = ['_static']
 html_logo = "_static/phringe_logo.png"
-html_title = "PHRINGE Docs"
+html_title = " "
 html_theme_options = {
     "logo_only": True,  # Show only the logo, not the project name
 }
