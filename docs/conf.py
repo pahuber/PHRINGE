@@ -26,6 +26,7 @@ copyright = f'2024, Philipp A. Huber'
 # }
 html_static_path = ['_static']
 html_logo = "_static/phringe_logo.png"
+html_title = ""
 
 # -- General configuration ---------------------------------------------------
 
