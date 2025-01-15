@@ -5,16 +5,16 @@ Welcome to the PHRINGE Docs
 
 **PHRINGE** is a **PH**\ otoelectron counts generato\ **R** for null\ **ING** int\ **E**\ rferometers. It offers
 GPU-accelerated generation of synthetic data for space-based nulling interferometers observing exoplanetary systems.
-`PHRINGE` is being developed in the context of the `Large Interferometer For Exoplanets (LIFE) <https://www.life-space-mission.com>`_
-mission and used within `LIFEsimMC <https://www.github.com/pahuber/lifesimmc>`_. The following features are included:
+`PHRINGE` is written in Python and has been developed in the context of the `Large Interferometer For Exoplanets (LIFE) <https://www.life-space-mission.com>`_
+mission and is used within `LIFEsimMC <https://www.github.com/pahuber/lifesimmc>`_. The following features are included:
 
-* Symbolic input of complex amplitude transfer matrix and array positions, ensuring maximum flexibility in instrument architecture modeling
-* Symbolic calculation of instrument intensity response
-* Noise models for astrophysical noise sources including stellar, local zodi and exozodi leakage
-* Noise models for instrumental perturbations including amplitude, phase (OPD) and polarization rotation perturbations
-* Export of synthetic data as a NIFITS file, integrating with the `nifits <https://www.github.com/rlaugier/nifits>`_ package
+* **Flexible Instrument Architecture Modeling:** Support for symbolic input of beam combiner matrices and collector positions thanks to the integration of `sympy <https://www.sympy.org>`_
+* **Detailed Instrumental Noise Modeling:** Monte Carlo sampled instrument perturbations such as amplitude, phase and polarization rotation errors
+* **Custom Astrophysical Scenes:** User-specifiable exoplanetary systems with the option for modeling planetary orbital motion
+* **Fast Computations:** Option for GPU-accelerated computations thanks to the integration of `PyTorch <https://pytorch.org>`_
+* **Support for NIFITS Data Standard:**: Option to export synthetic data sets as NIFITS files thanks to the integration of `nifits <https://www.github.com/rlaugier/nifits>`_
 
-
+For questions or other inquiries, please contact the main developer Philipp A. Huber (huberph@phys.ethz.ch).
 
 .. toctree::
    :maxdepth: 2
@@ -34,10 +34,3 @@ mission and used within `LIFEsimMC <https://www.github.com/pahuber/lifesimmc>`_.
    architecture
    api_documentation
 
-
-.. toctree::
-   :maxdepth: 2
-   :caption: About
-   :hidden:
-
-   about
