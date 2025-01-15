@@ -1,7 +1,7 @@
 .. _index:
 
-Welcome to the PHRINGE Documentation
-====================================
+Welcome to the PHRINGE Docs
+===========================
 
 **PHRINGE** is a **PH**\ otoelectron counts generato\ **R** for null\ **ING** int\ **E**\ rferometers capable of
 generating synthetic data for space-based nulling interferometers observing exoplanetary systems. It is being developed
