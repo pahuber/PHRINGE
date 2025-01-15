@@ -1,16 +1,20 @@
 .. _index:
 
-PHRINGE
-=======
+Welcome to the PHRINGE Documentation
+====================================
 
-**PHRINGE** is a **PH**\ otoelectron counts generato\ **R** for null\ **ING** int\ **E**\ rferometers capable of generating
-synthetic data for space-based nulling interferometers. It can simulate the observation of an exoplanetary system and
-generate realistic data in terms of photoelectron counts as a function of wavelength and time, considering both
-astrophysical and instrumental noise sources.
+**PHRINGE** is a **PH**\ otoelectron counts generato\ **R** for null\ **ING** int\ **E**\ rferometers capable of
+generating synthetic data for space-based nulling interferometers observing exoplanetary systems. It is being developed
+in the context of the `Large Interferometer For Exoplanets (LIFE) <https://www.life-space-mission.com>`_ mission and
+used within `LIFEsimMC <https://www.github.com/pahuber/lifesimmc>`_. It is written in Python
+and offers the following features:
 
-.. image:: _static/thumbnail.jpg
-    :alt: First Example
-    :width: 100%
+* Symbolic input of complex amplitude transfer matrix and array positions, ensuring maximum flexibility in architecture modeling
+* Symbolic calculation of instrument intensity response
+* Noise models for astrophysical noise sources including stellar, local zodi and exozodi leakage
+* Noise models for instrumental perturbations including amplitude, phase (OPD) and polarization rotation perturbations
+* Export of synthetic data as a NIFITS file, integrating with the `nifits <https://www.github.com/rlaugier/nifits>`_ package
+
 
 
 .. toctree::
