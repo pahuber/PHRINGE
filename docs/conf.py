@@ -20,10 +20,12 @@ sys.path.insert(0, os.path.abspath('../'))
 project = 'PHRINGE'
 author = 'Philipp A. Huber'
 copyright = f'2024, Philipp A. Huber'
-html_theme_options = {
-    "logo_light": "_static/phringe2.png",
-    "logo_dark": "_static/phringe.png"
-}
+# html_theme_options = {
+#     "logo_light": "_static/phringe2.png",
+#     "logo_dark": "_static/phringe.png"
+# }
+html_static_path = ['_static']
+html_logo = "_static/phringe_logo.png"
 
 # -- General configuration ---------------------------------------------------
 
