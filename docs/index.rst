@@ -13,7 +13,7 @@ Features
 --------
 
 | **Flexible Instrument Architecture Modeling:**
-| Support for symbolic input of beam combiner matrices and collector positions thanks to the integration of `sympy <https://www.sympy.org>`_.
+| Support for symbolic input of beam combiner matrices and collector positions thanks to the integration of `SymPy <https://www.sympy.org>`_.
 
 | **Detailed Instrumental Noise Modeling:**
 | Monte Carlo sampled instrument perturbations such as amplitude, phase and polarization rotation errors.
