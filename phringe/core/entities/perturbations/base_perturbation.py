@@ -10,8 +10,22 @@ from torch import Tensor
 
 
 class BasePerturbation(ABC, BaseModel):
-    rms: str
-    color: str
+    rms: str = None
+    color: str = None
+    _time_series: Any = None
+    _has_manually_set_time_series: bool = False
+    _number_of_inputs: int = None
+    _modulation_period: float = None
+    _number_of_simulation_time_steps: int = None
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        if (
+                (self.rms is not None and self.color is not None and self._time_series is not None) or
+                (self.rms is not None and self.color is None) or
+                (self.rms is None and self.color is not None)
+        ):
+            raise ValueError('Either both the rms and color or only the time series needs to be specified')
 
     @field_validator('color')
     def _validate_color(cls, value: Any, info: ValidationInfo) -> float:
@@ -26,15 +40,15 @@ class BasePerturbation(ABC, BaseModel):
         return value
 
     @abstractmethod
-    def get_time_series(
-            self,
-            number_of_inputs: int,
-            modulation_period: float,
-            number_of_simulation_time_steps: int,
-            seed: int = None,
-            **kwargs
-    ) -> Tensor:
+    def _calculate_time_series(self) -> Tensor:
         pass
+
+    @property
+    def time_series(self) -> Tensor:
+        if self._has_manually_set_time_series:
+            return self._time_series
+        # If not manually set, recalculate to account for potential changes in variables (e.g. modulation period)
+        return self._calculate_time_series()
 
     def _get_color_coeff(self) -> int:
         match self.color:
@@ -73,3 +87,7 @@ class BasePerturbation(ABC, BaseModel):
         time_series *= self.rms
 
         return time_series
+
+    def set_time_series(self, time_series: Any):
+        self._time_series = time_series
+        self._has_manually_set_time_series = True

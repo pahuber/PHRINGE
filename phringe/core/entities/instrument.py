@@ -6,8 +6,10 @@ import torch
 from astropy import units as u
 from pydantic import BaseModel, field_validator
 from pydantic_core.core_schema import ValidationInfo
+from sympy import symbols, Symbol, exp, I, pi, cos, sin, Abs, lambdify, sqrt
 from torch import Tensor
 
+from phringe.core.entities.base_entity import BaseEntity
 from phringe.core.entities.perturbations.amplitude_perturbation import AmplitudePerturbation
 from phringe.core.entities.perturbations.base_perturbation import BasePerturbation
 from phringe.core.entities.perturbations.phase_perturbation import PhasePerturbation
@@ -16,12 +18,12 @@ from phringe.io.validators import validate_quantity_units
 
 
 class _Perturbations(BaseModel):
-    amplitude_perturbation: AmplitudePerturbation
-    phase_perturbation: PhasePerturbation
-    polarization_perturbation: PolarizationPerturbation
+    amplitude: AmplitudePerturbation = None
+    phase: PhasePerturbation = None
+    polarization: PolarizationPerturbation = None
 
 
-class Instrument(BaseModel):
+class Instrument(BaseModel, BaseEntity):
     """Class representing the instrument.
 
     :param amplitude_perturbation_lower_limit: The lower limit of the amplitude perturbation
@@ -55,12 +57,44 @@ class Instrument(BaseModel):
     sep_at_max_mod_eff: Any
     aperture_diameter: str
     spectral_resolving_power: int
-    wavelength_range_lower_limit: str
-    wavelength_range_upper_limit: str
+    wavelength_min: str
+    wavelength_max: str
     throughput: float
     quantum_efficiency: float
-    perturbations: _Perturbations
+    perturbations: _Perturbations = None
     field_of_view: Any = None
+    response: Any = None
+    number_of_inputs: int = None
+    number_of_outputs: int = None
+
+    # _modulation_period: float = None
+    # _number_of_simulation_time_steps: Any = None
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        self.number_of_inputs = self.complex_amplitude_transfer_matrix.shape[1]
+        self.number_of_outputs = self.complex_amplitude_transfer_matrix.shape[0]
+        self.response = self.get_lambdafied_response()
+
+        # Set the attributes that are required for the time series calculation
+        if self.perturbations.amplitude is not None:
+            self.perturbations.amplitude._number_of_inputs = self.number_of_inputs
+        if self.perturbations.phase is not None:
+            self.perturbations.phase._number_of_inputs = self.number_of_inputs
+        if self.perturbations.polarization is not None:
+            self.perturbations.polarization._number_of_inputs = self.number_of_inputs
+
+    # def __setattr__(self, name, value):
+    #     super().__setattr__(name, value)  # Set the attribute
+    #
+    #     # if name == '_instrument' and self._instrument is not None:
+    #     #     self._instrument._phringe = self
+    #     if name == '_modulation_period':
+    #         if self.perturbations.amplitude is not None:
+    #             self.perturbations.amplitude._modulation_period = value
+    #     if name == '_number_of_simulation_time_steps':
+    #         if self.perturbations.amplitude is not None:
+    #             self.perturbations.amplitude._number_of_simulation_time_steps = value
 
     @field_validator('aperture_diameter')
     def _validate_aperture_diameter(cls, value: Any, info: ValidationInfo) -> Tensor:
@@ -95,8 +129,8 @@ class Instrument(BaseModel):
         """
         return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,)).si.value
 
-    @field_validator('wavelength_range_lower_limit')
-    def _validate_wavelength_range_lower_limit(cls, value: Any, info: ValidationInfo) -> float:
+    @field_validator('wavelength_min')
+    def _validate_wavelength_min(cls, value: Any, info: ValidationInfo) -> float:
         """Validate the wavelength range lower limit input.
 
         :param value: Value given as input
@@ -105,8 +139,8 @@ class Instrument(BaseModel):
         """
         return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,)).si.value
 
-    @field_validator('wavelength_range_upper_limit')
-    def _validate_wavelength_range_upper_limit(cls, value: Any, info: ValidationInfo) -> float:
+    @field_validator('wavelength_max')
+    def _validate_wavelength_max(cls, value: Any, info: ValidationInfo) -> float:
         """Validate the wavelength range upper limit input.
 
         :param value: Value given as input
@@ -144,31 +178,73 @@ class Instrument(BaseModel):
         return torch.concatenate((self.wavelength_bin_centers - self.wavelength_bin_widths / 2,
                                   self.wavelength_bin_centers[-1:] + self.wavelength_bin_widths[-1:] / 2))
 
+    def add_perturbation(self, perturbation: BasePerturbation):
+        # Set the attributes that are required for the time series calculation
+        perturbation.__number_of_inputs = self.number_of_inputs
+        # perturbation.__modulation_period = self._modulation_period
+        # perturbation.__number_of_simulation_time_steps = self._number_of_simulation_time_steps
+
+        if isinstance(perturbation, AmplitudePerturbation):
+            self.perturbations.amplitude = perturbation
+        elif isinstance(perturbation, PhasePerturbation):
+            self.perturbations.phase = perturbation
+        elif isinstance(perturbation, PolarizationPerturbation):
+            self.perturbations.polarization = perturbation
+
+    def remove_perturbation(self, perturbation: BasePerturbation):
+        if isinstance(perturbation, AmplitudePerturbation):
+            self.perturbations.amplitude = None
+        elif isinstance(perturbation, PhasePerturbation):
+            self.perturbations.phase = None
+        elif isinstance(perturbation, PolarizationPerturbation):
+            self.perturbations.polarization = None
+
+    def _get_amplitude(self, device: torch.device) -> Tensor:
+        return self.aperture_diameter / 2 * torch.sqrt(
+            torch.tensor(self.throughput * self.quantum_efficiency, device=device)
+        )
+
     def _get_wavelength_bins(self) -> Tuple[np.ndarray, np.ndarray]:
         """Return the wavelength bin centers and widths. The wavelength bin widths are calculated starting from the
         wavelength lower range. As a consequence, the uppermost wavelength bin might be smaller than anticipated.
 
         :return: A tuple containing the wavelength bin centers and widths
         """
-        current_minimum_wavelength = self.wavelength_range_lower_limit
+        current_minimum_wavelength = self.wavelength_min
         wavelength_bin_centers = []
         wavelength_bin_widths = []
 
-        while current_minimum_wavelength <= self.wavelength_range_upper_limit:
+        while current_minimum_wavelength <= self.wavelength_max:
             center_wavelength = current_minimum_wavelength / (1 - 1 / (2 * self.spectral_resolving_power))
             bin_width = 2 * (center_wavelength - current_minimum_wavelength)
-            if (center_wavelength + bin_width / 2 <= self.wavelength_range_upper_limit):
+            if (center_wavelength + bin_width / 2 <= self.wavelength_max):
                 wavelength_bin_centers.append(center_wavelength)
                 wavelength_bin_widths.append(bin_width)
                 current_minimum_wavelength = center_wavelength + bin_width / 2
             else:
-                last_bin_width = self.wavelength_range_upper_limit - current_minimum_wavelength
-                last_center_wavelength = self.wavelength_range_upper_limit - last_bin_width / 2
+                last_bin_width = self.wavelength_max - current_minimum_wavelength
+                last_center_wavelength = self.wavelength_max - last_bin_width / 2
                 wavelength_bin_centers.append(last_center_wavelength)
                 wavelength_bin_widths.append(last_bin_width)
                 break
         return torch.asarray(wavelength_bin_centers, dtype=torch.float32), torch.asarray(wavelength_bin_widths,
                                                                                          dtype=torch.float32)
+
+    def add_perturbation(self, perturbation: BasePerturbation):
+        if isinstance(perturbation, AmplitudePerturbation):
+            self.perturbations.amplitude_perturbation = perturbation
+        elif isinstance(perturbation, PhasePerturbation):
+            self.perturbations.phase_perturbation = perturbation
+        elif isinstance(perturbation, PolarizationPerturbation):
+            self.perturbations.polarization_perturbation = perturbation
+
+    def remove_perturbation(self, perturbation: BasePerturbation):
+        if isinstance(perturbation, AmplitudePerturbation):
+            self.perturbations.amplitude_perturbation = None
+        elif isinstance(perturbation, PhasePerturbation):
+            self.perturbations.phase_perturbation = None
+        elif isinstance(perturbation, PolarizationPerturbation):
+            self.perturbations.polarization_perturbation = None
 
     def get_all_perturbations(self) -> list[BasePerturbation]:
         """Return all perturbations.
@@ -180,3 +256,89 @@ class Instrument(BaseModel):
             self.perturbations.phase_perturbation,
             self.perturbations.polarization_perturbation
         ]
+
+    def get_lambdafied_response(self):
+        # Define symbols for symbolic expressions
+        catm = self.complex_amplitude_transfer_matrix
+        acm = self.array_configuration_matrix
+        ex = {}
+        ey = {}
+        a = {}
+        da = {}
+        dphi = {}
+        th = {}
+        dth = {}
+        t, tm, b, l, alpha, beta = symbols('t tm b l alpha beta')
+
+        # Define complex amplitudes
+        for k in range(self.number_of_inputs):
+            a[k] = Symbol(f'a_{k}', real=True)
+            da[k] = Symbol(f'da_{k}', real=True)
+            dphi[k] = Symbol(f'dphi_{k}', real=True)
+            th[k] = Symbol(f'th_{k}', real=True)
+            dth[k] = Symbol(f'dth_{k}', real=True)
+            ex[k] = a[k] * sqrt(pi) * (da[k] + 1) * exp(
+                I * (2 * pi / l * (acm[0, k] * alpha + acm[1, k] * beta) + dphi[k])) * cos(
+                th[k] + dth[k])
+            ey[k] = a[k] * sqrt(pi) * (da[k] + 1) * exp(
+                I * (2 * pi / l * (acm[0, k] * alpha + acm[1, k] * beta) + dphi[k])) * sin(
+                th[k] + dth[k])
+
+        # Define intensity response and save the symbolic expression
+        r = {}
+        rx = {}
+        ry = {}
+        r_torch = {}
+        r_numpy = {}
+
+        self._symbolic_intensity_response = {}
+        for j in range(self.number_of_outputs):
+            rx[j] = 0
+            ry[j] = 0
+            for k in range(self.number_of_inputs):
+                rx[j] += catm[j, k] * ex[k]
+                ry[j] += catm[j, k] * ey[k]
+            r[j] = Abs(rx[j]) ** 2 + Abs(ry[j]) ** 2
+            self._symbolic_intensity_response[j] = r[j]
+
+        # Compile the intensity response functions for numerical calculations and save the lambdified functions
+        def _torch_sqrt(x):
+            if not isinstance(x, torch.Tensor):
+                x = torch.tensor(x)
+            return torch.sqrt(x)
+
+        torch_func_dict = {
+            'sin': torch.sin,
+            'cos': torch.cos,
+            'exp': torch.exp,
+            'log': torch.log,
+            'sqrt': _torch_sqrt
+        }
+
+        self._diff_ir_torch = {}
+        self._diff_ir_numpy = {}
+
+        for i in range(len(self.differential_outputs)):
+            # Lambdify differential output for torch
+            self._diff_ir_torch[i] = lambdify(
+                [t, l, alpha, beta, tm, b, *a.values(), *da.values(), *dphi.values(), *th.values(), *dth.values(), ],
+                r[self.differential_outputs[i][0]] - r[self.differential_outputs[i][1]],
+                [torch_func_dict]
+            )
+
+            # Lambdify differential output for numpy
+            self._diff_ir_numpy[i] = lambdify(
+                [t, l, alpha, beta, tm, b, *a.values(), *da.values(), *dphi.values(), *th.values(), *dth.values(), ],
+                r[self.differential_outputs[i][0]] - r[self.differential_outputs[i][1]],
+                'numpy'
+            )
+
+        for j in range(self.number_of_outputs):
+            # Lambdify intensity response for torch
+            r[j] = lambdify(
+                [t, l, alpha, beta, tm, b, *a.values(), *da.values(), *dphi.values(), *th.values(), *dth.values(), ],
+                r[j],
+                [torch_func_dict]
+            )
+
+        return r

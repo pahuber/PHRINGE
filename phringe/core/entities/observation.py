@@ -7,7 +7,7 @@ from pydantic_core.core_schema import ValidationInfo
 from phringe.io.validators import validate_quantity_units
 
 
-class ObservationMode(BaseModel):
+class Observation(BaseModel):
     """Class representing the observation mode.
 
     :param solar_ecliptic_latitude: The solar ecliptic latitude
