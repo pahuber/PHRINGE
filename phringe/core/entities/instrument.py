@@ -9,7 +9,6 @@ from pydantic_core.core_schema import ValidationInfo
 from sympy import symbols, Symbol, exp, I, pi, cos, sin, Abs, lambdify, sqrt
 from torch import Tensor
 
-from phringe.core.entities.base_entity import BaseEntity
 from phringe.core.entities.perturbations.amplitude_perturbation import AmplitudePerturbation
 from phringe.core.entities.perturbations.base_perturbation import BasePerturbation
 from phringe.core.entities.perturbations.phase_perturbation import PhasePerturbation
@@ -23,7 +22,7 @@ class _Perturbations(BaseModel):
     polarization: PolarizationPerturbation = None
 
 
-class Instrument(BaseModel, BaseEntity):
+class Instrument(BaseModel):
     """Class representing the instrument.
 
     :param amplitude_perturbation_lower_limit: The lower limit of the amplitude perturbation
@@ -66,6 +65,7 @@ class Instrument(BaseModel, BaseEntity):
     response: Any = None
     number_of_inputs: int = None
     number_of_outputs: int = None
+    _device: Any = None
 
     # _modulation_period: float = None
     # _number_of_simulation_time_steps: Any = None
@@ -79,10 +79,13 @@ class Instrument(BaseModel, BaseEntity):
         # Set the attributes that are required for the time series calculation
         if self.perturbations.amplitude is not None:
             self.perturbations.amplitude._number_of_inputs = self.number_of_inputs
+            self.perturbations.amplitude._device = self._device
         if self.perturbations.phase is not None:
             self.perturbations.phase._number_of_inputs = self.number_of_inputs
+            self.perturbations.phase._device = self._device
         if self.perturbations.polarization is not None:
             self.perturbations.polarization._number_of_inputs = self.number_of_inputs
+            self.perturbations.polarization._device = self._device
 
     # def __setattr__(self, name, value):
     #     super().__setattr__(name, value)  # Set the attribute
@@ -179,10 +182,8 @@ class Instrument(BaseModel, BaseEntity):
                                   self.wavelength_bin_centers[-1:] + self.wavelength_bin_widths[-1:] / 2))
 
     def add_perturbation(self, perturbation: BasePerturbation):
-        # Set the attributes that are required for the time series calculation
         perturbation.__number_of_inputs = self.number_of_inputs
-        # perturbation.__modulation_period = self._modulation_period
-        # perturbation.__number_of_simulation_time_steps = self._number_of_simulation_time_steps
+        perturbation.__device = self._device
 
         if isinstance(perturbation, AmplitudePerturbation):
             self.perturbations.amplitude = perturbation
@@ -228,7 +229,8 @@ class Instrument(BaseModel, BaseEntity):
                 wavelength_bin_widths.append(last_bin_width)
                 break
         return torch.asarray(wavelength_bin_centers, dtype=torch.float32), torch.asarray(wavelength_bin_widths,
-                                                                                         dtype=torch.float32)
+                                                                                         dtype=torch.float32,
+                                                                                         device=self._device)
 
     def add_perturbation(self, perturbation: BasePerturbation):
         if isinstance(perturbation, AmplitudePerturbation):

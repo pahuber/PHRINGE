@@ -4,7 +4,6 @@ import torch
 from numpy import ndarray
 from torch import Tensor
 
-from phringe.core.entities.base_entity import BaseEntity
 from phringe.core.entities.configuration import Configuration
 from phringe.core.entities.instrument import Instrument
 from phringe.core.entities.observation import Observation
@@ -16,26 +15,29 @@ class PHRINGE:
     Main PHRINGE class.
     """
 
-    def __init__(self, seed: int = None, gpu: int = None, device: torch.device = None, time_step_size: float = 100):
+    def __init__(
+            self,
+            seed: int = None,
+            gpu: int = None,
+            device: torch.device = None,
+            grid_size=40,
+            time_step_size: float = 100
+    ):
         self._device = self._get_device(gpu) if device is None else device
         self._instrument = None
         self._observation = None
         self._scene = None
         self.seed = seed
+        self._grid_size = grid_size
         self._time_step_size = time_step_size
         self._simulation_time_steps = None
+        self._detector_time_steps = None
 
     def __setattr__(self, name, value):
-        super().__setattr__(name, value)  # Set the attribute
-
-        # if name == '_instrument' and self._instrument is not None:
-        #     self._instrument._phringe = self
+        super().__setattr__(name, value)
+        # Attributes derived from _observation
         try:
             self._instrument.perturbations.amplitude._modulation_period = value.modulation_period
-        except (AttributeError, TypeError):
-            pass
-        try:
-            self._instrument.perturbations.amplitude._number_of_simulation_time_steps = len(self.simulation_time_steps)
         except (AttributeError, TypeError):
             pass
         try:
@@ -43,15 +45,29 @@ class PHRINGE:
         except (AttributeError, TypeError):
             pass
         try:
-            self._instrument.perturbations.phase._number_of_simulation_time_steps = len(self.simulation_time_steps)
+            self._instrument.perturbations.polarization._modulation_period = value.modulation_period
         except (AttributeError, TypeError):
             pass
+
+        # Attributes derived from _instrument
         try:
             self._instrument.perturbations.phase._wavelengths = value.wavelength_bin_centers
         except (AttributeError, TypeError):
             pass
+        for source in self._scene.get_all_sources():
+            try:
+                source._wavelength_bin_centers = value.wavelength_bin_centers
+            except (AttributeError, TypeError):
+                pass
+
+        # Attributes derived from _simulation_time_steps
         try:
-            self._instrument.perturbations.polarization._modulation_period = value.modulation_period
+            self._instrument.perturbations.amplitude._number_of_simulation_time_steps = len(
+                self.simulation_time_steps)
+        except (AttributeError, TypeError):
+            pass
+        try:
+            self._instrument.perturbations.phase._number_of_simulation_time_steps = len(self.simulation_time_steps)
         except (AttributeError, TypeError):
             pass
         try:
@@ -61,11 +77,21 @@ class PHRINGE:
             pass
 
     @property
+    def detector_time_steps(self):
+        return torch.linspace(
+            0,
+            self._observation.total_integration_time,
+            int(self._observation.total_integration_time / self._observation.detector_integration_time),
+            device=self._device
+        ) if self._observation is not None else None
+
+    @property
     def simulation_time_steps(self):
         return torch.linspace(
             0,
             self._observation.total_integration_time,
-            int(self._observation.total_integration_time / self._time_step_size)
+            int(self._observation.total_integration_time / self._time_step_size),
+            device=self._device
         ) if self._observation is not None else None
 
     def _get_device(self, gpu: int) -> torch.device:
@@ -83,7 +109,31 @@ class PHRINGE:
         return device
 
     def get_counts(self):
-        pass
+        # Move all tensors to the device
+        self._instrument.aperture_diameter = self._instrument.aperture_diameter.to(self._device)
+        # self._detector_time_steps = self._detector_time_steps.to(self._device)
+        # self._instrument.wavelength_bin_centers = self._instrument.wavelength_bin_centers.to(self._device)
+        # self._wavelength_bin_widths = self._wavelength_bin_widths.to(self._device)
+        # self._wavelength_bin_edges = self._wavelength_bin_edges.to(self._device)
+        # self.amplitude_pert_time_series = self.amplitude_pert_time_series.to(self._device)
+        # self.phase_pert_time_series = self.phase_pert_time_series.to(self._device)
+        # self.polarization_pert_time_series = self.polarization_pert_time_series.to(self._device)
+        # self._simulation_time_step_size = self._simulation_time_step_size.to(self._device)
+        # self.simulation_time_steps = self.simulation_time_steps.to(self._device)
+
+        for index_source, source in enumerate(self._sources):
+            self._sources[index_source].spectral_flux_density = source.spectral_flux_density.to(self._device)
+            self._sources[index_source].sky_coordinates = source.sky_coordinates.to(self._device)
+            self._sources[index_source].sky_brightness_distribution = source.sky_brightness_distribution.to(
+                self._device)
+
+        # Prepare output tensor
+        counts = torch.zeros(
+            (self._instrument.number_of_outputs,
+             len(self._instrument.wavelength_bin_centers),
+             len(self._simulation_time_steps)),
+            device=self._device
+        )
 
     def get_diff_counts(self, index):
         pass
@@ -102,7 +152,8 @@ class PHRINGE:
         if self._observation is None:
             raise ValueError('An observation is required for the instrument response')
 
-        # Calculate perturbation time series unless they have been manually set by the user
+        # Calculate perturbation time series unless they have been manually set by the user. If no seed is set, the time
+        # series are different every time this method is called
         amplitude_pert_time_series = self._instrument.perturbations.amplitude.time_series if self._instrument.perturbations.amplitude is not None else torch.zeros(
             (self._instrument.number_of_inputs, len(self.simulation_time_steps)),
             dtype=torch.float32
@@ -140,7 +191,10 @@ class PHRINGE:
         return response
 
     def get_source_spectrum(self, source_name):
-        pass
+        if self._instrument is None:
+            raise ValueError('An instrument is required to get the source spectrum')
+        if self._scene is None:
+            raise ValueError('A scene is required to get the source spectrum')
 
     def get_time_steps(self):
         pass
@@ -154,7 +208,8 @@ class PHRINGE:
     def get_wavelength_bin_edges(self):
         pass
 
-    def set(self, entity: BaseEntity):
+    def set(self, entity: Union[Instrument, Observation, Scene, Configuration]):
+        entity._device = self._device
         if isinstance(entity, Instrument):
             self._instrument = entity
         elif isinstance(entity, Observation):
@@ -167,7 +222,3 @@ class PHRINGE:
             self._scene = Scene(**entity.dict['scene'])
         else:
             raise ValueError(f'Invalid entity type: {type(entity)}')
-
-        # Pass along attributes that are required class internally
-        # self._instrument._modulation_period = self._observation.modulation_period if self._observation is not None else None
-        # self._instrument._number_of_simulation_time_steps = 10000 if self._observation is not None else None  # TODO: Make this a parameter

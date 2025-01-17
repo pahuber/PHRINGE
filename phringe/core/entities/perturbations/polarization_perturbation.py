@@ -33,4 +33,4 @@ class PolarizationPerturbation(BasePerturbation, BaseModel):
                 self._number_of_simulation_time_steps
             )
 
-        return torch.tensor(time_series, dtype=torch.float32)
+        return torch.tensor(time_series, dtype=torch.float32, device=self._device)

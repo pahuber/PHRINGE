@@ -1,10 +1,12 @@
+from typing import Any
+
 from pydantic import BaseModel
 
-from phringe.core.entities.photon_sources.base_photon_source import BasePhotonSource
-from phringe.core.entities.photon_sources.exozodi import Exozodi
-from phringe.core.entities.photon_sources.local_zodi import LocalZodi
-from phringe.core.entities.photon_sources.planet import Planet
-from phringe.core.entities.photon_sources.star import Star
+from phringe.core.entities.sources.base_source import BasePhotonSource
+from phringe.core.entities.sources.exozodi import Exozodi
+from phringe.core.entities.sources.local_zodi import LocalZodi
+from phringe.core.entities.sources.planet import Planet
+from phringe.core.entities.sources.star import Star
 
 
 class Scene(BaseModel):
@@ -19,6 +21,7 @@ class Scene(BaseModel):
     planets: list[Planet]
     exozodi: Exozodi
     local_zodi: LocalZodi = None
+    _device: Any = None
 
     # spectrum_list: Any = None
     # maximum_simulation_wavelength_steps: Any = None

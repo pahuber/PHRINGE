@@ -11,7 +11,7 @@ from pydantic import BaseModel, field_validator
 from pydantic_core.core_schema import ValidationInfo
 from torch import Tensor
 
-from phringe.core.entities.photon_sources.base_photon_source import BasePhotonSource
+from phringe.core.entities.sources.base_source import BasePhotonSource
 from phringe.io.txt_reader import TXTReader
 from phringe.io.validators import validate_quantity_units
 from phringe.util.grid import get_index_of_closest_value, get_meshgrid

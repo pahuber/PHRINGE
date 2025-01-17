@@ -11,11 +11,11 @@ from torch import Tensor
 from phringe.core.director import Director
 from phringe.core.entities.instrument import Instrument
 from phringe.core.entities.observation import Observation
-from phringe.core.entities.photon_sources.exozodi import Exozodi
-from phringe.core.entities.photon_sources.local_zodi import LocalZodi
-from phringe.core.entities.photon_sources.planet import Planet
 from phringe.core.entities.scene import Scene
 from phringe.core.entities.simulation import Simulation
+from phringe.core.entities.sources.exozodi import Exozodi
+from phringe.core.entities.sources.local_zodi import LocalZodi
+from phringe.core.entities.sources.planet import Planet
 from phringe.io.fits_writer import FITSWriter
 from phringe.io.utils import load_config
 

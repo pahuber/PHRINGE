@@ -11,13 +11,13 @@ from phringe.core.entities.observation import Observation
 from phringe.core.entities.perturbations.amplitude_perturbation import AmplitudePerturbation
 from phringe.core.entities.perturbations.phase_perturbation import PhasePerturbation
 from phringe.core.entities.perturbations.polarization_perturbation import PolarizationPerturbation
-from phringe.core.entities.photon_sources.base_photon_source import BasePhotonSource
-from phringe.core.entities.photon_sources.exozodi import Exozodi
-from phringe.core.entities.photon_sources.local_zodi import LocalZodi
-from phringe.core.entities.photon_sources.planet import Planet
-from phringe.core.entities.photon_sources.star import Star
 from phringe.core.entities.scene import Scene
 from phringe.core.entities.simulation import Simulation
+from phringe.core.entities.sources.base_source import BasePhotonSource
+from phringe.core.entities.sources.exozodi import Exozodi
+from phringe.core.entities.sources.local_zodi import LocalZodi
+from phringe.core.entities.sources.planet import Planet
+from phringe.core.entities.sources.star import Star
 from phringe.util.memory import get_available_memory
 
 

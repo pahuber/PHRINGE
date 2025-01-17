@@ -6,7 +6,7 @@ from astropy import units as u
 from astropy.coordinates import SkyCoord, GeocentricTrueEcliptic
 from pydantic import BaseModel
 
-from phringe.core.entities.photon_sources.base_photon_source import BasePhotonSource
+from phringe.core.entities.sources.base_source import BasePhotonSource
 from phringe.util.grid import get_meshgrid
 from phringe.util.helpers import Coordinates
 from phringe.util.spectrum import create_blackbody_spectrum

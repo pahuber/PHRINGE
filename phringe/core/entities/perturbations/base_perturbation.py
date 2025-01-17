@@ -12,6 +12,7 @@ from torch import Tensor
 class BasePerturbation(ABC, BaseModel):
     rms: str = None
     color: str = None
+    _device: Any = None
     _time_series: Any = None
     _has_manually_set_time_series: bool = False
     _number_of_inputs: int = None

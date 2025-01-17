@@ -37,4 +37,4 @@ class PhasePerturbation(BasePerturbation, BaseModel):
         for il, l in enumerate(self._wavelengths):
             time_series[:, il] = 2 * np.pi * time_series[:, il] / l
 
-        return torch.tensor(time_series, dtype=torch.float32)
+        return torch.tensor(time_series, dtype=torch.float32, device=self._device)

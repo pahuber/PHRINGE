@@ -5,7 +5,7 @@ import torch
 from astropy.units import Quantity
 from pydantic import BaseModel
 
-from phringe.core.entities.photon_sources.base_photon_source import BasePhotonSource
+from phringe.core.entities.sources.base_source import BasePhotonSource
 from phringe.util.grid import get_radial_map, get_meshgrid
 from phringe.util.helpers import Coordinates
 from phringe.util.spectrum import create_blackbody_spectrum

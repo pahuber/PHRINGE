@@ -23,6 +23,11 @@ class BasePhotonSource(ABC, BaseModel):
     sky_brightness_distribution: Any = None
     sky_coordinates: Any = None
     solid_angle: Any = None
+    _wavelength_bin_centers: Any = None
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        self.prepare()
 
     @abstractmethod
     def _get_spectral_flux_density(self, wavelength_steps: np.ndarray, grid_size: int,
@@ -73,7 +78,7 @@ class BasePhotonSource(ABC, BaseModel):
         """
         pass
 
-    def prepare(self, wavelength_bin_centers, grid_size, **kwargs):
+    def prepare(self):
         """Prepare the photon source1 for the simulation. This method is called before the simulation starts and can be
         used to pre-calculate values that are constant over time and/or wavelength.
 

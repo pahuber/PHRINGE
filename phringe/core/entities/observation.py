@@ -28,6 +28,7 @@ class Observation(BaseModel):
     optimized_differential_output: int
     optimized_star_separation: str
     optimized_wavelength: str
+    _device: Any = None
 
     @field_validator('detector_integration_time')
     def _validate_detector_integration_time(cls, value: Any, info: ValidationInfo) -> float:
