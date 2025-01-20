@@ -6,13 +6,13 @@ from astropy import units as u
 from astropy.coordinates import SkyCoord, GeocentricTrueEcliptic
 from pydantic import BaseModel
 
-from phringe.core.entities.sources.base_source import BasePhotonSource
+from phringe.core.entities.sources.base_source import CachedAttributesSource
 from phringe.util.grid import get_meshgrid
 from phringe.util.helpers import Coordinates
 from phringe.util.spectrum import create_blackbody_spectrum
 
 
-class LocalZodi(BasePhotonSource, BaseModel):
+class LocalZodi(CachedAttributesSource, BaseModel):
     """Class representation of a local zodi."""
     name: str = 'LocalZodi'
 
@@ -31,11 +31,11 @@ class LocalZodi(BasePhotonSource, BaseModel):
         relative_ecliptic_longitude = ecliptic_longitude - solar_ecliptic_latitude
         return ecliptic_latitude, relative_ecliptic_longitude
 
-    def _get_sky_brightness_distribution(self, grid_size: int, **kwargs) -> np.ndarray:
+    def _sky_brightness_distribution(self, grid_size: int, **kwargs) -> np.ndarray:
         grid = torch.ones((grid_size, grid_size), dtype=torch.float32)
         return torch.einsum('i, jk ->ijk', self.spectral_flux_density, grid)
 
-    def _get_sky_coordinates(self, grid_size, **kwargs) -> Coordinates:
+    def _sky_coordinates(self, grid_size, **kwargs) -> Coordinates:
         number_of_wavelength_steps = kwargs['number_of_wavelength_steps']
         field_of_view = kwargs['field_of_view']
 
@@ -47,7 +47,7 @@ class LocalZodi(BasePhotonSource, BaseModel):
                 (sky_coordinates_at_fov[0], sky_coordinates_at_fov[1]))
         return sky_coordinates
 
-    def _get_solid_angle(self, **kwargs) -> float:
+    def solid_angle(self, **kwargs) -> float:
         """Calculate and return the solid angle of the local zodi.
 
         :param kwargs: Additional keyword arguments
@@ -55,7 +55,7 @@ class LocalZodi(BasePhotonSource, BaseModel):
         """
         return kwargs['field_of_view'] ** 2
 
-    def _get_spectral_energy_distribution(
+    def _spectral_energy_distribution(
             self,
             wavelength_steps: np.ndarray,
             grid_size: int,

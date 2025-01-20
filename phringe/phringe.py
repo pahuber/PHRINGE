@@ -137,8 +137,8 @@ class PHRINGE:
 
         for index_source, source in enumerate(self._sources):
             self._sources[index_source].spectral_flux_density = source.spectral_flux_density.to(self._device)
-            self._sources[index_source].sky_coordinates = source.sky_coordinates.to(self._device)
-            self._sources[index_source].sky_brightness_distribution = source.sky_brightness_distribution.to(
+            self._sources[index_source]._sky_coordinates = source._sky_coordinates.to(self._device)
+            self._sources[index_source]._sky_brightness_distribution = source._sky_brightness_distribution.to(
                 self._device)
 
         # Prepare output tensor
@@ -154,13 +154,19 @@ class PHRINGE:
 
     def get_instrument_response(
             self,
-            times: Union[float, ndarray, Tensor],
-            wavelengths: Union[float, ndarray, Tensor],
-            x_coordinates: Union[float, ndarray, Tensor],
-            y_coordinates: Union[float, ndarray, Tensor],
-            nulling_baseline: float,
+            times: Union[float, ndarray, Tensor] = None,
+            wavelengths: Union[float, ndarray, Tensor] = None,
+            x_coordinates: Union[float, ndarray, Tensor] = None,
+            y_coordinates: Union[float, ndarray, Tensor] = None,
+            nulling_baseline: float = None,
             output_as_numpy: bool = False,
     ):
+
+        times = self.simulation_time_steps if times is None else times
+        wavelengths = self._instrument.wavelength_bin_centers if wavelengths is None else wavelengths
+        x_coordinates = self._scene.star._sky_coordinates[0] if x_coordinates is None else x_coordinates
+        y_coordinates = self._scene.star._sky_coordinates[1] if y_coordinates is None else y_coordinates
+        nulling_baseline = 14
 
         # An observation object needs to be added to the PHRINGE object before the instrument response can be calculated
         if self._observation is None:
@@ -168,16 +174,16 @@ class PHRINGE:
 
         # Calculate perturbation time series unless they have been manually set by the user. If no seed is set, the time
         # series are different every time this method is called
-        amplitude_pert_time_series = self._instrument.perturbations.amplitude.time_series if self._instrument.perturbations.amplitude is not None else torch.zeros(
+        amplitude_pert_time_series = self._instrument.perturbations.amplitude._time_series if self._instrument.perturbations.amplitude is not None else torch.zeros(
             (self._instrument.number_of_inputs, len(self.simulation_time_steps)),
             dtype=torch.float32
         )
-        phase_pert_time_series = self._instrument.perturbations.phase.time_series if self._instrument.perturbations.phase is not None else torch.zeros(
+        phase_pert_time_series = self._instrument.perturbations.phase._time_series if self._instrument.perturbations.phase is not None else torch.zeros(
             (self._instrument.number_of_inputs, len(self._instrument.wavelength_bin_centers),
              len(self.simulation_time_steps)),
             dtype=torch.float32
         )
-        polarization_pert_time_series = self._instrument.perturbations.polarization.time_series if self._instrument.perturbations.polarization is not None else torch.zeros(
+        polarization_pert_time_series = self._instrument.perturbations.polarization._time_series if self._instrument.perturbations.polarization is not None else torch.zeros(
             (self._instrument.number_of_inputs, len(self.simulation_time_steps)),
             dtype=torch.float32
         )
@@ -204,11 +210,8 @@ class PHRINGE:
 
         return response
 
-    def get_source_spectrum(self, source_name):
-        if self._instrument is None:
-            raise ValueError('An instrument is required to get the source spectrum')
-        if self._scene is None:
-            raise ValueError('A scene is required to get the source spectrum')
+    def get_source_spectrum(self, source_name: str):
+        return self._scene.get_source(source_name)._spectral_energy_distribution
 
     def get_time_steps(self):
         pass
@@ -242,3 +245,8 @@ class PHRINGE:
             self._instrument._observation = self._observation
             self._instrument._number_of_simulation_time_steps = len(
                 self.simulation_time_steps) if self.simulation_time_steps is not None else None
+
+        if self._scene is not None:
+            self._scene._device = self._device
+            self._scene._instrument = self._instrument
+            self._scene._grid_size = self._grid_size

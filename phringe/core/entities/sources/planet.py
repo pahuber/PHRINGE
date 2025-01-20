@@ -1,4 +1,5 @@
-from typing import Any, Tuple
+import warnings
+from typing import Any, Tuple, Union
 
 import numpy as np
 import spectres
@@ -11,14 +12,15 @@ from pydantic import BaseModel, field_validator
 from pydantic_core.core_schema import ValidationInfo
 from torch import Tensor
 
-from phringe.core.entities.sources.base_source import BasePhotonSource
+from phringe.core.entities.sources.base_source import CachedAttributesSource
 from phringe.io.txt_reader import TXTReader
 from phringe.io.validators import validate_quantity_units
 from phringe.util.grid import get_index_of_closest_value, get_meshgrid
 from phringe.util.spectrum import create_blackbody_spectrum
+from phringe.util.warning import MissingRequirementWarning
 
 
-class Planet(BasePhotonSource, BaseModel):
+class Planet(CachedAttributesSource, BaseModel):
     """Class representation of a planet.
 
     :param name: The name of the planet
@@ -130,48 +132,91 @@ class Planet(BasePhotonSource, BaseModel):
         """
         return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.deg,)).si.value
 
-    def _get_sky_brightness_distribution(self, grid_size: int, **kwargs) -> np.ndarray:
+    @property
+    def _sky_brightness_distribution(self) -> np.ndarray:
         """Calculate and return the sky brightness distribution.
 
         :param context: The context
         :return: The sky brightness distribution
         """
-        has_planet_orbital_motion = kwargs.get('has_planet_orbital_motion')
-        number_of_wavelength_steps = kwargs.get('number_of_wavelength_steps')
+        has_planet_orbital_motion = False  # TODO: Implement this
+        # number_of_wavelength_steps = kwargs.get('number_of_wavelength_steps')
 
-        if has_planet_orbital_motion:
+        if self._instrument is None:
+            warnings.warn(MissingRequirementWarning('Instrument', 'sky_brightness_distribution'))
+            return None
+
+        if self._grid_size is None:
+            warnings.warn(MissingRequirementWarning('grid size', 'sky_brightness_distribution'))
+            return None
+
+        return self._get_cached_value(
+            attribute_name='sky_brightness_distribution',
+            compute_func=self._calculate_sky_brightness_distribution(),
+            required_attributes=(
+                self._instrument,
+                self._grid_size
+            )
+        )
+
+    def _calculate_sky_brightness_distribution(self):
+
+        # if has_planet_orbital_motion:
+        #     sky_brightness_distribution = torch.zeros(
+        #     (len(self.sky_coordinates[1]),
+        #
+        #     number_of_wavelength_steps, grid_size,
+        #     grid_size))
+        #     for index_time in range(len(self.sky_coordinates[1])):
+        #         sky_coordinates = self.sky_coordinates[:, index_time]
+        #     index_x = get_index_of_closest_value_numpy(
+        #         sky_coordinates[0, :, 0],
+        #         self.angular_separation_from_star_x[index_time]
+        #     )
+        #     index_y = get_index_of_closest_value_numpy(
+        #         sky_coordinates[1, 0, :],
+        #         self.angular_separation_from_star_y[index_time]
+        #     )
+        #     sky_brightness_distribution[index_time, :, index_x, index_y] = self.spectral_flux_density
+
+        number_of_wavelength_steps = len(self._instrument.wavelength_bin_centers)
+        if self.grid_position:
             sky_brightness_distribution = torch.zeros(
-                (len(self.sky_coordinates[1]), number_of_wavelength_steps, grid_size,
-                 grid_size))
-            for index_time in range(len(self.sky_coordinates[1])):
-                sky_coordinates = self.sky_coordinates[:, index_time]
-                index_x = get_index_of_closest_value_numpy(
-                    sky_coordinates[0, :, 0],
-                    self.angular_separation_from_star_x[index_time]
-                )
-                index_y = get_index_of_closest_value_numpy(
-                    sky_coordinates[1, 0, :],
-                    self.angular_separation_from_star_y[index_time]
-                )
-                sky_brightness_distribution[index_time, :, index_x, index_y] = self.spectral_flux_density
-        elif self.grid_position:
-            sky_brightness_distribution = torch.zeros(
-                (number_of_wavelength_steps, grid_size, grid_size))
+                (number_of_wavelength_steps, self._grid_size, self._grid_size))
             sky_brightness_distribution[:, self.grid_position[1], self.grid_position[0]] = self.spectral_flux_density
-            self.angular_separation_from_star_x = self.sky_coordinates[0, self.grid_position[1], self.grid_position[0]]
-            self.angular_separation_from_star_y = self.sky_coordinates[1, self.grid_position[1], self.grid_position[0]]
+            self.angular_separation_from_star_x = self._sky_coordinates[0, self.grid_position[1], self.grid_position[0]]
+            self.angular_separation_from_star_y = self._sky_coordinates[1, self.grid_position[1], self.grid_position[0]]
         else:
             sky_brightness_distribution = torch.zeros(
-                (number_of_wavelength_steps, grid_size, grid_size))
+                (number_of_wavelength_steps, self._grid_size, self._grid_size))
             # device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-            index_x = get_index_of_closest_value(torch.asarray(self.sky_coordinates[0, :, 0]),
+            index_x = get_index_of_closest_value(torch.asarray(self._sky_coordinates[0, :, 0]),
                                                  self.angular_separation_from_star_x[0])
-            index_y = get_index_of_closest_value(torch.asarray(self.sky_coordinates[1, 0, :]),
+            index_y = get_index_of_closest_value(torch.asarray(self._sky_coordinates[1, 0, :]),
                                                  self.angular_separation_from_star_y[0])
             sky_brightness_distribution[:, index_x, index_y] = self.spectral_flux_density
         return sky_brightness_distribution
 
-    def _get_sky_coordinates(self, grid_size, **kwargs) -> np.ndarray:
+    @property
+    def _sky_coordinates(self) -> Union[Tensor, None]:
+        if self._instrument is None:
+            warnings.warn(MissingRequirementWarning('Instrument', 'sky_brightness_distribution'))
+            return None
+
+        if self._grid_size is None:
+            warnings.warn(MissingRequirementWarning('grid size', 'sky_brightness_distribution'))
+            return None
+
+        return self._get_cached_value(
+            attribute_name='sky_coordinates',
+            compute_func=self._get_sky_coordinates,
+            required_attributes=(
+                self._instrument,
+                self._grid_size
+            )
+        )
+
+    def _get_sky_coordinates(self) -> np.ndarray:
         """Calculate and return the sky coordinates of the planet. Choose the maximum extent of the sky coordinates such
         that a circle with the radius of the planet's separation lies well (i.e. + 2x 20%) within the map. The construction
         of such a circle will be important to estimate the noise during signal extraction.
@@ -205,7 +250,7 @@ class Planet(BasePhotonSource, BaseModel):
             return self._get_coordinates(grid_size, time_steps[0], 0, has_planet_orbital_motion, star_distance,
                                          star_mass)
 
-    def _get_solid_angle(self, **kwargs) -> float:
+    def solid_angle(self, **kwargs) -> float:
         """Calculate and return the solid angle of the planet.
 
         :param kwargs: The keyword arguments
@@ -214,7 +259,7 @@ class Planet(BasePhotonSource, BaseModel):
         star_distance = kwargs.get('star_distance')
         return torch.pi * (self.radius / star_distance) ** 2
 
-    def _get_spectral_energy_distribution(self, wavelength_bin_centers: Tensor, grid_size: int, **kwargs) -> Tensor:
+    def _spectral_energy_distribution(self, wavelength_bin_centers: Tensor, grid_size: int, **kwargs) -> Tensor:
         """Calculate the spectral flux density of the planet in units of ph s-1 m-3. Use the previously generated
         reference spectrum in units of ph s-1 m-3 sr-1 and the solid angle to calculate it and bin it to the
         simulation wavelength bin centers.

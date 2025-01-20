@@ -13,7 +13,7 @@ from phringe.core.entities.perturbations.phase_perturbation import PhasePerturba
 from phringe.core.entities.perturbations.polarization_perturbation import PolarizationPerturbation
 from phringe.core.entities.scene import Scene
 from phringe.core.entities.simulation import Simulation
-from phringe.core.entities.sources.base_source import BasePhotonSource
+from phringe.core.entities.sources.base_source import CachedAttributesSource
 from phringe.core.entities.sources.exozodi import Exozodi
 from phringe.core.entities.sources.local_zodi import LocalZodi
 from phringe.core.entities.sources.planet import Planet
@@ -241,7 +241,7 @@ class Director():
 
     def _prepare_sources(
             self,
-            sources: list[BasePhotonSource],
+            sources: list[CachedAttributesSource],
             simulation_time_steps: Tensor,
             simulation_wavelength_bin_centers: Tensor,
             grid_size: int,
@@ -252,7 +252,7 @@ class Director():
             has_stellar_leakage: bool,
             has_local_zodi_leakage: bool,
             has_exozodi_leakage: bool
-    ) -> list[BasePhotonSource]:
+    ) -> list[CachedAttributesSource]:
         """Return the spectral flux densities, brightness distributions and coordinates for all sources in the scene.
 
         :param sources: The sources in the scene
@@ -390,8 +390,8 @@ class Director():
 
         for index_source, source in enumerate(self._sources):
             self._sources[index_source].spectral_flux_density = source.spectral_flux_density.to(self._device)
-            self._sources[index_source].sky_coordinates = source.sky_coordinates.to(self._device)
-            self._sources[index_source].sky_brightness_distribution = source.sky_brightness_distribution.to(
+            self._sources[index_source].sky_coordinates = source._sky_coordinates.to(self._device)
+            self._sources[index_source].sky_brightness_distribution = source._sky_brightness_distribution.to(
                 self._device)
 
         # Calculate amplitude (assumed to be identical for each collector)
@@ -450,27 +450,27 @@ class Director():
 
                 # Broadcast sky coordinates to the correct shape
                 if isinstance(source, LocalZodi) or isinstance(source, Exozodi):
-                    sky_coordinates_x = source.sky_coordinates[0][:, None, :, :]
-                    sky_coordinates_y = source.sky_coordinates[1][:, None, :, :]
+                    sky_coordinates_x = source._sky_coordinates[0][:, None, :, :]
+                    sky_coordinates_y = source._sky_coordinates[1][:, None, :, :]
                 elif isinstance(source, Planet) and self._has_planet_orbital_motion:
-                    sky_coordinates_x = source.sky_coordinates[0][None, it_low:it_high, :, :]
-                    sky_coordinates_y = source.sky_coordinates[1][None, it_low:it_high, :, :]
+                    sky_coordinates_x = source._sky_coordinates[0][None, it_low:it_high, :, :]
+                    sky_coordinates_y = source._sky_coordinates[1][None, it_low:it_high, :, :]
                 else:
-                    sky_coordinates_x = source.sky_coordinates[0][None, None, :, :]
-                    sky_coordinates_y = source.sky_coordinates[1][None, None, :, :]
+                    sky_coordinates_x = source._sky_coordinates[0][None, None, :, :]
+                    sky_coordinates_y = source._sky_coordinates[1][None, None, :, :]
 
                 # Broadcast sky brightness distribution to the correct shape
                 if isinstance(source, Planet) and self._has_planet_orbital_motion:
-                    sky_brightness_distribution = source.sky_brightness_distribution.swapaxes(0, 1)
+                    sky_brightness_distribution = source._sky_brightness_distribution.swapaxes(0, 1)
                 else:
-                    sky_brightness_distribution = source.sky_brightness_distribution[:, None, :, :]
+                    sky_brightness_distribution = source._sky_brightness_distribution[:, None, :, :]
 
                 # Define normalization
                 if isinstance(source, Planet):
                     normalization = 1
                 elif isinstance(source, Star):
                     normalization = len(
-                        source.sky_brightness_distribution[0][source.sky_brightness_distribution[0] > 0])
+                        source._sky_brightness_distribution[0][source._sky_brightness_distribution[0] > 0])
                 else:
                     normalization = self._grid_size ** 2
 

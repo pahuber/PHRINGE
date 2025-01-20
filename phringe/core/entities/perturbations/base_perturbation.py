@@ -1,5 +1,5 @@
 import warnings
-from abc import abstractmethod
+from abc import abstractmethod, ABC
 from typing import Any, Union
 
 import numpy as np
@@ -9,11 +9,11 @@ from pydantic_core.core_schema import ValidationInfo
 from scipy.fft import irfft, fftshift
 from torch import Tensor
 
-from phringe.core.base_entity import BaseEntity
+from phringe.core.cached_attributes_entity import CachedAttributesEntity
 from phringe.util.warning import MissingRequirementWarning
 
 
-class BasePerturbation(BaseModel, BaseEntity):
+class CachedAttributesPerturbation(ABC, BaseModel, CachedAttributesEntity):
     rms: str = None
     color: str = None
     _device: Any = None
@@ -56,7 +56,7 @@ class BasePerturbation(BaseModel, BaseEntity):
             return None
 
         return self._get_cached_value(
-            attribute_name='__time_series',
+            attribute_name='_time_series',
             compute_func=self._calculate_time_series,
             required_attributes=(
                 self._number_of_inputs,

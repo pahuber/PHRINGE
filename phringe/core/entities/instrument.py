@@ -8,9 +8,9 @@ from pydantic_core.core_schema import ValidationInfo
 from sympy import symbols, Symbol, exp, I, pi, cos, sin, Abs, lambdify, sqrt
 from torch import Tensor
 
-from phringe.core.base_entity import BaseEntity
+from phringe.core.cached_attributes_entity import CachedAttributesEntity
 from phringe.core.entities.perturbations.amplitude_perturbation import AmplitudePerturbation
-from phringe.core.entities.perturbations.base_perturbation import BasePerturbation
+from phringe.core.entities.perturbations.base_perturbation import CachedAttributesPerturbation
 from phringe.core.entities.perturbations.phase_perturbation import PhasePerturbation
 from phringe.core.entities.perturbations.polarization_perturbation import PolarizationPerturbation
 from phringe.io.validators import validate_quantity_units
@@ -22,7 +22,7 @@ class _Perturbations(BaseModel):
     polarization: PolarizationPerturbation = None
 
 
-class Instrument(BaseModel, BaseEntity):
+class Instrument(BaseModel, CachedAttributesEntity):
     """Class representing the instrument.
 
     :param amplitude_perturbation_lower_limit: The lower limit of the amplitude perturbation
@@ -202,7 +202,7 @@ class Instrument(BaseModel, BaseEntity):
             torch.asarray(wavelength_bin_widths, dtype=torch.float32, device=self._device)
         )
 
-    def add_perturbation(self, perturbation: BasePerturbation):
+    def add_perturbation(self, perturbation: CachedAttributesPerturbation):
         perturbation._device = self._device
         perturbation._number_of_inputs = self.number_of_inputs
         perturbation._number_of_simulation_time_steps = self._number_of_simulation_time_steps
@@ -216,7 +216,7 @@ class Instrument(BaseModel, BaseEntity):
         elif isinstance(perturbation, PolarizationPerturbation):
             self.perturbations.polarization = perturbation
 
-    def remove_perturbation(self, perturbation: BasePerturbation):
+    def remove_perturbation(self, perturbation: CachedAttributesPerturbation):
         if isinstance(perturbation, AmplitudePerturbation):
             self.perturbations.amplitude = None
         elif isinstance(perturbation, PhasePerturbation):
@@ -224,7 +224,7 @@ class Instrument(BaseModel, BaseEntity):
         elif isinstance(perturbation, PolarizationPerturbation):
             self.perturbations.polarization = None
 
-    def get_all_perturbations(self) -> list[BasePerturbation]:
+    def get_all_perturbations(self) -> list[CachedAttributesPerturbation]:
         """Return all perturbations.
 
         :return: A list containing all perturbations

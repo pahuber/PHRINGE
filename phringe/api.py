@@ -132,14 +132,14 @@ class PHRINGE():
         source = [source for source in self._director._sources if source.name == source_name][0]
 
         if isinstance(source, LocalZodi) or isinstance(source, Exozodi):
-            sky_coordinates_x = source.sky_coordinates[0][:, None, :, :]
-            sky_coordinates_y = source.sky_coordinates[1][:, None, :, :]
+            sky_coordinates_x = source._sky_coordinates[0][:, None, :, :]
+            sky_coordinates_y = source._sky_coordinates[1][:, None, :, :]
         elif isinstance(source, Planet) and self._director._has_planet_orbital_motion:
-            sky_coordinates_x = source.sky_coordinates[0][None, :, :, :]
-            sky_coordinates_y = source.sky_coordinates[1][None, :, :, :]
+            sky_coordinates_x = source._sky_coordinates[0][None, :, :, :]
+            sky_coordinates_y = source._sky_coordinates[1][None, :, :, :]
         else:
-            sky_coordinates_x = source.sky_coordinates[0][None, None, :, :]
-            sky_coordinates_y = source.sky_coordinates[1][None, None, :, :]
+            sky_coordinates_x = source._sky_coordinates[0][None, None, :, :]
+            sky_coordinates_y = source._sky_coordinates[1][None, None, :, :]
 
         num_in = self._director._number_of_inputs
         num_out = self._director._number_of_outputs

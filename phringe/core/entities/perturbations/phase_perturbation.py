@@ -9,12 +9,12 @@ from pydantic import field_validator
 from pydantic_core.core_schema import ValidationInfo
 from torch import Tensor
 
-from phringe.core.entities.perturbations.base_perturbation import BasePerturbation
+from phringe.core.entities.perturbations.base_perturbation import CachedAttributesPerturbation
 from phringe.io.validators import validate_quantity_units
 from phringe.util.warning import MissingRequirementWarning
 
 
-class PhasePerturbation(BasePerturbation):
+class PhasePerturbation(CachedAttributesPerturbation):
     _wavelength_bin_center: Any = None
 
     @field_validator('rms')
@@ -37,7 +37,6 @@ class PhasePerturbation(BasePerturbation):
             return None
 
         return self._get_cached_value(
-            attribute_name='__time_series',
             compute_func=self._calculate_time_series,
             required_attributes=(
                 self._number_of_inputs,

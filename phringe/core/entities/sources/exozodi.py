@@ -5,13 +5,13 @@ import torch
 from astropy.units import Quantity
 from pydantic import BaseModel
 
-from phringe.core.entities.sources.base_source import BasePhotonSource
+from phringe.core.entities.sources.base_source import CachedAttributesSource
 from phringe.util.grid import get_radial_map, get_meshgrid
 from phringe.util.helpers import Coordinates
 from phringe.util.spectrum import create_blackbody_spectrum
 
 
-class Exozodi(BasePhotonSource, BaseModel):
+class Exozodi(CachedAttributesSource, BaseModel):
     """Class representation of an exozodi.
     """
     name: str = 'Exozodi'
@@ -19,13 +19,13 @@ class Exozodi(BasePhotonSource, BaseModel):
     # inclination: Any
     field_of_view_in_au_radial_maps: Any = None
 
-    def _get_sky_brightness_distribution(self, grid_size: int, **kwargs) -> np.ndarray:
+    def _sky_brightness_distribution(self, grid_size: int, **kwargs) -> np.ndarray:
         star_luminosity = kwargs['star_luminosity']
         reference_radius_in_au = torch.sqrt(torch.tensor(star_luminosity))
         surface_maps = self.level * 7.12e-8 * (self.field_of_view_in_au_radial_maps / reference_radius_in_au) ** (-0.34)
         return surface_maps * self.spectral_flux_density
 
-    def _get_sky_coordinates(self, grid_size: int, **kwargs) -> Coordinates:
+    def _sky_coordinates(self, grid_size: int, **kwargs) -> Coordinates:
         field_of_view = kwargs['field_of_view']
         sky_coordinates = torch.zeros((2, len(field_of_view), grid_size, grid_size), dtype=torch.float32)
 
@@ -38,7 +38,7 @@ class Exozodi(BasePhotonSource, BaseModel):
                 (sky_coordinates_at_fov[0], sky_coordinates_at_fov[1]))
         return sky_coordinates
 
-    def _get_solid_angle(self, **kwargs) -> float:
+    def solid_angle(self, **kwargs) -> float:
         """Calculate and return the solid angle of the exozodi.
 
         :param kwargs: Additional keyword arguments
@@ -46,7 +46,7 @@ class Exozodi(BasePhotonSource, BaseModel):
         """
         return kwargs['field_of_view'] ** 2
 
-    def _get_spectral_energy_distribution(
+    def _spectral_energy_distribution(
             self,
             wavelength_steps: np.ndarray,
             grid_size: int,

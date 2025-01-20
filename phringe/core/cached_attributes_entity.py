@@ -1,4 +1,4 @@
-class BaseEntity:
+class CachedAttributesEntity:
     """
     A base class that provides a method `_get_cached_value` for caching derived values
     using a signature built from a tuple of dependencies. This allows lazy caching if they dependent attributed do not
@@ -11,6 +11,7 @@ class BaseEntity:
     If the new signature matches the old one, we return the cached value.
     Otherwise, we recalc via `compute_func`.
     """
+    _cache: dict = {}
 
     def _get_cached_value(
             self,
@@ -19,18 +20,20 @@ class BaseEntity:
             required_attributes: tuple
     ):
         """
-        :param attribute_name: The private attribute name storing the cache (e.g. "_derived_cache").
         :param compute_func: A zero-arg function that returns the newly computed derived value.
         :param required_attributes: A tuple of the current dependency values (attributes) that affect the result.
 
         The signature is stored in an attribute named "_sig_{attribute_name}".
         """
+        attribute_name = f'cache_{attribute_name}'
+
         # Derive the signature attribute name from attribute_name
         sig_attribute_name = f"_sig_{attribute_name}"
 
         # Retrieve any existing signature & cached value
         old_sig = getattr(self, sig_attribute_name, None)
-        cached_value = getattr(self, attribute_name, None)
+        cached_value = self._cache.get(attribute_name, None)
+        # getattr(self, attribute_name, None)
 
         # Build the new signature from the current dependencies
         new_sig = tuple(required_attributes)
@@ -43,6 +46,7 @@ class BaseEntity:
         new_value = compute_func()
 
         # Store updated cache and signature
-        setattr(self, attribute_name, new_value)
+        # setattr(self, attribute_name, new_value)
+        self._cache[attribute_name] = new_value
         setattr(self, sig_attribute_name, new_sig)
         return new_value

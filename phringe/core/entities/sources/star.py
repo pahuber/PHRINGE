@@ -1,21 +1,23 @@
+import warnings
 from functools import cached_property
 from typing import Any
 
 import numpy as np
 import torch
 from astropy import units as u
-from pydantic import BaseModel, field_validator
+from pydantic import field_validator
 from pydantic_core.core_schema import ValidationInfo
 from torch import Tensor
 
-from phringe.core.entities.sources.base_source import BasePhotonSource
+from phringe.core.entities.sources.base_source import CachedAttributesSource
 from phringe.io.validators import validate_quantity_units
 from phringe.util.grid import get_meshgrid
 from phringe.util.helpers import Coordinates
 from phringe.util.spectrum import create_blackbody_spectrum
+from phringe.util.warning import MissingRequirementWarning
 
 
-class Star(BasePhotonSource, BaseModel):
+class Star(CachedAttributesSource):
     """Class representation of a star.
 
     :param name: The name of the star
@@ -32,7 +34,7 @@ class Star(BasePhotonSource, BaseModel):
     mass: str
     radius: str
     temperature: str
-    luminosity: str
+    luminosity: str  # TODO: remove luminosity and calculate from radius and temperature
     right_ascension: str
     declination: str
 
@@ -87,12 +89,22 @@ class Star(BasePhotonSource, BaseModel):
         """
         return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.K,)).si.value
 
-    @cached_property
+    @property
     def angular_radius(self) -> float:
         """Return the solid angle covered by the star on the sky.
 
         :return: The solid angle
         """
+        return self._get_cached_value(
+            attribute_name='angular_radius',
+            compute_func=self._get_angular_radius(),
+            required_attributes=(
+                self.radius,
+                self.distance
+            )
+        )
+
+    def _get_angular_radius(self):
         return self.radius / self.distance
 
     @cached_property
@@ -126,18 +138,38 @@ class Star(BasePhotonSource, BaseModel):
         radius_outer = np.sqrt(self.luminosity / incident_stellar_flux_outer)
         return ((radius_outer + radius_inner) / 2 * u.au).si.value
 
-    def _get_sky_brightness_distribution(self, grid_size: int, **kwargs) -> np.ndarray:
-        number_of_wavelength_steps = kwargs['number_of_wavelength_steps']
-        sky_brightness_distribution = torch.zeros((number_of_wavelength_steps, grid_size, grid_size))
-        radius_map = (torch.sqrt(self.sky_coordinates[0] ** 2 + self.sky_coordinates[1] ** 2) <= self.angular_radius)
+    @property
+    def _sky_brightness_distribution(self) -> np.ndarray:
+        if self._instrument is None:
+            warnings.warn(MissingRequirementWarning('Instrument', 'sky_brightness_distribution'))
+            return None
 
-        for index_wavelength in range(len(self.spectral_flux_density)):
-            sky_brightness_distribution[index_wavelength] = radius_map * self.spectral_flux_density[
+        if self._grid_size is None:
+            warnings.warn(MissingRequirementWarning('Grid size', 'sky_brightness_distribution'))
+            return None
+
+        return self._get_cached_value(
+            attribute_name='sky_brightness_distribution',
+            compute_func=self._get_sky_brightness_distribution,
+            required_attributes=(
+                self._instrument,
+                self._grid_size
+            )
+        )
+
+    def _get_sky_brightness_distribution(self):
+        number_of_wavelength_steps = len(self._instrument.wavelength_bin_centers)
+        sky_brightness_distribution = torch.zeros((number_of_wavelength_steps, self._grid_size, self._grid_size))
+        radius_map = (torch.sqrt(self._sky_coordinates[0] ** 2 + self._sky_coordinates[1] ** 2) <= self.angular_radius)
+
+        for index_wavelength in range(len(self._spectral_energy_distribution)):
+            sky_brightness_distribution[index_wavelength] = radius_map * self._spectral_energy_distribution[
                 index_wavelength]
 
         return sky_brightness_distribution
 
-    def _get_sky_coordinates(self, grid_size, **kwargs) -> Coordinates:
+    @property
+    def _sky_coordinates(self) -> Coordinates:
         """Return the sky coordinate maps of the source1. The intensity responses are calculated in a resolution that
         allows the source1 to fill the grid, thus, each source1 needs to define its own sky coordinate map. Add 10% to the
         angular radius to account for rounding issues and make sure the source1 is fully covered within the map.
@@ -145,15 +177,52 @@ class Star(BasePhotonSource, BaseModel):
         :param grid_size: The grid size
         :return: A coordinates object containing the x- and y-sky coordinate maps
         """
-        sky_coordinates = get_meshgrid(2 * (1.05 * self.angular_radius), grid_size)
+        if self._grid_size is None:
+            warnings.warn(MissingRequirementWarning('Grid size', 'sky_brightness_distribution'))
+            return None
+
+        return self._get_cached_value(
+            attribute_name='sky_coordinates',
+            compute_func=self._get_sky_coordinates,
+            required_attributes=(
+                self._grid_size,
+                self.angular_radius
+            )
+        )
+
+    def _get_sky_coordinates(self):
+        sky_coordinates = get_meshgrid(2 * (1.05 * self.angular_radius), self._grid_size)
         return torch.stack((sky_coordinates[0], sky_coordinates[1]))
 
-    def _get_solid_angle(self, **kwargs) -> float:
-        """Return the solid angle of the source1 object.
+    @property
+    def solid_angle(self):
+        return self._get_cached_value(
+            attribute_name='solid_angle',
+            compute_func=self._get_solid_angle,
+            required_attributes=(
+                self.radius,
+                self.distance
+            )
+        )
 
-        :return: The solid angle
-        """
+    def _get_solid_angle(self):
         return np.pi * (self.radius / self.distance) ** 2
 
+    @property
+    def _spectral_energy_distribution(self) -> Tensor:
+        if self._instrument is None:
+            warnings.warn(MissingRequirementWarning('Instrument', 'sky_brightness_distribution'))
+            return None
+
+        return self._get_cached_value(
+            attribute_name='spectral_energy_distribution',
+            compute_func=self._get_spectral_energy_distribution,
+            required_attributes=(
+                self._instrument,
+                self.radius,
+                self.temperature
+            )
+        )
+
     def _get_spectral_energy_distribution(self) -> Tensor:
-        return create_blackbody_spectrum(self.temperature, self._wavelength_bin_centers) * self.solid_angle
+        return create_blackbody_spectrum(self.temperature, self._instrument.wavelength_bin_centers) * self.solid_angle

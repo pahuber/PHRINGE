@@ -7,11 +7,11 @@ from pydantic import field_validator
 from pydantic_core.core_schema import ValidationInfo
 from torch import Tensor
 
-from phringe.core.entities.perturbations.base_perturbation import BasePerturbation
+from phringe.core.entities.perturbations.base_perturbation import CachedAttributesPerturbation
 from phringe.io.validators import validate_quantity_units
 
 
-class PolarizationPerturbation(BasePerturbation):
+class PolarizationPerturbation(CachedAttributesPerturbation):
 
     @field_validator('rms')
     def _validate_rms(cls, value: Any, info: ValidationInfo) -> float:
