@@ -1,9 +1,9 @@
 from typing import Any
 
+import astropy.units as u
 import numpy as np
 import torch
-from astropy import units as u
-from pydantic import BaseModel, field_validator
+from pydantic import field_validator
 from pydantic_core.core_schema import ValidationInfo
 from torch import Tensor
 
@@ -11,7 +11,7 @@ from phringe.core.entities.perturbations.base_perturbation import BasePerturbati
 from phringe.io.validators import validate_quantity_units
 
 
-class PolarizationPerturbation(BasePerturbation, BaseModel):
+class PolarizationPerturbation(BasePerturbation):
 
     @field_validator('rms')
     def _validate_rms(cls, value: Any, info: ValidationInfo) -> float:
@@ -29,7 +29,7 @@ class PolarizationPerturbation(BasePerturbation, BaseModel):
         for k in range(self._number_of_inputs):
             time_series[k] = self._calculate_time_series_from_psd(
                 color_coeff,
-                self._modulation_period,
+                self._observation.modulation_period,
                 self._number_of_simulation_time_steps
             )
 

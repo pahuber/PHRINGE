@@ -1,5 +1,6 @@
-from abc import ABC, abstractmethod
-from typing import Any
+import warnings
+from abc import abstractmethod
+from typing import Any, Union
 
 import numpy as np
 from numpy.random import normal
@@ -8,15 +9,19 @@ from pydantic_core.core_schema import ValidationInfo
 from scipy.fft import irfft, fftshift
 from torch import Tensor
 
+from phringe.core.base_entity import BaseEntity
+from phringe.util.warning import MissingRequirementWarning
 
-class BasePerturbation(ABC, BaseModel):
+
+class BasePerturbation(BaseModel, BaseEntity):
     rms: str = None
     color: str = None
     _device: Any = None
-    _time_series: Any = None
+    __time_series: Any = None
     _has_manually_set_time_series: bool = False
+
     _number_of_inputs: int = None
-    _modulation_period: float = None
+    _observation: Any = None
     _number_of_simulation_time_steps: int = None
 
     def __init__(self, **data):
@@ -40,16 +45,29 @@ class BasePerturbation(ABC, BaseModel):
             raise ValueError(f'{value} is not a valid input for {info.field_name}. Must be one of white, pink, brown.')
         return value
 
+    @property
+    def _time_series(self) -> Union[Tensor, None]:
+        if self._observation is None:
+            warnings.warn(MissingRequirementWarning('Observation', '_time_series'))
+            return None
+
+        if self._number_of_simulation_time_steps is None:
+            warnings.warn(MissingRequirementWarning('Number of simulation time steps', '_time_series'))
+            return None
+
+        return self._get_cached_value(
+            attribute_name='__time_series',
+            compute_func=self._calculate_time_series,
+            required_attributes=(
+                self._number_of_inputs,
+                self._observation.modulation_period if self._observation else None,
+                self._number_of_simulation_time_steps
+            )
+        )
+
     @abstractmethod
     def _calculate_time_series(self) -> Tensor:
         pass
-
-    @property
-    def time_series(self) -> Tensor:
-        if self._has_manually_set_time_series:
-            return self._time_series
-        # If not manually set, recalculate to account for potential changes in variables (e.g. modulation period)
-        return self._calculate_time_series()
 
     def _get_color_coeff(self) -> int:
         match self.color:
@@ -90,5 +108,6 @@ class BasePerturbation(ABC, BaseModel):
         return time_series
 
     def set_time_series(self, time_series: Any):
+        # TODO: implement set time series correctly
         self._time_series = time_series
         self._has_manually_set_time_series = True

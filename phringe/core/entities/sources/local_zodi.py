@@ -55,7 +55,7 @@ class LocalZodi(BasePhotonSource, BaseModel):
         """
         return kwargs['field_of_view'] ** 2
 
-    def _get_spectral_flux_density(
+    def _get_spectral_energy_distribution(
             self,
             wavelength_steps: np.ndarray,
             grid_size: int,

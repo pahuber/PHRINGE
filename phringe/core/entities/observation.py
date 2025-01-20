@@ -1,7 +1,7 @@
 from typing import Any
 
 from astropy import units as u
-from pydantic import BaseModel, field_validator
+from pydantic import field_validator, BaseModel
 from pydantic_core.core_schema import ValidationInfo
 
 from phringe.io.validators import validate_quantity_units

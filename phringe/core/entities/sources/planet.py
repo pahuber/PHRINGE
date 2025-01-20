@@ -214,7 +214,7 @@ class Planet(BasePhotonSource, BaseModel):
         star_distance = kwargs.get('star_distance')
         return torch.pi * (self.radius / star_distance) ** 2
 
-    def _get_spectral_flux_density(self, wavelength_bin_centers: Tensor, grid_size: int, **kwargs) -> Tensor:
+    def _get_spectral_energy_distribution(self, wavelength_bin_centers: Tensor, grid_size: int, **kwargs) -> Tensor:
         """Calculate the spectral flux density of the planet in units of ph s-1 m-3. Use the previously generated
         reference spectrum in units of ph s-1 m-3 sr-1 and the solid angle to calculate it and bin it to the
         simulation wavelength bin centers.

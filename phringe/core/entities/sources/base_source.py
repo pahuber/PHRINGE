@@ -24,14 +24,18 @@ class BasePhotonSource(ABC, BaseModel):
     sky_coordinates: Any = None
     solid_angle: Any = None
     _wavelength_bin_centers: Any = None
+    _grid_size: int = None
 
     def __init__(self, **data):
         super().__init__(**data)
-        self.prepare()
+        # self.prepare()
+
+    # @model_validator(mode="after")
+    # def __post_init__(self):
+    #     self.prepare()
 
     @abstractmethod
-    def _get_spectral_flux_density(self, wavelength_steps: np.ndarray, grid_size: int,
-                                   **kwargs) -> np.ndarray:
+    def _get_spectral_energy_distribution(self) -> np.ndarray:
         """Return the mean spectral flux density of the source1 object for each wavelength.
 
         :param wavelength_steps: The wavelength steps
@@ -86,7 +90,7 @@ class BasePhotonSource(ABC, BaseModel):
         :param grid_size: The grid size
         :param kwargs: Additional keyword arguments
         """
-        self.solid_angle = self._get_solid_angle(**kwargs)
-        self.spectral_flux_density = self._get_spectral_flux_density(wavelength_bin_centers, grid_size, **kwargs)
-        self.sky_coordinates = self._get_sky_coordinates(grid_size, **kwargs)
-        self.sky_brightness_distribution = self._get_sky_brightness_distribution(grid_size, **kwargs)
+        self.solid_angle = self._get_solid_angle()
+        self.spectral_flux_density = self._get_spectral_energy_distribution()
+        self.sky_coordinates = self._get_sky_coordinates()
+        self.sky_brightness_distribution = self._get_sky_brightness_distribution()

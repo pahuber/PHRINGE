@@ -155,10 +155,5 @@ class Star(BasePhotonSource, BaseModel):
         """
         return np.pi * (self.radius / self.distance) ** 2
 
-    def _get_spectral_flux_density(
-            self,
-            wavelength_steps: Tensor,
-            grid_size: int,
-            **kwargs
-    ) -> Tensor:
-        return create_blackbody_spectrum(self.temperature, wavelength_steps) * self.solid_angle
+    def _get_spectral_energy_distribution(self) -> Tensor:
+        return create_blackbody_spectrum(self.temperature, self._wavelength_bin_centers) * self.solid_angle

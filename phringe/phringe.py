@@ -2,6 +2,7 @@ from typing import Union
 
 import torch
 from numpy import ndarray
+from phringe.core.event_manager import EventManager
 from torch import Tensor
 
 from phringe.core.entities.configuration import Configuration
@@ -23,6 +24,7 @@ class PHRINGE:
             grid_size=40,
             time_step_size: float = 100
     ):
+        self._event_manager = EventManager()
         self._device = self._get_device(gpu) if device is None else device
         self._instrument = None
         self._observation = None
@@ -33,48 +35,60 @@ class PHRINGE:
         self._simulation_time_steps = None
         self._detector_time_steps = None
 
-    def __setattr__(self, name, value):
-        super().__setattr__(name, value)
-        # Attributes derived from _observation
-        try:
-            self._instrument.perturbations.amplitude._modulation_period = value.modulation_period
-        except (AttributeError, TypeError):
-            pass
-        try:
-            self._instrument.perturbations.phase._modulation_period = value.modulation_period
-        except (AttributeError, TypeError):
-            pass
-        try:
-            self._instrument.perturbations.polarization._modulation_period = value.modulation_period
-        except (AttributeError, TypeError):
-            pass
-
-        # Attributes derived from _instrument
-        try:
-            self._instrument.perturbations.phase._wavelengths = value.wavelength_bin_centers
-        except (AttributeError, TypeError):
-            pass
-        for source in self._scene.get_all_sources():
-            try:
-                source._wavelength_bin_centers = value.wavelength_bin_centers
-            except (AttributeError, TypeError):
-                pass
-
-        # Attributes derived from _simulation_time_steps
-        try:
-            self._instrument.perturbations.amplitude._number_of_simulation_time_steps = len(
-                self.simulation_time_steps)
-        except (AttributeError, TypeError):
-            pass
-        try:
-            self._instrument.perturbations.phase._number_of_simulation_time_steps = len(self.simulation_time_steps)
-        except (AttributeError, TypeError):
-            pass
-        try:
-            self._instrument.perturbations.polarization._number_of_simulation_time_steps = len(
-                self.simulation_time_steps)
-        except (AttributeError, TypeError):
-            pass
+    # def __setattr__(self, name, value):
+    #     super().__setattr__(name, value)
+    #     # Attributes derived from _observation
+    #     # try:
+    #     #     # link((self._instrument.perturbations.amplitude, '_modulation_period'),
+    #     #     #      (self._observation, 'modulation_period'))
+    #     # except (AttributeError, TypeError):
+    #     #     pass
+    #     # if hasattr(self, '_instrument') and hasattr(self, '_observation'):
+    #     #     self._event_manager.register(
+    #     #         lambda attr_name, old_val, new_val: self._instrument._get_wavelength_bins(new_val),
+    #     #         self._observation, 'modulation_period')
+    #
+    #     try:
+    #         self._instrument.perturbations.amplitude._modulation_period = self._observation.modulation_period
+    #     except (AttributeError, TypeError):
+    #         pass
+    #     try:
+    #         self._instrument.perturbations.phase._modulation_period = self._observation.modulation_period
+    #     except (AttributeError, TypeError):
+    #         pass
+    #     try:
+    #         self._instrument.perturbations.polarization._modulation_period = self._observation.modulation_period
+    #     except (AttributeError, TypeError):
+    #         pass
+    #
+    #     # Attributes derived from _instrument
+    #     try:
+    #         self._instrument.perturbations.phase._wavelengths = self._instrument.wavelength_bin_centers
+    #     except (AttributeError, TypeError):
+    #         pass
+    #     try:
+    #         for source in self._scene.get_all_sources():
+    #             # try:
+    #             source._wavelength_bin_centers = self._instrument.wavelength_bin_centers
+    #             source._grid_size = self._grid_size
+    #     except (AttributeError, TypeError):
+    #         pass
+    #
+    #     # Attributes derived from _simulation_time_steps
+    #     try:
+    #         self._instrument.perturbations.amplitude._number_of_simulation_time_steps = len(
+    #             self.simulation_time_steps)
+    #     except (AttributeError, TypeError):
+    #         pass
+    #     try:
+    #         self._instrument.perturbations.phase._number_of_simulation_time_steps = len(self.simulation_time_steps)
+    #     except (AttributeError, TypeError):
+    #         pass
+    #     try:
+    #         self._instrument.perturbations.polarization._number_of_simulation_time_steps = len(
+    #             self.simulation_time_steps)
+    #     except (AttributeError, TypeError):
+    #         pass
 
     @property
     def detector_time_steps(self):
@@ -200,7 +214,7 @@ class PHRINGE:
         pass
 
     def get_wavelength_bin_centers(self):
-        pass
+        return self._instrument.wavelength_bin_centers
 
     def get_wavelength_bin_widths(self):
         pass
@@ -210,6 +224,7 @@ class PHRINGE:
 
     def set(self, entity: Union[Instrument, Observation, Scene, Configuration]):
         entity._device = self._device
+        entity._event_manager = self._event_manager
         if isinstance(entity, Instrument):
             self._instrument = entity
         elif isinstance(entity, Observation):
@@ -222,3 +237,8 @@ class PHRINGE:
             self._scene = Scene(**entity.dict['scene'])
         else:
             raise ValueError(f'Invalid entity type: {type(entity)}')
+
+        if self._instrument is not None:
+            self._instrument._observation = self._observation
+            self._instrument._number_of_simulation_time_steps = len(
+                self.simulation_time_steps) if self.simulation_time_steps is not None else None
