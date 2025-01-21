@@ -18,12 +18,13 @@ class Scene(BaseModel):
     :param local_zodi: The local zodi in the scene
     """
     star: Star = None
-    planets: list[Planet] = None
+    planets: list[Planet] = []
     exozodi: Exozodi = None
     local_zodi: LocalZodi = None
     _device: Any = None
     _instrument: Any = None
     _grid_size: int = None
+    _simulation_time_steps: Any = None
 
     def add_source(self, source: CachedAttributesSource):
         """Add a source to the scene.
@@ -37,6 +38,9 @@ class Scene(BaseModel):
         if isinstance(source, Star):
             self.star = source
         elif isinstance(source, Planet):
+            source._simulation_time_steps = self._simulation_time_steps
+            source._host_star_distance = self.star.distance if self.star is not None else None
+            source._host_star_mass = self.star.mass if self.star is not None else None
             self.planets.append(source)
         elif isinstance(source, Exozodi):
             self.exozodi = source

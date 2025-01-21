@@ -1,14 +1,21 @@
 from typing import Union
 
+import numpy as np
 import torch
 from numpy import ndarray
-from phringe.core.event_manager import EventManager
+from skimage.measure import block_reduce
 from torch import Tensor
+from tqdm import tqdm
 
 from phringe.core.entities.configuration import Configuration
 from phringe.core.entities.instrument import Instrument
 from phringe.core.entities.observation import Observation
 from phringe.core.entities.scene import Scene
+from phringe.core.entities.sources.exozodi import Exozodi
+from phringe.core.entities.sources.local_zodi import LocalZodi
+from phringe.core.entities.sources.planet import Planet
+from phringe.core.entities.sources.star import Star
+from phringe.util.memory import get_available_memory
 
 
 class PHRINGE:
@@ -22,73 +29,20 @@ class PHRINGE:
             gpu: int = None,
             device: torch.device = None,
             grid_size=40,
-            time_step_size: float = 100
+            time_step_size: float = 600
     ):
-        self._event_manager = EventManager()
         self._device = self._get_device(gpu) if device is None else device
         self._instrument = None
         self._observation = None
         self._scene = None
         self.seed = seed
         self._grid_size = grid_size
-        self._time_step_size = time_step_size
+        self._simulation_time_step_size = time_step_size
         self._simulation_time_steps = None
         self._detector_time_steps = None
-
-    # def __setattr__(self, name, value):
-    #     super().__setattr__(name, value)
-    #     # Attributes derived from _observation
-    #     # try:
-    #     #     # link((self._instrument.perturbations.amplitude, '_modulation_period'),
-    #     #     #      (self._observation, 'modulation_period'))
-    #     # except (AttributeError, TypeError):
-    #     #     pass
-    #     # if hasattr(self, '_instrument') and hasattr(self, '_observation'):
-    #     #     self._event_manager.register(
-    #     #         lambda attr_name, old_val, new_val: self._instrument._get_wavelength_bins(new_val),
-    #     #         self._observation, 'modulation_period')
-    #
-    #     try:
-    #         self._instrument.perturbations.amplitude._modulation_period = self._observation.modulation_period
-    #     except (AttributeError, TypeError):
-    #         pass
-    #     try:
-    #         self._instrument.perturbations.phase._modulation_period = self._observation.modulation_period
-    #     except (AttributeError, TypeError):
-    #         pass
-    #     try:
-    #         self._instrument.perturbations.polarization._modulation_period = self._observation.modulation_period
-    #     except (AttributeError, TypeError):
-    #         pass
-    #
-    #     # Attributes derived from _instrument
-    #     try:
-    #         self._instrument.perturbations.phase._wavelengths = self._instrument.wavelength_bin_centers
-    #     except (AttributeError, TypeError):
-    #         pass
-    #     try:
-    #         for source in self._scene.get_all_sources():
-    #             # try:
-    #             source._wavelength_bin_centers = self._instrument.wavelength_bin_centers
-    #             source._grid_size = self._grid_size
-    #     except (AttributeError, TypeError):
-    #         pass
-    #
-    #     # Attributes derived from _simulation_time_steps
-    #     try:
-    #         self._instrument.perturbations.amplitude._number_of_simulation_time_steps = len(
-    #             self.simulation_time_steps)
-    #     except (AttributeError, TypeError):
-    #         pass
-    #     try:
-    #         self._instrument.perturbations.phase._number_of_simulation_time_steps = len(self.simulation_time_steps)
-    #     except (AttributeError, TypeError):
-    #         pass
-    #     try:
-    #         self._instrument.perturbations.polarization._number_of_simulation_time_steps = len(
-    #             self.simulation_time_steps)
-    #     except (AttributeError, TypeError):
-    #         pass
+        self._detailed = False
+        self._normalize = False
+        self._extra_memory = 1
 
     @property
     def detector_time_steps(self):
@@ -104,7 +58,7 @@ class PHRINGE:
         return torch.linspace(
             0,
             self._observation.total_integration_time,
-            int(self._observation.total_integration_time / self._time_step_size),
+            int(self._observation.total_integration_time / self._simulation_time_step_size),
             device=self._device
         ) if self._observation is not None else None
 
@@ -135,19 +89,175 @@ class PHRINGE:
         # self._simulation_time_step_size = self._simulation_time_step_size.to(self._device)
         # self.simulation_time_steps = self.simulation_time_steps.to(self._device)
 
-        for index_source, source in enumerate(self._sources):
-            self._sources[index_source].spectral_flux_density = source.spectral_flux_density.to(self._device)
-            self._sources[index_source]._sky_coordinates = source._sky_coordinates.to(self._device)
-            self._sources[index_source]._sky_brightness_distribution = source._sky_brightness_distribution.to(
-                self._device)
+        # all_sources = self._scene.get_all_sources()
+
+        # for index_source, source in enumerate(all_sources):
+        #     self._sources[index_source].spectral_flux_density = source.spectral_flux_density.to(self._device)
+        #     self._sources[index_source]._sky_coordinates = source._sky_coordinates.to(self._device)
+        #     self._sources[index_source]._sky_brightness_distribution = source._sky_brightness_distribution.to(
+        #         self._device)
 
         # Prepare output tensor
         counts = torch.zeros(
             (self._instrument.number_of_outputs,
              len(self._instrument.wavelength_bin_centers),
-             len(self._simulation_time_steps)),
+             len(self.simulation_time_steps)),
             device=self._device
         )
+
+        diff_counts = torch.zeros(
+            (len(self._instrument.differential_outputs),
+             len(self._instrument.wavelength_bin_centers),
+             len(self.simulation_time_steps)),
+            device=self._device
+        )
+
+        # Estimate the data size and slice the time steps to fit the calculations into memory
+        data_size = (self._grid_size ** 2
+                     * len(self.simulation_time_steps)
+                     * len(self._instrument.wavelength_bin_centers)
+                     * self._instrument.number_of_outputs
+                     * 4  # should be 2, but only works with 4 so there you go
+                     * len(self._scene.get_all_sources()))
+
+        available_memory = get_available_memory(self._device) / self._extra_memory
+
+        # Divisor with 10% safety margin
+        divisor = int(np.ceil(data_size / (available_memory * 0.9)))
+
+        time_step_indices = torch.arange(
+            0,
+            len(self.simulation_time_steps) + 1,
+            len(self.simulation_time_steps) // divisor
+        )
+
+        nulling_baseline = 14  # TODO: implement correctly
+
+        amplitude_pert_time_series = self._instrument.perturbations.amplitude._time_series if self._instrument.perturbations.amplitude is not None else torch.zeros(
+            (self._instrument.number_of_inputs, len(self.simulation_time_steps)),
+            dtype=torch.float32
+        )
+        phase_pert_time_series = self._instrument.perturbations.phase._time_series if self._instrument.perturbations.phase is not None else torch.zeros(
+            (self._instrument.number_of_inputs, len(self._instrument.wavelength_bin_centers),
+             len(self.simulation_time_steps)),
+            dtype=torch.float32
+        )
+        polarization_pert_time_series = self._instrument.perturbations.polarization._time_series if self._instrument.perturbations.polarization is not None else torch.zeros(
+            (self._instrument.number_of_inputs, len(self.simulation_time_steps)),
+            dtype=torch.float32
+        )
+
+        # Add the last index if it is not already included due to rounding issues
+        if time_step_indices[-1] != len(self.simulation_time_steps):
+            time_step_indices = torch.cat((time_step_indices, torch.tensor([len(self.simulation_time_steps)])))
+
+        # Calculate differential counts
+        for index, it in tqdm(enumerate(time_step_indices), total=len(time_step_indices) - 1):
+
+            # Calculate the indices of the time slices
+            if index <= len(time_step_indices) - 2:
+                it_low = it
+                it_high = time_step_indices[index + 1]
+            else:
+                break
+
+            for source in self._scene.get_all_sources():
+
+                # Broadcast sky coordinates to the correct shape
+                if isinstance(source, LocalZodi) or isinstance(source, Exozodi):
+                    sky_coordinates_x = source._sky_coordinates[0][:, None, :, :]
+                    sky_coordinates_y = source._sky_coordinates[1][:, None, :, :]
+                elif isinstance(source, Planet) and source.has_orbital_motion:
+                    sky_coordinates_x = source._sky_coordinates[0][None, it_low:it_high, :, :]
+                    sky_coordinates_y = source._sky_coordinates[1][None, it_low:it_high, :, :]
+                else:
+                    sky_coordinates_x = source._sky_coordinates[0][None, None, :, :]
+                    sky_coordinates_y = source._sky_coordinates[1][None, None, :, :]
+
+                # Broadcast sky brightness distribution to the correct shape
+                if isinstance(source, Planet) and source.has_orbital_motion:
+                    sky_brightness_distribution = source._sky_brightness_distribution.swapaxes(0, 1)
+                else:
+                    sky_brightness_distribution = source._sky_brightness_distribution[:, None, :, :]
+
+                # Define normalization
+                if isinstance(source, Planet):
+                    normalization = 1
+                elif isinstance(source, Star):
+                    normalization = len(
+                        source._sky_brightness_distribution[0][source._sky_brightness_distribution[0] > 0])
+                else:
+                    normalization = self._grid_size ** 2
+
+                # Calculate counts of shape (N_outputs x N_wavelengths x N_time_steps) for all time step slices
+                # Within torch.sum, the shape is (N_wavelengths x N_time_steps x N_pix x N_pix)
+                for i in range(self._instrument.number_of_outputs):
+
+                    # Calculate the counts of all outputs only in detailed mode. Else calculate only the ones needed to
+                    # calculate the differential outputs
+                    if not self._detailed and i not in np.array(self._instrument.differential_outputs).flatten():
+                        continue
+
+                    if self._normalize:
+                        sky_brightness_distribution[sky_brightness_distribution > 0] = 1
+
+                    current_counts = (
+                        torch.sum(
+                            self._instrument.response[i](
+                                self.simulation_time_steps[None, it_low:it_high, None, None],
+                                self._instrument.wavelength_bin_centers[:, None, None, None],
+                                sky_coordinates_x,
+                                sky_coordinates_y,
+                                torch.tensor(self._observation.modulation_period, device=self._device),
+                                torch.tensor(nulling_baseline, device=self._device),
+                                *[self._instrument._get_amplitude(self._device) for _ in
+                                  range(self._instrument.number_of_inputs)],
+                                *[amplitude_pert_time_series[k][None, it_low:it_high, None, None] for k in
+                                  range(self._instrument.number_of_inputs)],
+                                *[phase_pert_time_series[k][:, it_low:it_high, None, None] for k in
+                                  range(self._instrument.number_of_inputs)],
+                                *[torch.tensor(0, device=self._device) for _ in
+                                  range(self._instrument.number_of_inputs)],
+                                *[polarization_pert_time_series[k][None, it_low:it_high, None, None] for k in
+                                  range(self._instrument.number_of_inputs)]
+                            )
+                            * sky_brightness_distribution
+                            / normalization
+                            * self._simulation_time_step_size
+                            * self._instrument.wavelength_bin_widths[:, None, None, None], axis=(2, 3)
+                        )
+                    )
+                    if not self._normalize:
+                        current_counts = torch.poisson(current_counts)
+
+                    counts[i, :, it_low:it_high] += current_counts
+
+        # Calculate differential outputs
+        for i in range(len(self._instrument.differential_outputs)):
+            diff_counts[i] = counts[self._instrument.differential_outputs[i][0]] - counts[
+                self._instrument.differential_outputs[i][1]]
+
+        # # Bin data to from simulation time steps detector time steps
+        binning_factor = int(round(len(self.simulation_time_steps) / len(self.detector_time_steps), 0))
+
+        if self._detailed:
+            self._counts = torch.asarray(
+                block_reduce(
+                    counts.cpu().numpy(),
+                    (1, 1, binning_factor),
+                    np.sum
+                )
+            )
+
+        self._data = torch.asarray(
+            block_reduce(
+                diff_counts.cpu().numpy(),
+                (1, 1, binning_factor),
+                np.sum
+            )
+        )
+
+        return self._data
 
     def get_diff_counts(self, index):
         pass
@@ -227,7 +337,6 @@ class PHRINGE:
 
     def set(self, entity: Union[Instrument, Observation, Scene, Configuration]):
         entity._device = self._device
-        entity._event_manager = self._event_manager
         if isinstance(entity, Instrument):
             self._instrument = entity
         elif isinstance(entity, Observation):
@@ -250,3 +359,4 @@ class PHRINGE:
             self._scene._device = self._device
             self._scene._instrument = self._instrument
             self._scene._grid_size = self._grid_size
+            self._scene._simulation_time_steps = self.simulation_time_steps

@@ -29,7 +29,7 @@ class CachedAttributesSource(ABC, BaseModel, CachedAttributesEntity):
 
     @property
     @abstractmethod
-    def _spectral_energy_distribution(self) -> Union[Tensor, None]:
+    def _get_spectral_energy_distribution(self) -> Union[Tensor, None]:
         """Return the mean spectral flux density of the source1 object for each wavelength.
 
         :param wavelength_steps: The wavelength steps
@@ -71,7 +71,7 @@ class CachedAttributesSource(ABC, BaseModel, CachedAttributesEntity):
 
     @property
     @abstractmethod
-    def solid_angle(self) -> Union[float, Tensor]:
+    def _solid_angle(self) -> Union[float, Tensor]:
         """Calculate and return the solid angle of the source1 object.
 
         :param kwargs: Additional keyword arguments

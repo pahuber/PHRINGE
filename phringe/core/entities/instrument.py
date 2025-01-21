@@ -132,6 +132,17 @@ class Instrument(BaseModel, CachedAttributesEntity):
         return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,)).si.value
 
     @property
+    def _field_of_view(self):
+        return self._get_cached_value(
+            attribute_name='field_of_View',
+            compute_func=self._get_field_of_view,
+            required_attributes=(
+                self.wavelength_bin_centers,
+                self.aperture_diameter
+            )
+        )
+
+    @property
     def _wavelength_bins(self) -> Tuple[np.ndarray, np.ndarray]:
         """Return the wavelength bin centers and widths.
 
@@ -172,6 +183,9 @@ class Instrument(BaseModel, CachedAttributesEntity):
         return self.aperture_diameter / 2 * torch.sqrt(
             torch.tensor(self.throughput * self.quantum_efficiency, device=device)
         )
+
+    def _get_field_of_view(self) -> Tensor:
+        return self.wavelength_bin_centers / self.aperture_diameter
 
     def _get_wavelength_bins(self) -> Tuple[np.ndarray, np.ndarray]:
         """Return the wavelength bin centers and widths. The wavelength bin widths are calculated starting from the

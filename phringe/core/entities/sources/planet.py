@@ -33,11 +33,12 @@ class Planet(CachedAttributesSource, BaseModel):
     :param raan: The right ascension of the ascending node of the planet
     :param argument_of_periapsis: The argument of periapsis of the planet
     :param true_anomaly: The true anomaly of the planet
-    :param angular_separation_from_star_x: The angular separation of the planet from the star in x-direction
-    :param angular_separation_from_star_y: The angular separation of the planet from the star in y-direction
+    :param _angular_separation_from_star_x: The angular separation of the planet from the star in x-direction
+    :param _angular_separation_from_star_y: The angular separation of the planet from the star in y-direction
     :param grid_position: The grid position of the planet
     """
     name: str
+    has_orbital_motion: bool
     mass: str
     radius: str
     temperature: str
@@ -48,9 +49,12 @@ class Planet(CachedAttributesSource, BaseModel):
     argument_of_periapsis: str
     true_anomaly: str
     path_to_spectrum: Any
-    angular_separation_from_star_x: Any = None
-    angular_separation_from_star_y: Any = None
     grid_position: Tuple = None
+    _angular_separation_from_star_x: Any = None
+    _angular_separation_from_star_y: Any = None
+    _simulation_time_steps: Any = None
+    _host_star_distance: Any = None
+    _host_star_mass: Any = None
 
     @field_validator('argument_of_periapsis')
     def _validate_argument_of_periapsis(cls, value: Any, info: ValidationInfo) -> float:
@@ -152,14 +156,82 @@ class Planet(CachedAttributesSource, BaseModel):
 
         return self._get_cached_value(
             attribute_name='sky_brightness_distribution',
-            compute_func=self._calculate_sky_brightness_distribution(),
+            compute_func=self._get_sky_brightness_distribution,
             required_attributes=(
                 self._instrument,
                 self._grid_size
             )
         )
 
-    def _calculate_sky_brightness_distribution(self):
+    @property
+    def _sky_coordinates(self) -> Union[Tensor, None]:
+        if self._instrument is None:
+            warnings.warn(MissingRequirementWarning('Instrument', 'sky_coordinates'))
+            return None
+
+        if self._grid_size is None:
+            warnings.warn(MissingRequirementWarning('grid size', 'sky_coordinates'))
+            return None
+
+        if self._host_star_mass is None:
+            warnings.warn(MissingRequirementWarning('host star mass', 'sky_coordinates'))
+            return None
+
+        if self._host_star_distance is None:
+            warnings.warn(MissingRequirementWarning('host star distance', 'sky_coordinates'))
+            return None
+
+        return self._get_cached_value(
+            attribute_name='sky_coordinates',
+            compute_func=self._get_sky_coordinates,
+            required_attributes=(
+                self._instrument,
+                self._grid_size,
+                self.has_orbital_motion,
+                self._simulation_time_steps,
+                self._host_star_distance,
+                self._host_star_mass
+            )
+        )
+
+    @property
+    def _solid_angle(self):
+        if self._host_star_distance is None:
+            warnings.warn(MissingRequirementWarning('host star distance', 'solid_angle'))
+            return None
+
+        return self._get_cached_value(
+            attribute_name='solid_angle',
+            compute_func=self._get_solid_angle,
+            required_attributes=(
+                self._host_star_distance,
+                self.radius
+            )
+        )
+
+    @property
+    def _spectral_energy_distribution(self) -> Union[Tensor, None]:
+        if self._instrument is None:
+            warnings.warn(MissingRequirementWarning('Instrument', 'sky_brightness_distribution'))
+            return None
+
+        if self._grid_size is None:
+            warnings.warn(MissingRequirementWarning('grid size', 'sky_brightness_distribution'))
+            return None
+
+        return self._get_cached_value(
+            attribute_name='spectral_energy_distribution',
+            compute_func=self._get_spectral_energy_distribution,
+            required_attributes=(
+                self._instrument,
+                self._grid_size,
+                self.temperature,
+                self.path_to_spectrum,
+                self._solid_angle
+            )
+        )
+
+    def _get_sky_brightness_distribution(self):
 
         # if has_planet_orbital_motion:
         #     sky_brightness_distribution = torch.zeros(
@@ -183,38 +255,22 @@ class Planet(CachedAttributesSource, BaseModel):
         if self.grid_position:
             sky_brightness_distribution = torch.zeros(
                 (number_of_wavelength_steps, self._grid_size, self._grid_size))
-            sky_brightness_distribution[:, self.grid_position[1], self.grid_position[0]] = self.spectral_flux_density
-            self.angular_separation_from_star_x = self._sky_coordinates[0, self.grid_position[1], self.grid_position[0]]
-            self.angular_separation_from_star_y = self._sky_coordinates[1, self.grid_position[1], self.grid_position[0]]
+            sky_brightness_distribution[:, self.grid_position[1],
+            self.grid_position[0]] = self._spectral_energy_distribution
+            self._angular_separation_from_star_x = self._sky_coordinates[
+                0, self.grid_position[1], self.grid_position[0]]
+            self._angular_separation_from_star_y = self._sky_coordinates[
+                1, self.grid_position[1], self.grid_position[0]]
         else:
             sky_brightness_distribution = torch.zeros(
                 (number_of_wavelength_steps, self._grid_size, self._grid_size))
             # device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
             index_x = get_index_of_closest_value(torch.asarray(self._sky_coordinates[0, :, 0]),
-                                                 self.angular_separation_from_star_x[0])
+                                                 self._angular_separation_from_star_x[0])
             index_y = get_index_of_closest_value(torch.asarray(self._sky_coordinates[1, 0, :]),
-                                                 self.angular_separation_from_star_y[0])
-            sky_brightness_distribution[:, index_x, index_y] = self.spectral_flux_density
+                                                 self._angular_separation_from_star_y[0])
+            sky_brightness_distribution[:, index_x, index_y] = self._spectral_energy_distribution
         return sky_brightness_distribution
-
-    @property
-    def _sky_coordinates(self) -> Union[Tensor, None]:
-        if self._instrument is None:
-            warnings.warn(MissingRequirementWarning('Instrument', 'sky_brightness_distribution'))
-            return None
-
-        if self._grid_size is None:
-            warnings.warn(MissingRequirementWarning('grid size', 'sky_brightness_distribution'))
-            return None
-
-        return self._get_cached_value(
-            attribute_name='sky_coordinates',
-            compute_func=self._get_sky_coordinates,
-            required_attributes=(
-                self._instrument,
-                self._grid_size
-            )
-        )
 
     def _get_sky_coordinates(self) -> np.ndarray:
         """Calculate and return the sky coordinates of the planet. Choose the maximum extent of the sky coordinates such
@@ -225,41 +281,32 @@ class Planet(CachedAttributesSource, BaseModel):
         :param kwargs: The keyword arguments
         :return: The sky coordinates
         """
-        time_steps = kwargs.get('time_steps')
-        has_planet_orbital_motion = kwargs.get('has_planet_orbital_motion')
-        star_distance = kwargs.get('star_distance')
-        star_mass = kwargs.get('star_mass')
-        self.angular_separation_from_star_x = torch.zeros(len(time_steps))
-        self.angular_separation_from_star_y = torch.zeros(len(time_steps))
+        self._angular_separation_from_star_x = torch.zeros(len(self._simulation_time_steps), device=self._device)
+        self._angular_separation_from_star_y = torch.zeros(len(self._simulation_time_steps), device=self._device)
 
         # If planet motion is being considered, then the sky coordinates may change with each time step and thus
         # coordinates are created for each time step, rather than just once
-        if has_planet_orbital_motion:
-            sky_coordinates = torch.zeros((2, len(time_steps), grid_size, grid_size))
-            for index_time, time_step in enumerate(time_steps):
+        if self.has_orbital_motion:
+            sky_coordinates = torch.zeros((2, len(self._simulation_time_steps), self._grid_size, self._grid_size),
+                                          device=self._device)
+            for index_time, time_step in enumerate(self._simulation_time_steps):
                 sky_coordinates[:, index_time] = self._get_coordinates(
-                    grid_size,
                     time_step,
                     index_time,
-                    has_planet_orbital_motion,
-                    star_distance,
-                    star_mass
                 )
             return sky_coordinates
         else:
-            return self._get_coordinates(grid_size, time_steps[0], 0, has_planet_orbital_motion, star_distance,
-                                         star_mass)
+            return self._get_coordinates(self._simulation_time_steps[0], 0)
 
-    def solid_angle(self, **kwargs) -> float:
+    def _get_solid_angle(self) -> float:
         """Calculate and return the solid angle of the planet.
 
         :param kwargs: The keyword arguments
         :return: The solid angle
         """
-        star_distance = kwargs.get('star_distance')
-        return torch.pi * (self.radius / star_distance) ** 2
+        return torch.pi * (self.radius / self._host_star_distance) ** 2
 
-    def _spectral_energy_distribution(self, wavelength_bin_centers: Tensor, grid_size: int, **kwargs) -> Tensor:
+    def _get_spectral_energy_distribution(self) -> Tensor:
         """Calculate the spectral flux density of the planet in units of ph s-1 m-3. Use the previously generated
         reference spectrum in units of ph s-1 m-3 sr-1 and the solid angle to calculate it and bin it to the
         simulation wavelength bin centers.
@@ -272,30 +319,26 @@ class Planet(CachedAttributesSource, BaseModel):
         if self.path_to_spectrum:
             fluxes, wavelengths = TXTReader.read(self.path_to_spectrum)
             binned_spectral_flux_density = spectres.spectres(
-                wavelength_bin_centers.numpy(),
+                self._instrument.wavelength_bin_centers.numpy(),
                 wavelengths.numpy(),
                 fluxes.numpy(),
                 fill=0,
                 verbose=False
-            ) * self.solid_angle
-            return torch.asarray(binned_spectral_flux_density, dtype=torch.float32)
+            ) * self._get_solid_angle
+            return torch.asarray(binned_spectral_flux_density, dtype=torch.float32, device=self._device)
         else:
             binned_spectral_flux_density = torch.asarray(
                 create_blackbody_spectrum(
                     self.temperature,
-                    wavelength_bin_centers
+                    self._instrument.wavelength_bin_centers
                 )
-                , dtype=torch.float32) * self.solid_angle
+                , dtype=torch.float32, device=self._device) * self._solid_angle
             return binned_spectral_flux_density
 
     def _get_coordinates(
             self,
-            grid_size: int,
             time_step: float,
-            index_time: int,
-            has_planet_orbital_motion: bool,
-            star_distance: float,
-            star_mass: float
+            index_time: int
     ) -> np.ndarray:
         """Return the sky coordinates of the planet.
 
@@ -307,19 +350,20 @@ class Planet(CachedAttributesSource, BaseModel):
         :param star_mass: The mass of the star
         :return: The sky coordinates
         """
-        self.angular_separation_from_star_x[index_time], self.angular_separation_from_star_y[index_time] = (
-            self._get_x_y_angular_separation_from_star(time_step, has_planet_orbital_motion, star_distance,
-                                                       star_mass))
+        self._angular_separation_from_star_x[index_time], self._angular_separation_from_star_y[index_time] = (
+            self._get_x_y_angular_separation_from_star(time_step)
+        )
 
         angular_radius = torch.sqrt(
-            self.angular_separation_from_star_x[index_time] ** 2 + self.angular_separation_from_star_y[
-                index_time] ** 2)
+            self._angular_separation_from_star_x[index_time] ** 2
+            + self._angular_separation_from_star_y[index_time] ** 2
+        )
 
-        sky_coordinates_at_time_step = get_meshgrid(2 * (1.2 * angular_radius), grid_size)
+        sky_coordinates_at_time_step = get_meshgrid(2 * (1.2 * angular_radius), self._grid_size)
 
         return torch.stack((sky_coordinates_at_time_step[0], sky_coordinates_at_time_step[1]))
 
-    def orbital_elements_to_sky_position(self, a, e, i, Omega, omega, nu):
+    def _convert_orbital_elements_to_sky_position(self, a, e, i, Omega, omega, nu):
         # Convert angles from degrees to radians
         # i = np.radians(i)
         # Omega = np.radians(Omega)
@@ -347,29 +391,26 @@ class Planet(CachedAttributesSource, BaseModel):
         y = x_orb * (np.cos(omega) * np.sin(Omega) + np.sin(omega) * np.cos(Omega) * np.cos(i)) + y_orb * (
                 np.cos(omega) * np.cos(Omega) * np.cos(i) - np.sin(omega) * np.sin(Omega))
 
-        # x_temp = x_orb * np.cos(omega) - y_orb * np.sin(omega)
-        # y_temp = x_orb * np.sin(omega) + y_orb * np.cos(omega)
-        # z_temp = 0  # Initial z-position is 0 since in orbital plane
-        #
-        # # Rotate by inclination (i)
-        # x_inclined = x_temp
-        # y_inclined = y_temp * np.cos(i)
-        # z_inclined = y_temp * np.sin(i)
-        #
-        # # Rotate by longitude of ascending node (Omega)
-        # x_final = x_inclined * np.cos(Omega) - z_inclined * np.sin(Omega)
-        # y_final = y_inclined
-        # z_final = x_inclined * np.sin(Omega) + z_inclined * np.cos(Omega)
-
-        # For sky projection, we are generally interested in the x and y components
         return x, y
 
-    def _get_x_y_separation_from_star(
+    def _get_x_y_angular_separation_from_star(
             self,
-            time_step: float,
-            has_planet_orbital_motion: bool,
-            star_mass: float
+            time_step: float
     ) -> Tuple:
+        """Return the angular separation of the planet from the star in x- and y-direction.
+
+        :param time_step: The time step
+        :param planet_orbital_motion: Whether the planet orbital motion is to be considered
+        :param star_distance: The distance of the star
+        :param star_mass: The mass of the star
+        :return: A tuple containing the x- and y- coordinates
+        """
+        separation_from_star_x, separation_from_star_y = self._get_x_y_separation_from_star(time_step)
+        angular_separation_from_star_x = separation_from_star_x / self._host_star_distance
+        angular_separation_from_star_y = separation_from_star_y / self._host_star_distance
+        return (angular_separation_from_star_x, angular_separation_from_star_y)
+
+    def _get_x_y_separation_from_star(self, time_step: float, ) -> Tuple:
         """Return the separation of the planet from the star in x- and y-direction. If the planet orbital motion is
         considered, calculate the new position for each time step.
 
@@ -378,12 +419,12 @@ class Planet(CachedAttributesSource, BaseModel):
         :param star_mass: The mass of the star
         :return: A tuple containing the x- and y- coordinates
         """
-        star = Body(parent=None, k=G * (star_mass + self.mass) * u.kg, name='Star')
+        star = Body(parent=None, k=G * (self._host_star_mass + self.mass) * u.kg, name='Star')
         orbit = Orbit.from_classical(star, a=self.semi_major_axis * u.m, ecc=u.Quantity(self.eccentricity),
                                      inc=self.inclination * u.rad,
                                      raan=self.raan * u.rad,
                                      argp=self.argument_of_periapsis * u.rad, nu=self.true_anomaly * u.rad)
-        if has_planet_orbital_motion:
+        if self.has_orbital_motion:
             orbit_propagated = orbit.propagate(time_step * u.s)
             x, y = (orbit_propagated.r[0].to(u.m).value, orbit_propagated.r[1].to(u.m).value)
             pass
@@ -395,27 +436,5 @@ class Planet(CachedAttributesSource, BaseModel):
             omega = self.argument_of_periapsis  # Argument of periapsis in degrees
             M = self.true_anomaly  # Mean anomaly in degrees
 
-            x, y = self.orbital_elements_to_sky_position(a, e, i, Omega, omega, M)
+            x, y = self._convert_orbital_elements_to_sky_position(a, e, i, Omega, omega, M)
         return x, y
-
-    def _get_x_y_angular_separation_from_star(
-            self,
-            time_step: float,
-            planet_orbital_motion: bool,
-            star_distance: float,
-            star_mass: float
-    ) -> Tuple:
-        """Return the angular separation of the planet from the star in x- and y-direction.
-
-        :param time_step: The time step
-        :param planet_orbital_motion: Whether the planet orbital motion is to be considered
-        :param star_distance: The distance of the star
-        :param star_mass: The mass of the star
-        :return: A tuple containing the x- and y- coordinates
-        """
-        separation_from_star_x, separation_from_star_y = self._get_x_y_separation_from_star(time_step,
-                                                                                            planet_orbital_motion,
-                                                                                            star_mass)
-        angular_separation_from_star_x = separation_from_star_x / star_distance
-        angular_separation_from_star_y = separation_from_star_y / star_distance
-        return (angular_separation_from_star_x, angular_separation_from_star_y)

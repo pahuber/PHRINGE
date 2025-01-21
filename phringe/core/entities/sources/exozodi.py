@@ -38,7 +38,7 @@ class Exozodi(CachedAttributesSource, BaseModel):
                 (sky_coordinates_at_fov[0], sky_coordinates_at_fov[1]))
         return sky_coordinates
 
-    def solid_angle(self, **kwargs) -> float:
+    def _get_solid_angle(self, **kwargs) -> float:
         """Calculate and return the solid angle of the exozodi.
 
         :param kwargs: Additional keyword arguments
@@ -46,7 +46,7 @@ class Exozodi(CachedAttributesSource, BaseModel):
         """
         return kwargs['field_of_view'] ** 2
 
-    def _spectral_energy_distribution(
+    def _get_spectral_energy_distribution(
             self,
             wavelength_steps: np.ndarray,
             grid_size: int,
@@ -74,7 +74,7 @@ class Exozodi(CachedAttributesSource, BaseModel):
             spectral_flux_density[ifov] = create_blackbody_spectrum(
                 temperature_map[ifov, :, :],
                 wavelength_steps[ifov, None, None]
-            ) * self.solid_angle[ifov, None, None]
+            ) * self._get_solid_angle[ifov, None, None]
 
         return spectral_flux_density
 

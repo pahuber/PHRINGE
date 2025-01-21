@@ -97,7 +97,7 @@ class Star(CachedAttributesSource):
         """
         return self._get_cached_value(
             attribute_name='angular_radius',
-            compute_func=self._get_angular_radius(),
+            compute_func=self._get_angular_radius,
             required_attributes=(
                 self.radius,
                 self.distance
@@ -159,7 +159,8 @@ class Star(CachedAttributesSource):
 
     def _get_sky_brightness_distribution(self):
         number_of_wavelength_steps = len(self._instrument.wavelength_bin_centers)
-        sky_brightness_distribution = torch.zeros((number_of_wavelength_steps, self._grid_size, self._grid_size))
+        sky_brightness_distribution = torch.zeros((number_of_wavelength_steps, self._grid_size, self._grid_size),
+                                                  device=self._device)
         radius_map = (torch.sqrt(self._sky_coordinates[0] ** 2 + self._sky_coordinates[1] ** 2) <= self.angular_radius)
 
         for index_wavelength in range(len(self._spectral_energy_distribution)):
@@ -195,7 +196,7 @@ class Star(CachedAttributesSource):
         return torch.stack((sky_coordinates[0], sky_coordinates[1]))
 
     @property
-    def solid_angle(self):
+    def _solid_angle(self):
         return self._get_cached_value(
             attribute_name='solid_angle',
             compute_func=self._get_solid_angle,
@@ -220,9 +221,11 @@ class Star(CachedAttributesSource):
             required_attributes=(
                 self._instrument,
                 self.radius,
-                self.temperature
+                self.temperature,
+                self._solid_angle
             )
         )
 
     def _get_spectral_energy_distribution(self) -> Tensor:
-        return create_blackbody_spectrum(self.temperature, self._instrument.wavelength_bin_centers) * self.solid_angle
+        return create_blackbody_spectrum(self.temperature,
+                                         self._instrument.wavelength_bin_centers) * self._solid_angle

@@ -47,7 +47,7 @@ class LocalZodi(CachedAttributesSource, BaseModel):
                 (sky_coordinates_at_fov[0], sky_coordinates_at_fov[1]))
         return sky_coordinates
 
-    def solid_angle(self, **kwargs) -> float:
+    def _get_solid_angle(self, **kwargs) -> float:
         """Calculate and return the solid angle of the local zodi.
 
         :param kwargs: Additional keyword arguments
@@ -55,7 +55,7 @@ class LocalZodi(CachedAttributesSource, BaseModel):
         """
         return kwargs['field_of_view'] ** 2
 
-    def _spectral_energy_distribution(
+    def _get_spectral_energy_distribution(
             self,
             wavelength_steps: np.ndarray,
             grid_size: int,
@@ -78,9 +78,9 @@ class LocalZodi(CachedAttributesSource, BaseModel):
         spectral_flux_density = (
                 variable_tau *
                 (
-                        create_blackbody_spectrum(265, wavelength_steps) * self.solid_angle
+                        create_blackbody_spectrum(265, wavelength_steps) * self._get_solid_angle
                         + variable_a
-                        * create_blackbody_spectrum(5778, wavelength_steps) * self.solid_angle
+                        * create_blackbody_spectrum(5778, wavelength_steps) * self._get_solid_angle
                         * ((1 * u.Rsun).to(u.au) / (1.5 * u.au)).value ** 2
                 ) *
                 ((torch.pi / torch.arccos(torch.cos(torch.tensor(relative_ecliptic_longitude)) * torch.cos(
