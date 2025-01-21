@@ -39,8 +39,8 @@ class Scene(BaseModel):
             self.star = source
         elif isinstance(source, Planet):
             source._simulation_time_steps = self._simulation_time_steps
-            source._host_star_distance = self.star.distance if self.star is not None else None
-            source._host_star_mass = self.star.mass if self.star is not None else None
+            source.host_star_distance = self.star.distance if source.host_star_distance is None else source.host_star_distance
+            source.host_star_mass = self.star.mass if source.host_star_mass is None else source.host_star_mass
             self.planets.append(source)
         elif isinstance(source, Exozodi):
             self.exozodi = source

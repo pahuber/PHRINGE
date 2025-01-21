@@ -50,11 +50,13 @@ class Planet(CachedAttributesSource, BaseModel):
     true_anomaly: str
     path_to_spectrum: Any
     grid_position: Tuple = None
+    host_star_distance: Any = None
+    host_star_mass: Any = None
     _angular_separation_from_star_x: Any = None
     _angular_separation_from_star_y: Any = None
     _simulation_time_steps: Any = None
-    _host_star_distance: Any = None
-    _host_star_mass: Any = None
+
+    # TODO: add option to manually set host star mass and distance in case no star has been added to the scene
 
     @field_validator('argument_of_periapsis')
     def _validate_argument_of_periapsis(cls, value: Any, info: ValidationInfo) -> float:
@@ -173,11 +175,11 @@ class Planet(CachedAttributesSource, BaseModel):
             warnings.warn(MissingRequirementWarning('grid size', 'sky_coordinates'))
             return None
 
-        if self._host_star_mass is None:
+        if self.host_star_mass is None:
             warnings.warn(MissingRequirementWarning('host star mass', 'sky_coordinates'))
             return None
 
-        if self._host_star_distance is None:
+        if self.host_star_distance is None:
             warnings.warn(MissingRequirementWarning('host star distance', 'sky_coordinates'))
             return None
 
@@ -189,14 +191,14 @@ class Planet(CachedAttributesSource, BaseModel):
                 self._grid_size,
                 self.has_orbital_motion,
                 self._simulation_time_steps,
-                self._host_star_distance,
-                self._host_star_mass
+                self.host_star_distance,
+                self.host_star_mass
             )
         )
 
     @property
     def _solid_angle(self):
-        if self._host_star_distance is None:
+        if self.host_star_distance is None:
             warnings.warn(MissingRequirementWarning('host star distance', 'solid_angle'))
             return None
 
@@ -204,7 +206,7 @@ class Planet(CachedAttributesSource, BaseModel):
             attribute_name='solid_angle',
             compute_func=self._get_solid_angle,
             required_attributes=(
-                self._host_star_distance,
+                self.host_star_distance,
                 self.radius
             )
         )
@@ -304,7 +306,7 @@ class Planet(CachedAttributesSource, BaseModel):
         :param kwargs: The keyword arguments
         :return: The solid angle
         """
-        return torch.pi * (self.radius / self._host_star_distance) ** 2
+        return torch.pi * (self.radius / self.host_star_distance) ** 2
 
     def _get_spectral_energy_distribution(self) -> Tensor:
         """Calculate the spectral flux density of the planet in units of ph s-1 m-3. Use the previously generated
@@ -406,8 +408,8 @@ class Planet(CachedAttributesSource, BaseModel):
         :return: A tuple containing the x- and y- coordinates
         """
         separation_from_star_x, separation_from_star_y = self._get_x_y_separation_from_star(time_step)
-        angular_separation_from_star_x = separation_from_star_x / self._host_star_distance
-        angular_separation_from_star_y = separation_from_star_y / self._host_star_distance
+        angular_separation_from_star_x = separation_from_star_x / self.host_star_distance
+        angular_separation_from_star_y = separation_from_star_y / self.host_star_distance
         return (angular_separation_from_star_x, angular_separation_from_star_y)
 
     def _get_x_y_separation_from_star(self, time_step: float, ) -> Tuple:
@@ -419,7 +421,7 @@ class Planet(CachedAttributesSource, BaseModel):
         :param star_mass: The mass of the star
         :return: A tuple containing the x- and y- coordinates
         """
-        star = Body(parent=None, k=G * (self._host_star_mass + self.mass) * u.kg, name='Star')
+        star = Body(parent=None, k=G * (self.host_star_mass + self.mass) * u.kg, name='Star')
         orbit = Orbit.from_classical(star, a=self.semi_major_axis * u.m, ecc=u.Quantity(self.eccentricity),
                                      inc=self.inclination * u.rad,
                                      raan=self.raan * u.rad,

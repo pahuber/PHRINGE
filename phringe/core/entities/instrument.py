@@ -9,6 +9,7 @@ from sympy import symbols, Symbol, exp, I, pi, cos, sin, Abs, lambdify, sqrt
 from torch import Tensor
 
 from phringe.core.cached_attributes_entity import CachedAttributesEntity
+from phringe.core.entities.base_entity import BaseEntity
 from phringe.core.entities.perturbations.amplitude_perturbation import AmplitudePerturbation
 from phringe.core.entities.perturbations.base_perturbation import CachedAttributesPerturbation
 from phringe.core.entities.perturbations.phase_perturbation import PhasePerturbation
@@ -22,7 +23,7 @@ class _Perturbations(BaseModel):
     polarization: PolarizationPerturbation = None
 
 
-class Instrument(BaseModel, CachedAttributesEntity):
+class Instrument(BaseModel, BaseEntity, CachedAttributesEntity):
     """Class representing the instrument.
 
     :param amplitude_perturbation_lower_limit: The lower limit of the amplitude perturbation
@@ -217,7 +218,7 @@ class Instrument(BaseModel, CachedAttributesEntity):
         )
 
     def add_perturbation(self, perturbation: CachedAttributesPerturbation):
-        perturbation._device = self._device
+        perturbation._device = self._device if self._device is not None else None
         perturbation._number_of_inputs = self.number_of_inputs
         perturbation._number_of_simulation_time_steps = self._number_of_simulation_time_steps
         perturbation._observation = self._observation
