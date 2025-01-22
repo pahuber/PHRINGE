@@ -15,6 +15,7 @@ from phringe.core.entities.sources.exozodi import Exozodi
 from phringe.core.entities.sources.local_zodi import LocalZodi
 from phringe.core.entities.sources.planet import Planet
 from phringe.core.entities.sources.star import Star
+from phringe.util.grid import get_meshgrid
 from phringe.util.memory import get_available_memory
 
 
@@ -76,37 +77,15 @@ class PHRINGE:
             device = torch.device('cpu')
         return device
 
-    def get_counts(self):
-        # Move all tensors to the device
-        self._instrument.aperture_diameter = self._instrument.aperture_diameter.to(self._device)
-        # self._detector_time_steps = self._detector_time_steps.to(self._device)
-        # self._instrument.wavelength_bin_centers = self._instrument.wavelength_bin_centers.to(self._device)
-        # self._wavelength_bin_widths = self._wavelength_bin_widths.to(self._device)
-        # self._wavelength_bin_edges = self._wavelength_bin_edges.to(self._device)
-        # self.amplitude_pert_time_series = self.amplitude_pert_time_series.to(self._device)
-        # self.phase_pert_time_series = self.phase_pert_time_series.to(self._device)
-        # self.polarization_pert_time_series = self.polarization_pert_time_series.to(self._device)
-        # self._simulation_time_step_size = self._simulation_time_step_size.to(self._device)
-        # self.simulation_time_steps = self.simulation_time_steps.to(self._device)
+    def _get_unbinned_counts(self, diff_only: bool = False):
+        """Calculate the differential counts for all time steps (, i.e. simulation time steps). Hence
+        the output is not yet binned to detector time steps.
 
-        # all_sources = self._scene.get_all_sources()
-
-        # for index_source, source in enumerate(all_sources):
-        #     self._sources[index_source].spectral_flux_density = source.spectral_flux_density.to(self._device)
-        #     self._sources[index_source]._sky_coordinates = source._sky_coordinates.to(self._device)
-        #     self._sources[index_source]._sky_brightness_distribution = source._sky_brightness_distribution.to(
-        #         self._device)
+        """
 
         # Prepare output tensor
         counts = torch.zeros(
             (self._instrument.number_of_outputs,
-             len(self._instrument.wavelength_bin_centers),
-             len(self.simulation_time_steps)),
-            device=self._device
-        )
-
-        diff_counts = torch.zeros(
-            (len(self._instrument.differential_outputs),
              len(self._instrument.wavelength_bin_centers),
              len(self.simulation_time_steps)),
             device=self._device
@@ -135,23 +114,26 @@ class PHRINGE:
 
         amplitude_pert_time_series = self._instrument.perturbations.amplitude._time_series if self._instrument.perturbations.amplitude is not None else torch.zeros(
             (self._instrument.number_of_inputs, len(self.simulation_time_steps)),
-            dtype=torch.float32
+            dtype=torch.float32,
+            device=self._device
         )
         phase_pert_time_series = self._instrument.perturbations.phase._time_series if self._instrument.perturbations.phase is not None else torch.zeros(
             (self._instrument.number_of_inputs, len(self._instrument.wavelength_bin_centers),
              len(self.simulation_time_steps)),
-            dtype=torch.float32
+            dtype=torch.float32,
+            device=self._device
         )
         polarization_pert_time_series = self._instrument.perturbations.polarization._time_series if self._instrument.perturbations.polarization is not None else torch.zeros(
             (self._instrument.number_of_inputs, len(self.simulation_time_steps)),
-            dtype=torch.float32
+            dtype=torch.float32,
+            device=self._device
         )
 
         # Add the last index if it is not already included due to rounding issues
         if time_step_indices[-1] != len(self.simulation_time_steps):
             time_step_indices = torch.cat((time_step_indices, torch.tensor([len(self.simulation_time_steps)])))
 
-        # Calculate differential counts
+        # Calculate counts
         for index, it in tqdm(enumerate(time_step_indices), total=len(time_step_indices) - 1):
 
             # Calculate the indices of the time slices
@@ -195,7 +177,7 @@ class PHRINGE:
 
                     # Calculate the counts of all outputs only in detailed mode. Else calculate only the ones needed to
                     # calculate the differential outputs
-                    if not self._detailed and i not in np.array(self._instrument.differential_outputs).flatten():
+                    if not diff_only and i not in np.array(self._instrument.differential_outputs).flatten():
                         continue
 
                     if self._normalize:
@@ -232,24 +214,44 @@ class PHRINGE:
 
                     counts[i, :, it_low:it_high] += current_counts
 
+        # Bin data to from simulation time steps detector time steps
+        binning_factor = int(round(len(self.simulation_time_steps) / len(self.detector_time_steps), 0))
+
+        return counts, binning_factor
+
+    def get_counts(self):
+        # Move all tensors to the device
+        self._instrument.aperture_diameter = self._instrument.aperture_diameter.to(self._device)
+
+        counts, binning_factor = self._get_unbinned_counts(diff_only=True)
+
+        counts = torch.asarray(
+            block_reduce(
+                counts.cpu().numpy(),
+                (1, 1, binning_factor),
+                np.sum
+            )
+        )
+
+        return counts
+
+    def get_diff_counts(self):
+
+        diff_counts = torch.zeros(
+            (len(self._instrument.differential_outputs),
+             len(self._instrument.wavelength_bin_centers),
+             len(self.simulation_time_steps)),
+            device=self._device
+        )
+
+        counts, binning_factor = self._get_unbinned_counts(diff_only=True)
+
         # Calculate differential outputs
         for i in range(len(self._instrument.differential_outputs)):
             diff_counts[i] = counts[self._instrument.differential_outputs[i][0]] - counts[
                 self._instrument.differential_outputs[i][1]]
 
-        # # Bin data to from simulation time steps detector time steps
-        binning_factor = int(round(len(self.simulation_time_steps) / len(self.detector_time_steps), 0))
-
-        if self._detailed:
-            self._counts = torch.asarray(
-                block_reduce(
-                    counts.cpu().numpy(),
-                    (1, 1, binning_factor),
-                    np.sum
-                )
-            )
-
-        self._data = torch.asarray(
+        diff_counts = torch.asarray(
             block_reduce(
                 diff_counts.cpu().numpy(),
                 (1, 1, binning_factor),
@@ -257,30 +259,37 @@ class PHRINGE:
             )
         )
 
-        return self._data
-
-    def get_diff_counts(self, index):
-        pass
+        return diff_counts
 
     def get_instrument_response(
             self,
-            times: Union[float, ndarray, Tensor] = None,
-            wavelengths: Union[float, ndarray, Tensor] = None,
-            x_coordinates: Union[float, ndarray, Tensor] = None,
-            y_coordinates: Union[float, ndarray, Tensor] = None,
+            output: int,
+            times: Union[float, ndarray, Tensor],
+            wavelengths: Union[float, ndarray, Tensor],
+            field_of_view: float,
             nulling_baseline: float = None,
             output_as_numpy: bool = False,
     ):
+
+        # Handle broadcasting and type conversions
+        if isinstance(times, ndarray) or isinstance(times, float) or isinstance(times, int):
+            times = torch.tensor(times, device=self._device)
+        times = times[None, None, None, None]
+
+        if isinstance(wavelengths, ndarray) or isinstance(wavelengths, float) or isinstance(wavelengths, int):
+            wavelengths = torch.tensor(wavelengths, device=self._device)
+        wavelengths = wavelengths[None, None, None, None]
+
+        x_coordinates, y_coordinates = get_meshgrid(field_of_view, self._grid_size)
+        x_coordinates = x_coordinates.to(self._device)
+        y_coordinates = y_coordinates.to(self._device)
+        x_coordinates = x_coordinates[None, None, :, :]
+        y_coordinates = y_coordinates[None, None, :, :]
 
         times = self.simulation_time_steps if times is None else times
         wavelengths = self._instrument.wavelength_bin_centers if wavelengths is None else wavelengths
         x_coordinates = self._scene.star._sky_coordinates[0] if x_coordinates is None else x_coordinates
         y_coordinates = self._scene.star._sky_coordinates[1] if y_coordinates is None else y_coordinates
-        nulling_baseline = 14
-
-        # An observation object needs to be added to the PHRINGE object before the instrument response can be calculated
-        if self._observation is None:
-            raise ValueError('An observation is required for the instrument response')
 
         # Calculate perturbation time series unless they have been manually set by the user. If no seed is set, the time
         # series are different every time this method is called
@@ -298,7 +307,7 @@ class PHRINGE:
             dtype=torch.float32
         )
 
-        response = torch.stack([self._instrument.response[j](
+        response = torch.stack([self._instrument.response[output](
             times,
             wavelengths,
             x_coordinates,

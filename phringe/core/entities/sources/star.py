@@ -192,7 +192,7 @@ class Star(CachedAttributesSource):
         )
 
     def _get_sky_coordinates(self):
-        sky_coordinates = get_meshgrid(2 * (1.05 * self.angular_radius), self._grid_size)
+        sky_coordinates = get_meshgrid(2 * (1.05 * self.angular_radius), self._grid_size, device=self._device)
         return torch.stack((sky_coordinates[0], sky_coordinates[1]))
 
     @property

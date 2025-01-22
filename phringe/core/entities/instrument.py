@@ -213,7 +213,7 @@ class Instrument(BaseModel, BaseEntity, CachedAttributesEntity):
                 break
 
         return (
-            torch.asarray(wavelength_bin_centers, dtype=torch.float32),
+            torch.asarray(wavelength_bin_centers, dtype=torch.float32, device=self._device),
             torch.asarray(wavelength_bin_widths, dtype=torch.float32, device=self._device)
         )
 

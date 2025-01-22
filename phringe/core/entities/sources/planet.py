@@ -256,7 +256,7 @@ class Planet(CachedAttributesSource, BaseModel):
         number_of_wavelength_steps = len(self._instrument.wavelength_bin_centers)
         if self.grid_position:
             sky_brightness_distribution = torch.zeros(
-                (number_of_wavelength_steps, self._grid_size, self._grid_size))
+                (number_of_wavelength_steps, self._grid_size, self._grid_size), device=self._device)
             sky_brightness_distribution[:, self.grid_position[1],
             self.grid_position[0]] = self._spectral_energy_distribution
             self._angular_separation_from_star_x = self._sky_coordinates[
@@ -265,11 +265,11 @@ class Planet(CachedAttributesSource, BaseModel):
                 1, self.grid_position[1], self.grid_position[0]]
         else:
             sky_brightness_distribution = torch.zeros(
-                (number_of_wavelength_steps, self._grid_size, self._grid_size))
+                (number_of_wavelength_steps, self._grid_size, self._grid_size), device=self._device)
             # device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-            index_x = get_index_of_closest_value(torch.asarray(self._sky_coordinates[0, :, 0]),
+            index_x = get_index_of_closest_value(torch.asarray(self._sky_coordinates[0, :, 0], device=self._device),
                                                  self._angular_separation_from_star_x[0])
-            index_y = get_index_of_closest_value(torch.asarray(self._sky_coordinates[1, 0, :]),
+            index_y = get_index_of_closest_value(torch.asarray(self._sky_coordinates[1, 0, :], device=self._device),
                                                  self._angular_separation_from_star_y[0])
             sky_brightness_distribution[:, index_x, index_y] = self._spectral_energy_distribution
         return sky_brightness_distribution
@@ -361,7 +361,7 @@ class Planet(CachedAttributesSource, BaseModel):
             + self._angular_separation_from_star_y[index_time] ** 2
         )
 
-        sky_coordinates_at_time_step = get_meshgrid(2 * (1.2 * angular_radius), self._grid_size)
+        sky_coordinates_at_time_step = get_meshgrid(2 * (1.2 * angular_radius), self._grid_size, device=self._device)
 
         return torch.stack((sky_coordinates_at_time_step[0], sky_coordinates_at_time_step[1]))
 
