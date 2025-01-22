@@ -69,6 +69,7 @@ class Instrument(ObservingEntity):
     _number_of_simulation_time_steps: int = None
 
     def __init__(self, **data):
+
         super().__init__(**data)
 
         if self.perturbations is None:

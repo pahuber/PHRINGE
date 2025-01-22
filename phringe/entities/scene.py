@@ -43,7 +43,6 @@ class Scene(BaseEntity):
             self.planets.append(source)
         elif isinstance(source, Exozodi):
             source._host_star_luminosity = self.star.luminosity
-            source._field_of_view = self._instrument.field_of_view
             self.exozodi = source
         elif isinstance(source, LocalZodi):
             self.local_zodi = source

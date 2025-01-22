@@ -13,7 +13,6 @@ from phringe.util.spectrum import create_blackbody_spectrum
 
 class LocalZodi(BaseSource):
     """Class representation of a local zodi."""
-    name: str = 'LocalZodi'
 
     def _get_ecliptic_coordinates(self, star_right_ascension, star_declination, solar_ecliptic_latitude) -> Tuple:
         """Return the ecliptic latitude and relative ecliptic longitude that correspond to the star position in the sky.
