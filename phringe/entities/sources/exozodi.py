@@ -4,7 +4,6 @@ from typing import Any
 import numpy as np
 import torch
 from astropy.units import Quantity
-from pydantic import BaseModel
 
 from phringe.entities.sources.base_source import BaseSource
 from phringe.util.grid import get_radial_map, get_meshgrid
@@ -13,7 +12,7 @@ from phringe.util.spectrum import create_blackbody_spectrum
 from phringe.util.warning import MissingRequirementWarning
 
 
-class Exozodi(BaseSource, BaseModel):
+class Exozodi(BaseSource):
     """Class representation of an exozodi.
     """
     name: str = 'Exozodi'

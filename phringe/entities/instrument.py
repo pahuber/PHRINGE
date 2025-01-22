@@ -10,7 +10,7 @@ from torch import Tensor
 
 from phringe.core.observing_entity import ObservingEntity
 from phringe.entities.perturbations.amplitude_perturbation import AmplitudePerturbation
-from phringe.entities.perturbations.base_perturbation import ObservingPerturbation
+from phringe.entities.perturbations.base_perturbation import BasePerturbation
 from phringe.entities.perturbations.phase_perturbation import PhasePerturbation
 from phringe.entities.perturbations.polarization_perturbation import PolarizationPerturbation
 from phringe.io.validators import validate_quantity_units
@@ -22,7 +22,7 @@ class _Perturbations(BaseModel):
     polarization: PolarizationPerturbation = None
 
 
-class Instrument(BaseModel, ObservingEntity):
+class Instrument(ObservingEntity):
     """Class representing the instrument.
 
     :param amplitude_perturbation_lower_limit: The lower limit of the amplitude perturbation
@@ -216,7 +216,7 @@ class Instrument(BaseModel, ObservingEntity):
             torch.asarray(wavelength_bin_widths, dtype=torch.float32, device=self._device)
         )
 
-    def add_perturbation(self, perturbation: ObservingPerturbation):
+    def add_perturbation(self, perturbation: BasePerturbation):
         perturbation._device = self._device if self._device is not None else None
         perturbation._number_of_inputs = self.number_of_inputs
         perturbation._number_of_simulation_time_steps = self._number_of_simulation_time_steps
@@ -230,7 +230,7 @@ class Instrument(BaseModel, ObservingEntity):
         elif isinstance(perturbation, PolarizationPerturbation):
             self.perturbations.polarization = perturbation
 
-    def remove_perturbation(self, perturbation: ObservingPerturbation):
+    def remove_perturbation(self, perturbation: BasePerturbation):
         if isinstance(perturbation, AmplitudePerturbation):
             self.perturbations.amplitude = None
         elif isinstance(perturbation, PhasePerturbation):
@@ -238,7 +238,7 @@ class Instrument(BaseModel, ObservingEntity):
         elif isinstance(perturbation, PolarizationPerturbation):
             self.perturbations.polarization = None
 
-    def get_all_perturbations(self) -> list[ObservingPerturbation]:
+    def get_all_perturbations(self) -> list[BasePerturbation]:
         """Return all perturbations.
 
         :return: A list containing all perturbations

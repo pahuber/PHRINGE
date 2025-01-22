@@ -8,7 +8,7 @@ from astropy import units as u
 from astropy.constants.codata2018 import G
 from poliastro.bodies import Body
 from poliastro.twobody import Orbit
-from pydantic import BaseModel, field_validator
+from pydantic import field_validator
 from pydantic_core.core_schema import ValidationInfo
 from torch import Tensor
 
@@ -20,7 +20,7 @@ from phringe.util.spectrum import create_blackbody_spectrum
 from phringe.util.warning import MissingRequirementWarning
 
 
-class Planet(BaseSource, BaseModel):
+class Planet(BaseSource):
     """Class representation of a planet.
 
     :param name: The name of the planet

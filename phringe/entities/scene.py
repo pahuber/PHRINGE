@@ -1,7 +1,5 @@
 from typing import Any
 
-from pydantic import BaseModel
-
 from phringe.core.base_entity import BaseEntity
 from phringe.entities.sources.base_source import BaseSource
 from phringe.entities.sources.exozodi import Exozodi
@@ -10,7 +8,7 @@ from phringe.entities.sources.planet import Planet
 from phringe.entities.sources.star import Star
 
 
-class Scene(BaseModel, BaseEntity):
+class Scene(BaseEntity):
     """Class representing the observation scene.
 
     :param star: The star in the scene

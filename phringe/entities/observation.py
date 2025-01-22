@@ -1,14 +1,14 @@
 from typing import Any
 
 from astropy import units as u
-from pydantic import field_validator, BaseModel
+from pydantic import field_validator
 from pydantic_core.core_schema import ValidationInfo
 
 from phringe.core.base_entity import BaseEntity
 from phringe.io.validators import validate_quantity_units
 
 
-class Observation(BaseModel, BaseEntity):
+class Observation(BaseEntity):
     """Class representing the observation mode.
 
     :param solar_ecliptic_latitude: The solar ecliptic latitude

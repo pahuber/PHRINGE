@@ -1,10 +1,11 @@
 import importlib
 from pathlib import Path
 
+from phringe.core.base_entity import BaseEntity
 from phringe.io.utils import load_config
 
 
-class Configuration():
+class Configuration(BaseEntity):
     def __init__(self, path):
         super().__init__()
         self.dict = load_config(path)

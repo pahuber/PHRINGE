@@ -4,7 +4,7 @@ from typing import Any, Union
 
 import numpy as np
 from numpy.random import normal
-from pydantic import BaseModel, field_validator
+from pydantic import field_validator
 from pydantic_core.core_schema import ValidationInfo
 from scipy.fft import irfft, fftshift
 from torch import Tensor
@@ -13,7 +13,7 @@ from phringe.core.observing_entity import ObservingEntity
 from phringe.util.warning import MissingRequirementWarning
 
 
-class ObservingPerturbation(ABC, BaseModel, ObservingEntity):
+class BasePerturbation(ABC, ObservingEntity):
     rms: str = None
     color: str = None
     _device: Any = None

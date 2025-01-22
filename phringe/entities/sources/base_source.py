@@ -1,13 +1,12 @@
 from abc import abstractmethod, ABC
 from typing import Any, Union
 
-from pydantic import BaseModel
 from torch import Tensor
 
 from phringe.core.observing_entity import ObservingEntity
 
 
-class BaseSource(ABC, BaseModel, ObservingEntity):
+class BaseSource(ABC, ObservingEntity):
     """Class representation of a photon source1.
 
     :param mean_spectral_flux_density: An array containing the mean spectral flux density of the photon source1 for each
