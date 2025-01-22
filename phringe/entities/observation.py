@@ -4,10 +4,11 @@ from astropy import units as u
 from pydantic import field_validator, BaseModel
 from pydantic_core.core_schema import ValidationInfo
 
+from phringe.core.base_entity import BaseEntity
 from phringe.io.validators import validate_quantity_units
 
 
-class Observation(BaseModel):
+class Observation(BaseModel, BaseEntity):
     """Class representing the observation mode.
 
     :param solar_ecliptic_latitude: The solar ecliptic latitude
@@ -28,7 +29,6 @@ class Observation(BaseModel):
     optimized_differential_output: int
     optimized_star_separation: str
     optimized_wavelength: str
-    _device: Any = None
 
     @field_validator('detector_integration_time')
     def _validate_detector_integration_time(cls, value: Any, info: ValidationInfo) -> float:

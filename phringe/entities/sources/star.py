@@ -9,7 +9,7 @@ from pydantic import field_validator
 from pydantic_core.core_schema import ValidationInfo
 from torch import Tensor
 
-from phringe.core.entities.sources.base_source import CachedAttributesSource
+from phringe.entities.sources.base_source import BaseSource
 from phringe.io.validators import validate_quantity_units
 from phringe.util.grid import get_meshgrid
 from phringe.util.helpers import Coordinates
@@ -17,7 +17,7 @@ from phringe.util.spectrum import create_blackbody_spectrum
 from phringe.util.warning import MissingRequirementWarning
 
 
-class Star(CachedAttributesSource):
+class Star(BaseSource):
     """Class representation of a star.
 
     :param name: The name of the star
@@ -219,7 +219,7 @@ class Star(CachedAttributesSource):
             attribute_name='spectral_energy_distribution',
             compute_func=self._get_spectral_energy_distribution,
             required_attributes=(
-                self._instrument,
+                self._instrument.wavelength_bin_centers,
                 self.radius,
                 self.temperature,
                 self._solid_angle

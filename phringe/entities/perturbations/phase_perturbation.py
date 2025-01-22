@@ -9,12 +9,12 @@ from pydantic import field_validator
 from pydantic_core.core_schema import ValidationInfo
 from torch import Tensor
 
-from phringe.core.entities.perturbations.base_perturbation import CachedAttributesPerturbation
+from phringe.entities.perturbations.base_perturbation import ObservingPerturbation
 from phringe.io.validators import validate_quantity_units
 from phringe.util.warning import MissingRequirementWarning
 
 
-class PhasePerturbation(CachedAttributesPerturbation):
+class PhasePerturbation(ObservingPerturbation):
     _wavelength_bin_center: Any = None
 
     @field_validator('rms')

@@ -9,13 +9,13 @@ import torch
 from torch import Tensor
 
 from phringe.core.director import Director
-from phringe.core.entities.instrument import Instrument
-from phringe.core.entities.observation import Observation
-from phringe.core.entities.scene import Scene
-from phringe.core.entities.simulation import Simulation
-from phringe.core.entities.sources.exozodi import Exozodi
-from phringe.core.entities.sources.local_zodi import LocalZodi
-from phringe.core.entities.sources.planet import Planet
+from phringe.entities import Instrument
+from phringe.entities.observation import Observation
+from phringe.entities import Scene
+from phringe.entities import Simulation
+from phringe.entities.sources.exozodi import Exozodi
+from phringe.entities.sources.local_zodi import LocalZodi
+from phringe.entities import Planet
 from phringe.io.fits_writer import FITSWriter
 from phringe.io.utils import load_config
 

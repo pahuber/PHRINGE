@@ -2,14 +2,15 @@ from typing import Any
 
 from pydantic import BaseModel
 
-from phringe.core.entities.sources.base_source import CachedAttributesSource
-from phringe.core.entities.sources.exozodi import Exozodi
-from phringe.core.entities.sources.local_zodi import LocalZodi
-from phringe.core.entities.sources.planet import Planet
-from phringe.core.entities.sources.star import Star
+from phringe.core.base_entity import BaseEntity
+from phringe.entities.sources.base_source import BaseSource
+from phringe.entities.sources.exozodi import Exozodi
+from phringe.entities.sources.local_zodi import LocalZodi
+from phringe.entities.sources.planet import Planet
+from phringe.entities.sources.star import Star
 
 
-class Scene(BaseModel):
+class Scene(BaseModel, BaseEntity):
     """Class representing the observation scene.
 
     :param star: The star in the scene
@@ -21,12 +22,12 @@ class Scene(BaseModel):
     planets: list[Planet] = []
     exozodi: Exozodi = None
     local_zodi: LocalZodi = None
-    _device: Any = None
     _instrument: Any = None
     _grid_size: int = None
     _simulation_time_steps: Any = None
+    _field_of_view: Any = None
 
-    def add_source(self, source: CachedAttributesSource):
+    def add_source(self, source: BaseSource):
         """Add a source to the scene.
 
         :param source: The source to add
@@ -43,6 +44,8 @@ class Scene(BaseModel):
             source.host_star_mass = self.star.mass if source.host_star_mass is None else source.host_star_mass
             self.planets.append(source)
         elif isinstance(source, Exozodi):
+            source._host_star_luminosity = self.star.luminosity
+            source._field_of_view = self._instrument.field_of_view
             self.exozodi = source
         elif isinstance(source, LocalZodi):
             self.local_zodi = source
@@ -62,7 +65,7 @@ class Scene(BaseModel):
         elif isinstance(source, LocalZodi):
             self.local_zodi = None
 
-    def get_all_sources(self) -> list[CachedAttributesSource]:
+    def get_all_sources(self) -> list[BaseSource]:
         """Return all sources in the scene.
 
         """
@@ -77,7 +80,7 @@ class Scene(BaseModel):
             all_sources.append(self.exozodi)
         return all_sources
 
-    def get_source(self, name: str) -> CachedAttributesSource:
+    def get_source(self, name: str) -> BaseSource:
         """Return the source with the given name.
 
         :param name: The name of the source

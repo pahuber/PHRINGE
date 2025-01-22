@@ -9,11 +9,11 @@ from pydantic_core.core_schema import ValidationInfo
 from scipy.fft import irfft, fftshift
 from torch import Tensor
 
-from phringe.core.cached_attributes_entity import CachedAttributesEntity
+from phringe.core.observing_entity import ObservingEntity
 from phringe.util.warning import MissingRequirementWarning
 
 
-class CachedAttributesPerturbation(ABC, BaseModel, CachedAttributesEntity):
+class ObservingPerturbation(ABC, BaseModel, ObservingEntity):
     rms: str = None
     color: str = None
     _device: Any = None

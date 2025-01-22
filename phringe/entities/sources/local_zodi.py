@@ -6,13 +6,13 @@ from astropy import units as u
 from astropy.coordinates import SkyCoord, GeocentricTrueEcliptic
 from pydantic import BaseModel
 
-from phringe.core.entities.sources.base_source import CachedAttributesSource
+from phringe.entities.sources.base_source import BaseSource
 from phringe.util.grid import get_meshgrid
 from phringe.util.helpers import Coordinates
 from phringe.util.spectrum import create_blackbody_spectrum
 
 
-class LocalZodi(CachedAttributesSource, BaseModel):
+class LocalZodi(BaseSource, BaseModel):
     """Class representation of a local zodi."""
     name: str = 'LocalZodi'
 

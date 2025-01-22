@@ -1,4 +1,7 @@
-class CachedAttributesEntity:
+from phringe.core.base_entity import BaseEntity
+
+
+class ObservingEntity(BaseEntity):
     """
     A base class that provides a method `_get_cached_value` for caching derived values
     using a signature built from a tuple of dependencies. This allows lazy caching if they dependent attributed do not
@@ -11,6 +14,7 @@ class CachedAttributesEntity:
     If the new signature matches the old one, we return the cached value.
     Otherwise, we recalc via `compute_func`.
     """
+    # TODO: add usage example
     _cache: dict = {}
 
     def _get_cached_value(

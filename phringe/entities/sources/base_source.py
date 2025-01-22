@@ -4,10 +4,10 @@ from typing import Any, Union
 from pydantic import BaseModel
 from torch import Tensor
 
-from phringe.core.cached_attributes_entity import CachedAttributesEntity
+from phringe.core.observing_entity import ObservingEntity
 
 
-class CachedAttributesSource(ABC, BaseModel, CachedAttributesEntity):
+class BaseSource(ABC, BaseModel, ObservingEntity):
     """Class representation of a photon source1.
 
     :param mean_spectral_flux_density: An array containing the mean spectral flux density of the photon source1 for each

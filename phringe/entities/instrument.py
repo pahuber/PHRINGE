@@ -8,12 +8,11 @@ from pydantic_core.core_schema import ValidationInfo
 from sympy import symbols, Symbol, exp, I, pi, cos, sin, Abs, lambdify, sqrt
 from torch import Tensor
 
-from phringe.core.cached_attributes_entity import CachedAttributesEntity
-from phringe.core.entities.base_entity import BaseEntity
-from phringe.core.entities.perturbations.amplitude_perturbation import AmplitudePerturbation
-from phringe.core.entities.perturbations.base_perturbation import CachedAttributesPerturbation
-from phringe.core.entities.perturbations.phase_perturbation import PhasePerturbation
-from phringe.core.entities.perturbations.polarization_perturbation import PolarizationPerturbation
+from phringe.core.observing_entity import ObservingEntity
+from phringe.entities.perturbations.amplitude_perturbation import AmplitudePerturbation
+from phringe.entities.perturbations.base_perturbation import ObservingPerturbation
+from phringe.entities.perturbations.phase_perturbation import PhasePerturbation
+from phringe.entities.perturbations.polarization_perturbation import PolarizationPerturbation
 from phringe.io.validators import validate_quantity_units
 
 
@@ -23,7 +22,7 @@ class _Perturbations(BaseModel):
     polarization: PolarizationPerturbation = None
 
 
-class Instrument(BaseModel, BaseEntity, CachedAttributesEntity):
+class Instrument(BaseModel, ObservingEntity):
     """Class representing the instrument.
 
     :param amplitude_perturbation_lower_limit: The lower limit of the amplitude perturbation
@@ -217,7 +216,7 @@ class Instrument(BaseModel, BaseEntity, CachedAttributesEntity):
             torch.asarray(wavelength_bin_widths, dtype=torch.float32, device=self._device)
         )
 
-    def add_perturbation(self, perturbation: CachedAttributesPerturbation):
+    def add_perturbation(self, perturbation: ObservingPerturbation):
         perturbation._device = self._device if self._device is not None else None
         perturbation._number_of_inputs = self.number_of_inputs
         perturbation._number_of_simulation_time_steps = self._number_of_simulation_time_steps
@@ -231,7 +230,7 @@ class Instrument(BaseModel, BaseEntity, CachedAttributesEntity):
         elif isinstance(perturbation, PolarizationPerturbation):
             self.perturbations.polarization = perturbation
 
-    def remove_perturbation(self, perturbation: CachedAttributesPerturbation):
+    def remove_perturbation(self, perturbation: ObservingPerturbation):
         if isinstance(perturbation, AmplitudePerturbation):
             self.perturbations.amplitude = None
         elif isinstance(perturbation, PhasePerturbation):
@@ -239,7 +238,7 @@ class Instrument(BaseModel, BaseEntity, CachedAttributesEntity):
         elif isinstance(perturbation, PolarizationPerturbation):
             self.perturbations.polarization = None
 
-    def get_all_perturbations(self) -> list[CachedAttributesPerturbation]:
+    def get_all_perturbations(self) -> list[ObservingPerturbation]:
         """Return all perturbations.
 
         :return: A list containing all perturbations

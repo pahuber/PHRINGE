@@ -7,15 +7,15 @@ from pydantic import field_validator
 from pydantic_core.core_schema import ValidationInfo
 from torch import Tensor
 
-from phringe.core.entities.perturbations.base_perturbation import CachedAttributesPerturbation
+from phringe.entities.perturbations.base_perturbation import ObservingPerturbation
 from phringe.io.validators import validate_quantity_units
 
 
-class PolarizationPerturbation(CachedAttributesPerturbation):
+class AmplitudePerturbation(ObservingPerturbation):
 
     @field_validator('rms')
     def _validate_rms(cls, value: Any, info: ValidationInfo) -> float:
-        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.rad,)).si.value
+        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.percent,)).si.value
 
     def _calculate_time_series(
             self,
@@ -24,6 +24,7 @@ class PolarizationPerturbation(CachedAttributesPerturbation):
             # **kwargs
     ) -> Tensor:
         time_series = np.zeros((self._number_of_inputs, self._number_of_simulation_time_steps))
+
         color_coeff = self._get_color_coeff()
 
         for k in range(self._number_of_inputs):
