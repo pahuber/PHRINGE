@@ -17,14 +17,14 @@ def get_meshgrid(full_extent: float, grid_size: int, device: torch.device) -> Tu
     return torch.meshgrid((linspace, linspace), indexing='ij')
 
 
-def get_radial_map(full_extent: Quantity, grid_size: int) -> Tuple[np.ndarray, np.ndarray]:
+def get_radial_map(full_extent: Quantity, grid_size: int, device=torch.device) -> Tuple[np.ndarray, np.ndarray]:
     """Return a radial map over the full extent given.
 
     :param full_extent: The full extent
     :param grid_size: The grid size
     :return: THe radial map
     """
-    meshgrid = get_meshgrid(full_extent, grid_size)
+    meshgrid = get_meshgrid(full_extent, grid_size, device)
     return torch.sqrt(meshgrid[0] ** 2 + meshgrid[1] ** 2)
 
 

@@ -7,6 +7,7 @@ import torch
 from astropy import units as u
 from pydantic import field_validator
 from pydantic_core.core_schema import ValidationInfo
+from scipy.constants import sigma
 from torch import Tensor
 
 from phringe.entities.sources.base_source import BaseSource
@@ -34,7 +35,7 @@ class Star(BaseSource):
     mass: str
     radius: str
     temperature: str
-    luminosity: str  # TODO: remove luminosity and calculate from radius and temperature
+    # luminosity: str
     right_ascension: str
     declination: str
 
@@ -47,17 +48,6 @@ class Star(BaseSource):
         :return: The distance in units of length
         """
         return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,)).si.value
-
-    @field_validator('luminosity')
-    def _validate_luminosity(cls, value: Any, info: ValidationInfo) -> float:
-        """Validate the luminosity input.
-
-        :param value: Value given as input
-        :param info: ValidationInfo object
-        :return: The luminosity in units of luminosity
-        """
-        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.Lsun,)).to(
-            u.Lsun).value
 
     @field_validator('mass')
     def _validate_mass(cls, value: Any, info: ValidationInfo) -> float:
@@ -137,6 +127,20 @@ class Star(BaseSource):
         radius_inner = np.sqrt(self.luminosity / incident_stellar_flux_inner)
         radius_outer = np.sqrt(self.luminosity / incident_stellar_flux_outer)
         return ((radius_outer + radius_inner) / 2 * u.au).si.value
+
+    @property
+    def luminosity(self):
+        return self._get_cached_value(
+            attribute_name='luminosity',
+            compute_func=self._get_luminosity,
+            required_attributes=(
+                self.radius,
+                self.temperature
+            )
+        )
+
+    def _get_luminosity(self):
+        return 4 * np.pi * self.radius ** 2 * sigma * self.temperature ** 4 / 3.86e26  # TODO: make SI units
 
     @property
     def _sky_brightness_distribution(self) -> np.ndarray:

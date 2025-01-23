@@ -1,3 +1,5 @@
+import torch
+
 from phringe.core.base_entity import BaseEntity
 
 
@@ -16,6 +18,49 @@ class ObservingEntity(BaseEntity):
     """
     # TODO: add usage example
     _cache: dict = {}
+
+    def has_tensor(self, obj) -> bool:
+        """
+        Recursively check if 'obj' (which may be nested lists/tuples)
+        contains at least one torch.Tensor.
+        """
+        if isinstance(obj, torch.Tensor):
+            return True
+        elif isinstance(obj, (list, tuple)):
+            return any(self.has_tensor(x) for x in obj)
+        return False
+
+    def is_signature_equal(self, sig1, sig2) -> bool:
+        """
+        If neither sig1 nor sig2 contains a torch.Tensor,
+        compare them with normal '=='.
+        Otherwise, do a minimal custom comparison.
+        """
+        # Quick short-circuit: if type is different, not equal
+        if type(sig1) != type(sig2):
+            return False
+
+        # If neither has Tensor => normal '=='
+        if not self.has_tensor(sig1) and not self.has_tensor(sig2):
+            return sig1 == sig2
+
+        # If either has a Tensor, do a minimal custom approach
+        return self.eq_for_signature(sig1, sig2)
+
+    def eq_for_signature(self, old, new) -> bool:
+        """
+        Minimal custom comparison for Tensors & nested structures.
+        """
+        if isinstance(old, torch.Tensor) and isinstance(new, torch.Tensor):
+            if old.shape != new.shape or old.dtype != new.dtype:
+                return False
+            return bool(torch.allclose(old, new))
+        elif isinstance(old, (list, tuple)) and isinstance(new, (list, tuple)):
+            if len(old) != len(new):
+                return False
+            return all(self.eq_for_signature(o, n) for o, n in zip(old, new))
+        else:
+            return old == new
 
     def _get_cached_value(
             self,
@@ -41,9 +86,10 @@ class ObservingEntity(BaseEntity):
 
         # Build the new signature from the current dependencies
         new_sig = tuple(required_attributes)
+        new_sig = new_sig.__str__()
 
         # If there's an old signature that matches new_sig, return the existing cache
-        if old_sig is not None and old_sig == new_sig:
+        if old_sig is not None and self.is_signature_equal(old_sig, new_sig):
             return cached_value
 
         # Otherwise, something changed => recompute

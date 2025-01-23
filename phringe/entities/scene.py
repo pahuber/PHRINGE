@@ -42,7 +42,11 @@ class Scene(BaseEntity):
             source.host_star_mass = self.star.mass if source.host_star_mass is None else source.host_star_mass
             self.planets.append(source)
         elif isinstance(source, Exozodi):
-            source._host_star_luminosity = self.star.luminosity
+            # If the user has not provided the host star luminosity and distance, use the values from the star
+            if source.host_star_luminosity is None:
+                source.host_star_luminosity = self.star.luminosity if self.star is not None else None
+            if source.host_star_distance is None:
+                source.host_star_distance = self.star.distance if self.star is not None else None
             self.exozodi = source
         elif isinstance(source, LocalZodi):
             self.local_zodi = source

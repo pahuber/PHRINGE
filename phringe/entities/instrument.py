@@ -61,7 +61,7 @@ class Instrument(ObservingEntity):
     throughput: float
     quantum_efficiency: float
     perturbations: _Perturbations = None
-    field_of_view: Any = None
+    # field_of_view: Any = None
     response: Any = None
     number_of_inputs: int = None
     number_of_outputs: int = None
@@ -135,7 +135,7 @@ class Instrument(ObservingEntity):
     @property
     def _field_of_view(self):
         return self._get_cached_value(
-            attribute_name='field_of_View',
+            attribute_name='_field_of_view',
             compute_func=self._get_field_of_view,
             required_attributes=(
                 self.wavelength_bin_centers,
