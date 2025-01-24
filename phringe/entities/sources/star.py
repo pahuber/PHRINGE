@@ -10,6 +10,7 @@ from pydantic_core.core_schema import ValidationInfo
 from scipy.constants import sigma
 from torch import Tensor
 
+from phringe.core.observing_entity import observing_property
 from phringe.entities.sources.base_source import BaseSource
 from phringe.io.validators import validate_quantity_units
 from phringe.util.grid import get_meshgrid
@@ -128,7 +129,15 @@ class Star(BaseSource):
         radius_outer = np.sqrt(self.luminosity / incident_stellar_flux_outer)
         return ((radius_outer + radius_inner) / 2 * u.au).si.value
 
-    @property
+    @observing_property(
+        # compute_func=lambda s: s._get_luminosity(),
+        observed_attributes=(
+                lambda s: s._instrument._field_of_view,
+                lambda s: s._instrument.wavelength_bin_centers,
+                lambda s: s.host_star_distance,
+                lambda s: s._grid_size
+        )
+    )
     def luminosity(self):
         return self._get_cached_value(
             attribute_name='luminosity',

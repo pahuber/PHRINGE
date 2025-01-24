@@ -1,3 +1,4 @@
+import warnings
 from typing import Tuple
 
 import numpy as np
@@ -9,6 +10,7 @@ from phringe.entities.sources.base_source import BaseSource
 from phringe.util.grid import get_meshgrid
 from phringe.util.helpers import Coordinates
 from phringe.util.spectrum import create_blackbody_spectrum
+from phringe.util.warning import MissingRequirementWarning
 
 
 class LocalZodi(BaseSource):
@@ -29,29 +31,75 @@ class LocalZodi(BaseSource):
         relative_ecliptic_longitude = ecliptic_longitude - solar_ecliptic_latitude
         return ecliptic_latitude, relative_ecliptic_longitude
 
-    def _sky_brightness_distribution(self, grid_size: int, **kwargs) -> np.ndarray:
-        grid = torch.ones((grid_size, grid_size), dtype=torch.float32)
-        return torch.einsum('i, jk ->ijk', self.spectral_flux_density, grid)
+    @property
+    def _sky_brightness_distribution(self):
+        if self._instrument is None:
+            warnings.warn(MissingRequirementWarning('Instrument', 'sky_brightness_distribution'))
+            return None
 
-    def _sky_coordinates(self, grid_size, **kwargs) -> Coordinates:
-        number_of_wavelength_steps = kwargs['number_of_wavelength_steps']
-        field_of_view = kwargs['field_of_view']
+        return self._get_cached_value(
+            attribute_name='sky_brightness_distribution',
+            compute_func=self._get_sky_brightness_distribution(),
+            required_attributes=(
+                self._instrument._field_of_view,
+                self._spectral_energy_distribution,
+                self._grid_size
+            )
+        )
 
-        sky_coordinates = torch.zeros((2, number_of_wavelength_steps, grid_size, grid_size))
+    def _get_sky_brightness_distribution(self) -> np.ndarray:
+        grid = torch.ones((self._grid_size, self._grid_size), dtype=torch.float32, device=self._device)
+        return torch.einsum('i, jk ->ijk', self._spectral_energy_distribution, grid)
+
+    @property
+    def _sky_coordinates(self):
+        if self._instrument is None:
+            warnings.warn(MissingRequirementWarning('Instrument', 'sky_coordinates'))
+            return None
+
+        return self._get_cached_value(
+            attribute_name='sky_brightness_distribution',
+            compute_func=self._get_sky_coordinates,
+            required_attributes=(
+                self._instrument._field_of_view,
+                self._instrument._wavelength_bin_centers,
+                self._grid_size
+            )
+        )
+
+    def _get_sky_coordinates(self, grid_size, **kwargs) -> Coordinates:
+        number_of_wavelength_steps = len(self._instrument.wavelength_bin_centers)
+
+        sky_coordinates = torch.zeros((2, number_of_wavelength_steps, self._grid_size, self._grid_size),
+                                      device=self._device)
         # The sky coordinates have a different extent for each field of view, i.e. for each wavelength
         for index_fov in range(number_of_wavelength_steps):
-            sky_coordinates_at_fov = get_meshgrid(field_of_view[index_fov], grid_size)
+            sky_coordinates_at_fov = get_meshgrid(self._instrument._field_of_view[index_fov], self._grid_size)
             sky_coordinates[:, index_fov] = torch.stack(
                 (sky_coordinates_at_fov[0], sky_coordinates_at_fov[1]))
         return sky_coordinates
 
-    def _get_solid_angle(self, **kwargs) -> float:
+    @property
+    def _solid_angle(self):
+        if self._instrument is None:
+            warnings.warn(MissingRequirementWarning('Instrument', 'sky_coordinates'))
+            return None
+
+        return self._get_cached_value(
+            attribute_name='sky_brightness_distribution',
+            compute_func=self._get_solid_angle,
+            required_attributes=(
+                self._instrument._field_of_view,
+            )
+        )
+
+    def _get_solid_angle(self) -> float:
         """Calculate and return the solid angle of the local zodi.
 
         :param kwargs: Additional keyword arguments
         :return: The solid angle
         """
-        return kwargs['field_of_view'] ** 2
+        return self._instrument._field_of_view ** 2
 
     def _get_spectral_energy_distribution(
             self,

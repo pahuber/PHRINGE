@@ -1,4 +1,3 @@
-import warnings
 from typing import Any
 
 import numpy as np
@@ -8,9 +7,7 @@ from astropy.units import Quantity
 from phringe.core.observing_entity import observing_property
 from phringe.entities.sources.base_source import BaseSource
 from phringe.util.grid import get_radial_map, get_meshgrid
-from phringe.util.helpers import Coordinates
 from phringe.util.spectrum import create_blackbody_spectrum
-from phringe.util.warning import MissingRequirementWarning
 
 
 class Exozodi(BaseSource):
@@ -23,134 +20,16 @@ class Exozodi(BaseSource):
     host_star_luminosity: Any = None
     host_star_distance: Any = None
 
-    @property
-    def _sky_brightness_distribution(self):
-        if self._instrument is None:
-            warnings.warn(MissingRequirementWarning('Instrument', 'sky_brightness_distribution'))
-            return None
-
-        if self.host_star_luminosity is None:
-            warnings.warn(MissingRequirementWarning('Star', 'sky_brightness_distribution'))
-            return None
-
-        return self._get_cached_value(
-            attribute_name='sky_brightness_distribution',
-            compute_func=self._get_sky_brightness_distribution,
-            required_attributes=(
-                self._grid_size,
-                self.host_star_luminosity,
-                self._field_of_view_in_au_radial_map
-            )
-        )
-
-    def _get_sky_brightness_distribution(self) -> np.ndarray:
-        reference_radius_in_au = torch.sqrt(torch.tensor(self.host_star_luminosity))
-        surface_maps = self.level * 7.12e-8 * (self._field_of_view_in_au_radial_map / reference_radius_in_au) ** (-0.34)
-        return surface_maps * self._spectral_energy_distribution
-
-    @property
-    def _sky_coordinates(self):
-        if self._instrument is None:
-            warnings.warn(MissingRequirementWarning('Instrument', 'sky_coordinates'))
-            return None
-
-        return self._get_cached_value(
-            attribute_name='sky_coordinates',
-            compute_func=self._get_sky_coordinates,
-            required_attributes=(
-                self._grid_size,
-                self._instrument._field_of_view
-            )
-        )
-
-    def _get_sky_coordinates(self) -> Coordinates:
-        sky_coordinates = torch.zeros((2, len(self._instrument._field_of_view), self._grid_size, self._grid_size),
-                                      dtype=torch.float32, device=self._device)
-
-        # The sky coordinates have a different extent for each field of view, i.e. for each wavelength
-        for index_fov in range(len(self._instrument._field_of_view)):
-            sky_coordinates_at_fov = get_meshgrid(
-                self._instrument._field_of_view[index_fov],
-                self._grid_size,
-                self._device)
-            sky_coordinates[:, index_fov] = torch.stack(
-                (sky_coordinates_at_fov[0], sky_coordinates_at_fov[1]))
-
-        return sky_coordinates
-
-    @property
-    def _solid_angle(self) -> np.ndarray:
-        if self._instrument is None:
-            warnings.warn(MissingRequirementWarning('Instrument', 'solid_angle'))
-            return None
-
-        return self._get_cached_value(
-            attribute_name='solid_angle',
-            compute_func=self._get_solid_angle,
-            required_attributes=(
-                (self._instrument._field_of_view,)
-            )
-        )
-
-    def _get_solid_angle(self) -> float:
-        """Calculate and return the solid angle of the exozodi.
-
-        :param kwargs: Additional keyword arguments
-        :return: The solid angle
-        """
-        return self._instrument._field_of_view ** 2
-
-    # @property
-    # def _spectral_energy_distribution(self):
-    #
-    #     if self._instrument is None:
-    #         warnings.warn(MissingRequirementWarning('Instrument', 'spectral_energy_distribution'))
-    #         return None
-    #
-    #     return self._get_cached_value(
-    #         attribute_name='spectral_energy_distribution',
-    #         compute_func=self._get_spectral_energy_distribution,
-    #         required_attributes=(
-    #             self._instrument._field_of_view,
-    #             self._instrument.wavelength_bin_centers,
-    #             self._field_of_view_in_au_radial_map,
-    #             self.host_star_distance,
-    #             self.host_star_luminosity,
-    #             self._grid_size
-    #         )
-    #     )
-
     @observing_property(
-        compute_func=lambda s: s._get_spectral_energy_distribution(),
         observed_attributes=(
                 lambda s: s._instrument._field_of_view,
                 lambda s: s._instrument.wavelength_bin_centers,
-                lambda s: s._field_of_view_in_au_radial_map,
                 lambda s: s.host_star_distance,
-                lambda s: s.host_star_luminosity,
                 lambda s: s._grid_size
         )
     )
-    def _spectral_energy_distribution(self):
-        pass
-
-    @property
     def _field_of_view_in_au_radial_map(self):
-        return self._get_cached_value(
-            attribute_name='field_of_view_in_au_radial_map',
-            compute_func=self._get_field_of_view_in_au_radial_map,
-            required_attributes=(
-                self._instrument._field_of_view,
-                self.test,
-                self._instrument.wavelength_bin_centers,
-                self.host_star_distance,
-                self._grid_size
-            )
-        )
-
-    def _get_field_of_view_in_au_radial_map(self):
         field_of_view_in_au = self._instrument._field_of_view * self.host_star_distance * 6.68459e-12
-        print(self.test)
         num_wavelengths = len(self._instrument._field_of_view)
         shape = (num_wavelengths, self._grid_size, self._grid_size)
 
@@ -161,8 +40,53 @@ class Exozodi(BaseSource):
 
         return field_of_view_in_au_radial_map
 
-    def _get_spectral_energy_distribution(self) -> np.ndarray:
+    @observing_property(
+        observed_attributes=(
+                lambda s: s._spectral_energy_distribution,
+                lambda s: s._field_of_view_in_au_radial_map,
+                lambda s: s.host_star_luminosity,
+                lambda s: s._grid_size
+        )
+    )
+    def _sky_brightness_distribution(self):
+        reference_radius_in_au = torch.sqrt(torch.tensor(self.host_star_luminosity))
+        surface_maps = self.level * 7.12e-8 * (self._field_of_view_in_au_radial_map / reference_radius_in_au) ** (-0.34)
+        return surface_maps * self._spectral_energy_distribution
 
+    @observing_property(observed_attributes=(lambda s: s._instrument._field_of_view, lambda s: s._grid_size))
+    def _sky_coordinates(self):
+        sky_coordinates = torch.zeros(
+            (2, len(self._instrument._field_of_view), self._grid_size, self._grid_size),
+            dtype=torch.float32,
+            device=self._device
+        )
+
+        # The sky coordinates have a different extent for each field of view, i.e. for each wavelength
+        for index_fov in range(len(self._instrument._field_of_view)):
+            sky_coordinates_at_fov = get_meshgrid(
+                self._instrument._field_of_view[index_fov],
+                self._grid_size,
+                self._device
+            )
+            sky_coordinates[:, index_fov] = torch.stack((sky_coordinates_at_fov[0], sky_coordinates_at_fov[1]))
+
+        return sky_coordinates
+
+    @observing_property(observed_attributes=(lambda s: s._instrument._field_of_view,))
+    def _solid_angle(self) -> np.ndarray:
+        return self._instrument._field_of_view ** 2
+
+    @observing_property(
+        observed_attributes=(
+                lambda s: s._instrument._field_of_view,
+                lambda s: s._instrument.wavelength_bin_centers,
+                lambda s: s._field_of_view_in_au_radial_map,
+                lambda s: s.host_star_distance,
+                lambda s: s.host_star_luminosity,
+                lambda s: s._grid_size
+        )
+    )
+    def _spectral_energy_distribution(self):
         temperature_map = self._get_temperature_profile(
             self._field_of_view_in_au_radial_map,
             self.host_star_luminosity

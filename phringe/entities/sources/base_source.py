@@ -3,7 +3,7 @@ from typing import Any, Union
 
 from torch import Tensor
 
-from phringe.core.observing_entity import ObservingEntity
+from phringe.core.observing_entity import ObservingEntity, observing_property
 
 
 class BaseSource(ABC, ObservingEntity):
@@ -18,17 +18,17 @@ class BaseSource(ABC, ObservingEntity):
     :param sky_coordinates: An array containing the sky coordinates for each time and wavelength in units of radians.
         If the sky coordinates are constant over time and/or wavelength, the time/wavelength axes are omitted
     """
-    name: str = None
-    __spectral_energy_density: Any = None
-    __sky_brightness_distribution: Any = None
-    __sky_coordinates: Any = None
-    _solid_angle: Any = None
+    # name: str = None
+    # __spectral_energy_density: Any = None
+    # __sky_brightness_distribution: Any = None
+    # __sky_coordinates: Any = None
+    # _solid_angle: Any = None
     _grid_size: int = None
     _instrument: Any = None
 
-    @property
+    @observing_property()
     @abstractmethod
-    def _get_spectral_energy_distribution(self) -> Union[Tensor, None]:
+    def _spectral_energy_distribution(self) -> Union[Tensor, None]:
         """Return the mean spectral flux density of the source1 object for each wavelength.
 
         :param wavelength_steps: The wavelength steps
@@ -38,7 +38,7 @@ class BaseSource(ABC, ObservingEntity):
         """
         pass
 
-    @property
+    @observing_property()
     @abstractmethod
     def _sky_brightness_distribution(self) -> Union[Tensor, None]:
         """Calculate and return the sky brightness distribution of the source1 object for each (time and) wavelength as
@@ -51,7 +51,7 @@ class BaseSource(ABC, ObservingEntity):
         """
         pass
 
-    @property
+    @observing_property()
     @abstractmethod
     def _sky_coordinates(self) -> Union[Tensor, None]:
         """Calculate and return the sky coordinates of the source1 for a given time. For moving sources, such as planets,
@@ -68,7 +68,7 @@ class BaseSource(ABC, ObservingEntity):
         """
         pass
 
-    @property
+    @observing_property()
     @abstractmethod
     def _solid_angle(self) -> Union[float, Tensor]:
         """Calculate and return the solid angle of the source1 object.
@@ -77,33 +77,3 @@ class BaseSource(ABC, ObservingEntity):
         :return: The solid angle
         """
         pass
-
-    @abstractmethod
-    def _get_sky_brightness_distribution(self):
-        pass
-
-    @abstractmethod
-    def _get_sky_coordinates(self):
-        pass
-
-    @abstractmethod
-    def _get_spectral_energy_distribution(self):
-        pass
-
-    @abstractmethod
-    def _get_solid_angle(self):
-        pass
-
-    #
-    # def prepare(self):
-    #     """Prepare the photon source1 for the simulation. This method is called before the simulation starts and can be
-    #     used to pre-calculate values that are constant over time and/or wavelength.
-    #
-    #     :param wavelength_bin_centers: The wavelength steps
-    #     :param grid_size: The grid size
-    #     :param kwargs: Additional keyword arguments
-    #     """
-    #     self.solid_angle = self.solid_angle()
-    #     self.spectral_flux_density = self.spectral_energy_distribution()
-    #     self.sky_coordinates = self.sky_coordinates()
-    #     self.sky_brightness_distribution = self.sky_brightness_distribution()

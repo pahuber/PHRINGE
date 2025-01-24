@@ -99,10 +99,7 @@ class ObservingEntity(BaseEntity):
         return self._compare_tensors(sig1, sig2)
 
 
-def observing_property(
-        compute_func,
-        observed_attributes: tuple = ()
-):
+def observing_property(*, observed_attributes: tuple = ()):
     """
     Defines a property that:
       1. Uses `_get_cached_value` internally for lazy, signature-based caching.
@@ -136,8 +133,8 @@ def observing_property(
 
             # Now call your signature-based caching method
             return self._get_cached_value(
-                attribute_name=compute_func.__qualname__,
-                compute_func=lambda: compute_func(self),
+                attribute_name=method.__qualname__,
+                compute_func=lambda: method(self),
                 required_attributes=deps
             )
 
