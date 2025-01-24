@@ -5,6 +5,7 @@ import numpy as np
 import torch
 from astropy.units import Quantity
 
+from phringe.core.observing_entity import observing_property
 from phringe.entities.sources.base_source import BaseSource
 from phringe.util.grid import get_radial_map, get_meshgrid
 from phringe.util.helpers import Coordinates
@@ -16,6 +17,7 @@ class Exozodi(BaseSource):
     """Class representation of an exozodi.
     """
     level: float
+    test: Any
     # inclination: Any
     # field_of_view_in_au_radial_maps: Any = None
     host_star_luminosity: Any = None
@@ -98,24 +100,39 @@ class Exozodi(BaseSource):
         """
         return self._instrument._field_of_view ** 2
 
-    @property
-    def _spectral_energy_distribution(self):
+    # @property
+    # def _spectral_energy_distribution(self):
+    #
+    #     if self._instrument is None:
+    #         warnings.warn(MissingRequirementWarning('Instrument', 'spectral_energy_distribution'))
+    #         return None
+    #
+    #     return self._get_cached_value(
+    #         attribute_name='spectral_energy_distribution',
+    #         compute_func=self._get_spectral_energy_distribution,
+    #         required_attributes=(
+    #             self._instrument._field_of_view,
+    #             self._instrument.wavelength_bin_centers,
+    #             self._field_of_view_in_au_radial_map,
+    #             self.host_star_distance,
+    #             self.host_star_luminosity,
+    #             self._grid_size
+    #         )
+    #     )
 
-        if self._instrument is None:
-            warnings.warn(MissingRequirementWarning('Instrument', 'spectral_energy_distribution'))
-            return None
-
-        return self._get_cached_value(
-            attribute_name='spectral_energy_distribution',
-            compute_func=self._get_spectral_energy_distribution,
-            required_attributes=(
-                self._instrument._field_of_view,
-                self._instrument.wavelength_bin_centers,
-                self.host_star_distance,
-                self.host_star_luminosity,
-                self._grid_size
-            )
+    @observing_property(
+        compute_func=lambda s: s._get_spectral_energy_distribution(),
+        observed_attributes=(
+                lambda s: s._instrument._field_of_view,
+                lambda s: s._instrument.wavelength_bin_centers,
+                lambda s: s._field_of_view_in_au_radial_map,
+                lambda s: s.host_star_distance,
+                lambda s: s.host_star_luminosity,
+                lambda s: s._grid_size
         )
+    )
+    def _spectral_energy_distribution(self):
+        pass
 
     @property
     def _field_of_view_in_au_radial_map(self):
@@ -124,6 +141,7 @@ class Exozodi(BaseSource):
             compute_func=self._get_field_of_view_in_au_radial_map,
             required_attributes=(
                 self._instrument._field_of_view,
+                self.test,
                 self._instrument.wavelength_bin_centers,
                 self.host_star_distance,
                 self._grid_size
@@ -132,6 +150,7 @@ class Exozodi(BaseSource):
 
     def _get_field_of_view_in_au_radial_map(self):
         field_of_view_in_au = self._instrument._field_of_view * self.host_star_distance * 6.68459e-12
+        print(self.test)
         num_wavelengths = len(self._instrument._field_of_view)
         shape = (num_wavelengths, self._grid_size, self._grid_size)
 
