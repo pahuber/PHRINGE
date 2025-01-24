@@ -6,18 +6,18 @@ from skimage.measure import block_reduce
 from torch import Tensor
 from tqdm import tqdm
 
+from phringe.entities import BaseSource
 from phringe.entities import Instrument
-from phringe.entities.observation import Observation
-from phringe.entities.perturbations.amplitude_perturbation import AmplitudePerturbation
 from phringe.entities import PhasePerturbation
+from phringe.entities import Planet
 from phringe.entities import PolarizationPerturbation
 from phringe.entities import Scene
 from phringe.entities import Simulation
-from phringe.entities import BaseSource
+from phringe.entities import Star
+from phringe.entities.observation import Observation
+from phringe.entities.perturbations.amplitude_perturbation import AmplitudePerturbation
 from phringe.entities.sources.exozodi import Exozodi
 from phringe.entities.sources.local_zodi import LocalZodi
-from phringe.entities import Planet
-from phringe.entities import Star
 from phringe.util.memory import get_available_memory
 
 
@@ -349,7 +349,7 @@ class Director():
 
         # Calculate the nulling baseline
         self.nulling_baseline = self._get_nulling_baseline(
-            self._star.habitable_zone_central_angular_radius,
+            self._star._habitable_zone_central_angular_radius,
             self._optimized_star_separation,
             self._optimized_differential_output,
             self._optimized_wavelength,

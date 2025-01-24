@@ -1,5 +1,3 @@
-import warnings
-from functools import cached_property
 from typing import Any
 
 import numpy as np
@@ -16,7 +14,6 @@ from phringe.io.validators import validate_quantity_units
 from phringe.util.grid import get_meshgrid
 from phringe.util.helpers import Coordinates
 from phringe.util.spectrum import create_blackbody_spectrum
-from phringe.util.warning import MissingRequirementWarning
 
 
 class Star(BaseSource):
@@ -80,34 +77,20 @@ class Star(BaseSource):
         """
         return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.K,)).si.value
 
-    @property
-    def angular_radius(self) -> float:
-        """Return the solid angle covered by the star on the sky.
-
-        :return: The solid angle
-        """
-        return self._get_cached_value(
-            attribute_name='angular_radius',
-            compute_func=self._get_angular_radius,
-            required_attributes=(
-                self.radius,
-                self.distance
-            )
-        )
-
-    def _get_angular_radius(self):
+    @observing_property(observed_attributes=(lambda s: s.radius, lambda s: s.distance))
+    def _angular_radius(self) -> float:
         return self.radius / self.distance
 
-    @cached_property
-    def habitable_zone_central_angular_radius(self) -> float:
+    @observing_property(observed_attributes=(lambda s: s._habitable_zone_central_radius, lambda s: s.distance))
+    def _habitable_zone_central_angular_radius(self) -> float:
         """Return the central habitable zone radius in angular units.
 
         :return: The central habitable zone radius in angular units
         """
-        return self.habitable_zone_central_radius / self.distance
+        return self._habitable_zone_central_radius / self.distance
 
-    @cached_property
-    def habitable_zone_central_radius(self) -> float:
+    @observing_property(observed_attributes=(lambda s: s.temperature, lambda s: s.luminosity))
+    def _habitable_zone_central_radius(self) -> float:
         """Return the central habitable zone radius of the star. Calculated as defined in Kopparapu et al. 2013.
 
         :return: The central habitable zone radius
@@ -129,52 +112,23 @@ class Star(BaseSource):
         radius_outer = np.sqrt(self.luminosity / incident_stellar_flux_outer)
         return ((radius_outer + radius_inner) / 2 * u.au).si.value
 
+    @observing_property(observed_attributes=(lambda s: s.radius, lambda s: s.temperature,))
+    def luminosity(self):
+        return 4 * np.pi * self.radius ** 2 * sigma * self.temperature ** 4 / 3.86e26  # TODO: make SI units
+
     @observing_property(
-        # compute_func=lambda s: s._get_luminosity(),
         observed_attributes=(
-                lambda s: s._instrument._field_of_view,
                 lambda s: s._instrument.wavelength_bin_centers,
-                lambda s: s.host_star_distance,
+                lambda s: s._sky_coordinates,
+                lambda s: s._spectral_energy_distribution,
                 lambda s: s._grid_size
         )
     )
-    def luminosity(self):
-        return self._get_cached_value(
-            attribute_name='luminosity',
-            compute_func=self._get_luminosity,
-            required_attributes=(
-                self.radius,
-                self.temperature
-            )
-        )
-
-    def _get_luminosity(self):
-        return 4 * np.pi * self.radius ** 2 * sigma * self.temperature ** 4 / 3.86e26  # TODO: make SI units
-
-    @property
     def _sky_brightness_distribution(self) -> np.ndarray:
-        if self._instrument is None:
-            warnings.warn(MissingRequirementWarning('Instrument', 'sky_brightness_distribution'))
-            return None
-
-        if self._grid_size is None:
-            warnings.warn(MissingRequirementWarning('Grid size', 'sky_brightness_distribution'))
-            return None
-
-        return self._get_cached_value(
-            attribute_name='sky_brightness_distribution',
-            compute_func=self._get_sky_brightness_distribution,
-            required_attributes=(
-                self._instrument,
-                self._grid_size
-            )
-        )
-
-    def _get_sky_brightness_distribution(self):
         number_of_wavelength_steps = len(self._instrument.wavelength_bin_centers)
         sky_brightness_distribution = torch.zeros((number_of_wavelength_steps, self._grid_size, self._grid_size),
                                                   device=self._device)
-        radius_map = (torch.sqrt(self._sky_coordinates[0] ** 2 + self._sky_coordinates[1] ** 2) <= self.angular_radius)
+        radius_map = (torch.sqrt(self._sky_coordinates[0] ** 2 + self._sky_coordinates[1] ** 2) <= self._angular_radius)
 
         for index_wavelength in range(len(self._spectral_energy_distribution)):
             sky_brightness_distribution[index_wavelength] = radius_map * self._spectral_energy_distribution[
@@ -182,63 +136,24 @@ class Star(BaseSource):
 
         return sky_brightness_distribution
 
-    @property
+    @observing_property(observed_attributes=(lambda s: s._angular_radius, lambda s: s._grid_size))
     def _sky_coordinates(self) -> Coordinates:
-        """Return the sky coordinate maps of the source1. The intensity responses are calculated in a resolution that
-        allows the source1 to fill the grid, thus, each source1 needs to define its own sky coordinate map. Add 10% to the
-        angular radius to account for rounding issues and make sure the source1 is fully covered within the map.
-
-        :param grid_size: The grid size
-        :return: A coordinates object containing the x- and y-sky coordinate maps
-        """
-        if self._grid_size is None:
-            warnings.warn(MissingRequirementWarning('Grid size', 'sky_brightness_distribution'))
-            return None
-
-        return self._get_cached_value(
-            attribute_name='sky_coordinates',
-            compute_func=self._get_sky_coordinates,
-            required_attributes=(
-                self._grid_size,
-                self.angular_radius
-            )
-        )
-
-    def _get_sky_coordinates(self):
-        sky_coordinates = get_meshgrid(2 * (1.05 * self.angular_radius), self._grid_size, device=self._device)
+        sky_coordinates = get_meshgrid(2 * (1.05 * self._angular_radius), self._grid_size, device=self._device)
         return torch.stack((sky_coordinates[0], sky_coordinates[1]))
 
-    @property
+    @observing_property(observed_attributes=(lambda s: s.radius, lambda s: s.distance))
     def _solid_angle(self):
-        return self._get_cached_value(
-            attribute_name='solid_angle',
-            compute_func=self._get_solid_angle,
-            required_attributes=(
-                self.radius,
-                self.distance
-            )
-        )
-
-    def _get_solid_angle(self):
         return np.pi * (self.radius / self.distance) ** 2
 
-    @property
-    def _spectral_energy_distribution(self) -> Tensor:
-        if self._instrument is None:
-            warnings.warn(MissingRequirementWarning('Instrument', 'sky_brightness_distribution'))
-            return None
-
-        return self._get_cached_value(
-            attribute_name='spectral_energy_distribution',
-            compute_func=self._get_spectral_energy_distribution,
-            required_attributes=(
-                self._instrument.wavelength_bin_centers,
-                self.radius,
-                self.temperature,
-                self._solid_angle
-            )
+    @observing_property(
+        observed_attributes=(
+                lambda s: s._instrument.wavelength_bin_centers,
+                lambda s: s.radius,
+                lambda s: s.temperature
         )
-
-    def _get_spectral_energy_distribution(self) -> Tensor:
-        return create_blackbody_spectrum(self.temperature,
-                                         self._instrument.wavelength_bin_centers) * self._solid_angle
+    )
+    def _spectral_energy_distribution(self) -> Tensor:
+        return create_blackbody_spectrum(
+            self.temperature,
+            self._instrument.wavelength_bin_centers
+        ) * self._solid_angle
