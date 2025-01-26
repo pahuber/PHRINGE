@@ -21,6 +21,7 @@ class Scene(BaseEntity):
     exozodi: Exozodi = None
     local_zodi: LocalZodi = None
     _instrument: Any = None
+    _observation: Any = None
     _grid_size: int = None
     _simulation_time_steps: Any = None
     _field_of_view: Any = None
@@ -38,8 +39,8 @@ class Scene(BaseEntity):
             self.star = source
         elif isinstance(source, Planet):
             source._simulation_time_steps = self._simulation_time_steps
-            source.host_star_distance = self.star.distance if source.host_star_distance is None else source.host_star_distance
-            source.host_star_mass = self.star.mass if source.host_star_mass is None else source.host_star_mass
+            source.host_star_distance = self.star.distance if self.star is not None else None
+            source.host_star_mass = self.star.mass if self.star is not None else None
             self.planets.append(source)
         elif isinstance(source, Exozodi):
             # If the user has not provided the host star luminosity and distance, use the values from the star
@@ -49,6 +50,9 @@ class Scene(BaseEntity):
                 source.host_star_distance = self.star.distance if self.star is not None else None
             self.exozodi = source
         elif isinstance(source, LocalZodi):
+            source.host_star_right_ascension = self.star.right_ascension if self.star is not None else None
+            source.host_star_declination = self.star.declination if self.star is not None else None
+            source.solar_ecliptic_latitude = self._observation.solar_ecliptic_latitude if self._observation is not None else None
             self.local_zodi = source
 
     def remove_source(self, name: str):

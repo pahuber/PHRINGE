@@ -367,5 +367,6 @@ class PHRINGE:
         if self._scene is not None:
             self._scene._device = self._device
             self._scene._instrument = self._instrument
+            self._scene._observation = self._observation
             self._scene._grid_size = self._grid_size
             self._scene._simulation_time_steps = self.simulation_time_steps
