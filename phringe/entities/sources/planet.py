@@ -1,4 +1,3 @@
-import warnings
 from typing import Any, Tuple, Union
 
 import numpy as np
@@ -12,12 +11,12 @@ from pydantic import field_validator
 from pydantic_core.core_schema import ValidationInfo
 from torch import Tensor
 
+from phringe.core.observing_entity import observing_property
 from phringe.entities.sources.base_source import BaseSource
 from phringe.io.txt_reader import TXTReader
 from phringe.io.validators import validate_quantity_units
 from phringe.util.grid import get_index_of_closest_value, get_meshgrid
 from phringe.util.spectrum import create_blackbody_spectrum
-from phringe.util.warning import MissingRequirementWarning
 
 
 class Planet(BaseSource):
@@ -138,7 +137,12 @@ class Planet(BaseSource):
         """
         return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.deg,)).si.value
 
-    @property
+    @observing_property(
+        observed_attributes=(
+                lambda s: s._instrument.wavelength_bin_centers,
+                lambda s: s._grid_size,
+        )
+    )
     def _sky_brightness_distribution(self) -> np.ndarray:
         """Calculate and return the sky brightness distribution.
 
@@ -146,112 +150,6 @@ class Planet(BaseSource):
         :return: The sky brightness distribution
         """
         has_planet_orbital_motion = False  # TODO: Implement this
-        # number_of_wavelength_steps = kwargs.get('number_of_wavelength_steps')
-
-        if self._instrument is None:
-            warnings.warn(MissingRequirementWarning('Instrument', 'sky_brightness_distribution'))
-            return None
-
-        if self._grid_size is None:
-            warnings.warn(MissingRequirementWarning('grid size', 'sky_brightness_distribution'))
-            return None
-
-        return self._get_cached_value(
-            attribute_name='sky_brightness_distribution',
-            compute_func=self._get_sky_brightness_distribution,
-            required_attributes=(
-                self._instrument,
-                self._grid_size
-            )
-        )
-
-    @property
-    def _sky_coordinates(self) -> Union[Tensor, None]:
-        if self._instrument is None:
-            warnings.warn(MissingRequirementWarning('Instrument', 'sky_coordinates'))
-            return None
-
-        if self._grid_size is None:
-            warnings.warn(MissingRequirementWarning('grid size', 'sky_coordinates'))
-            return None
-
-        if self.host_star_mass is None:
-            warnings.warn(MissingRequirementWarning('host star mass', 'sky_coordinates'))
-            return None
-
-        if self.host_star_distance is None:
-            warnings.warn(MissingRequirementWarning('host star distance', 'sky_coordinates'))
-            return None
-
-        return self._get_cached_value(
-            attribute_name='sky_coordinates',
-            compute_func=self._get_sky_coordinates,
-            required_attributes=(
-                self._instrument,
-                self._grid_size,
-                self.has_orbital_motion,
-                self._simulation_time_steps,
-                self.host_star_distance,
-                self.host_star_mass
-            )
-        )
-
-    @property
-    def _solid_angle(self):
-        if self.host_star_distance is None:
-            warnings.warn(MissingRequirementWarning('host star distance', 'solid_angle'))
-            return None
-
-        return self._get_cached_value(
-            attribute_name='solid_angle',
-            compute_func=self._get_solid_angle,
-            required_attributes=(
-                self.host_star_distance,
-                self.radius
-            )
-        )
-
-    @property
-    def _spectral_energy_distribution(self) -> Union[Tensor, None]:
-        if self._instrument is None:
-            warnings.warn(MissingRequirementWarning('Instrument', 'sky_brightness_distribution'))
-            return None
-
-        if self._grid_size is None:
-            warnings.warn(MissingRequirementWarning('grid size', 'sky_brightness_distribution'))
-            return None
-
-        return self._get_cached_value(
-            attribute_name='spectral_energy_distribution',
-            compute_func=self._get_spectral_energy_distribution,
-            required_attributes=(
-                self._instrument,
-                self._grid_size,
-                self.temperature,
-                self.path_to_spectrum,
-                self._solid_angle
-            )
-        )
-
-    def _get_sky_brightness_distribution(self):
-
-        # if has_planet_orbital_motion:
-        #     sky_brightness_distribution = torch.zeros(
-        #     (len(self.sky_coordinates[1]),
-        #
-        #     number_of_wavelength_steps, grid_size,
-        #     grid_size))
-        #     for index_time in range(len(self.sky_coordinates[1])):
-        #         sky_coordinates = self.sky_coordinates[:, index_time]
-        #     index_x = get_index_of_closest_value_numpy(
-        #         sky_coordinates[0, :, 0],
-        #         self.angular_separation_from_star_x[index_time]
-        #     )
-        #     index_y = get_index_of_closest_value_numpy(
-        #         sky_coordinates[1, 0, :],
-        #         self.angular_separation_from_star_y[index_time]
-        #     )
-        #     sky_brightness_distribution[index_time, :, index_x, index_y] = self.spectral_flux_density
 
         number_of_wavelength_steps = len(self._instrument.wavelength_bin_centers)
         if self.grid_position:
@@ -274,15 +172,17 @@ class Planet(BaseSource):
             sky_brightness_distribution[:, index_x, index_y] = self._spectral_energy_distribution
         return sky_brightness_distribution
 
-    def _get_sky_coordinates(self) -> np.ndarray:
-        """Calculate and return the sky coordinates of the planet. Choose the maximum extent of the sky coordinates such
-        that a circle with the radius of the planet's separation lies well (i.e. + 2x 20%) within the map. The construction
-        of such a circle will be important to estimate the noise during signal extraction.
-
-        :param grid_size: The grid size
-        :param kwargs: The keyword arguments
-        :return: The sky coordinates
-        """
+    @observing_property(
+        observed_attributes=(
+                lambda s: s._instrument.wavelength_bin_centers,
+                lambda s: s._grid_size,
+                lambda s: s.has_orbital_motion,
+                lambda s: s._simulation_time_steps,
+                lambda s: s.host_star_distance,
+                lambda s: s.host_star_mass
+        )
+    )
+    def _sky_coordinates(self) -> Union[Tensor, None]:
         self._angular_separation_from_star_x = torch.zeros(len(self._simulation_time_steps), device=self._device)
         self._angular_separation_from_star_y = torch.zeros(len(self._simulation_time_steps), device=self._device)
 
@@ -300,24 +200,25 @@ class Planet(BaseSource):
         else:
             return self._get_coordinates(self._simulation_time_steps[0], 0)
 
-    def _get_solid_angle(self) -> float:
-        """Calculate and return the solid angle of the planet.
-
-        :param kwargs: The keyword arguments
-        :return: The solid angle
-        """
+    @observing_property(
+        observed_attributes=(
+                lambda s: s.host_star_distance,
+                lambda s: s.radius
+        )
+    )
+    def _solid_angle(self):
         return torch.pi * (self.radius / self.host_star_distance) ** 2
 
-    def _get_spectral_energy_distribution(self) -> Tensor:
-        """Calculate the spectral flux density of the planet in units of ph s-1 m-3. Use the previously generated
-        reference spectrum in units of ph s-1 m-3 sr-1 and the solid angle to calculate it and bin it to the
-        simulation wavelength bin centers.
-
-        :param wavelength_bin_centers: The wavelength bin centers
-        :param grid_size: The grid size
-        :param kwargs: The keyword arguments
-        :return: The binned mean spectral flux density in units of ph s-1 m-3
-        """
+    @observing_property(
+        observed_attributes=(
+                lambda s: s._instrument.wavelength_bin_centers,
+                lambda s: s._grid_size,
+                lambda s: s.temperature,
+                lambda s: s.path_to_spectrum,
+                lambda s: s._solid_angle
+        )
+    )
+    def _spectral_energy_distribution(self) -> Union[Tensor, None]:
         if self.path_to_spectrum:
             fluxes, wavelengths = TXTReader.read(self.path_to_spectrum)
             binned_spectral_flux_density = spectres.spectres(
