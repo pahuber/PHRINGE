@@ -131,6 +131,9 @@ def observing_property(*, observed_attributes: tuple = ()):
             # Evaluate each dependency callable to get the current values
             deps = tuple(fn(self) for fn in observed_attributes)
 
+            # if None in deps:
+            #     raise ValueError("One of the observed attributes is None")
+
             # Now call your signature-based caching method
             return self._get_cached_value(
                 attribute_name=method.__qualname__,

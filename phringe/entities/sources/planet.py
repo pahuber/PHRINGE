@@ -10,6 +10,7 @@ from poliastro.twobody import Orbit
 from pydantic import field_validator
 from pydantic_core.core_schema import ValidationInfo
 from torch import Tensor
+from tqdm import tqdm
 
 from phringe.core.observing_entity import observing_property
 from phringe.entities.sources.base_source import BaseSource
@@ -149,12 +150,27 @@ class Planet(BaseSource):
         :param context: The context
         :return: The sky brightness distribution
         """
-        has_planet_orbital_motion = False  # TODO: Implement this
-
         number_of_wavelength_steps = len(self._instrument.wavelength_bin_centers)
-        if self.grid_position:
+
+        if self.has_orbital_motion:
             sky_brightness_distribution = torch.zeros(
-                (number_of_wavelength_steps, self._grid_size, self._grid_size), device=self._device)
+                (len(self._sky_coordinates[1]), number_of_wavelength_steps, self._grid_size,
+                 self._grid_size),
+                device=self._device)
+            for index_time in range(len(self._sky_coordinates[1])):
+                sky_coordinates = self._sky_coordinates[:, index_time]
+                index_x = get_index_of_closest_value(
+                    sky_coordinates[0, :, 0],
+                    self._angular_separation_from_star_x[index_time]
+                )
+                index_y = get_index_of_closest_value(
+                    sky_coordinates[1, 0, :],
+                    self._angular_separation_from_star_y[index_time]
+                )
+                sky_brightness_distribution[index_time, :, index_x, index_y] = self._spectral_energy_distribution
+        elif self.grid_position:
+            sky_brightness_distribution = torch.zeros(
+                (number_of_wavelength_steps, self._grid_size, self._grid_size))
             sky_brightness_distribution[:, self.grid_position[1],
             self.grid_position[0]] = self._spectral_energy_distribution
             self._angular_separation_from_star_x = self._sky_coordinates[
@@ -163,13 +179,13 @@ class Planet(BaseSource):
                 1, self.grid_position[1], self.grid_position[0]]
         else:
             sky_brightness_distribution = torch.zeros(
-                (number_of_wavelength_steps, self._grid_size, self._grid_size), device=self._device)
+                (number_of_wavelength_steps, self._grid_size, self._grid_size))
             # device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-            index_x = get_index_of_closest_value(torch.asarray(self._sky_coordinates[0, :, 0], device=self._device),
-                                                 self._angular_separation_from_star_x[0])
-            index_y = get_index_of_closest_value(torch.asarray(self._sky_coordinates[1, 0, :], device=self._device),
-                                                 self._angular_separation_from_star_y[0])
-            sky_brightness_distribution[:, index_x, index_y] = self._spectral_energy_distribution
+            index_x = get_index_of_closest_value(torch.asarray(self.sky_coordinates[0, :, 0]),
+                                                 self.angular_separation_from_star_x[0])
+            index_y = get_index_of_closest_value(torch.asarray(self.sky_coordinates[1, 0, :]),
+                                                 self.angular_separation_from_star_y[0])
+            sky_brightness_distribution[:, index_x, index_y] = self.spectral_flux_density
         return sky_brightness_distribution
 
     @observing_property(
@@ -189,11 +205,15 @@ class Planet(BaseSource):
         # If planet motion is being considered, then the sky coordinates may change with each time step and thus
         # coordinates are created for each time step, rather than just once
         if self.has_orbital_motion:
-            sky_coordinates = torch.zeros((2, len(self._simulation_time_steps), self._grid_size, self._grid_size),
-                                          device=self._device)
-            for index_time, time_step in enumerate(self._simulation_time_steps):
+            sky_coordinates = torch.zeros(
+                (2, len(self._simulation_time_steps), self._grid_size, self._grid_size),
+                device=self._device
+            )
+            for index_time, time_step in tqdm(enumerate(self._simulation_time_steps),
+                                              total=len(self._simulation_time_steps),
+                                              desc="Propagating planet along its orbit..."):
                 sky_coordinates[:, index_time] = self._get_coordinates(
-                    time_step,
+                    time_step.item(),
                     index_time,
                 )
             return sky_coordinates

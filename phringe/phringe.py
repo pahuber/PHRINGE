@@ -30,7 +30,7 @@ class PHRINGE:
             gpu: int = None,
             device: torch.device = None,
             grid_size=40,
-            time_step_size: float = 600
+            time_step_size: float = 60000  # TODO: imeplement this
     ):
         self._device = self._get_device(gpu) if device is None else device
         self._instrument = None

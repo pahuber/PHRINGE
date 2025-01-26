@@ -39,8 +39,8 @@ class Scene(BaseEntity):
             self.star = source
         elif isinstance(source, Planet):
             source._simulation_time_steps = self._simulation_time_steps
-            source.host_star_distance = self.star.distance if self.star is not None else None
-            source.host_star_mass = self.star.mass if self.star is not None else None
+            source.host_star_distance = self.star.distance if self.star is not None else source.host_star_distance
+            source.host_star_mass = self.star.mass if self.star is not None else source.host_star_mass
             self.planets.append(source)
         elif isinstance(source, Exozodi):
             # If the user has not provided the host star luminosity and distance, use the values from the star
