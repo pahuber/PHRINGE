@@ -14,7 +14,6 @@ class Exozodi(BaseSource):
     """Class representation of an exozodi.
     """
     level: float
-    test: Any
     # inclination: Any
     # field_of_view_in_au_radial_maps: Any = None
     host_star_luminosity: Any = None
