@@ -1,3 +1,4 @@
+from copy import copy
 from typing import Any
 
 from phringe.core.base_entity import BaseEntity
@@ -42,9 +43,9 @@ class Scene(BaseEntity):
         if hasattr(self, "exozodi") and self.exozodi is not None:
             assignments += [
                 (self.exozodi, "host_star_luminosity",
-                 self.star.luminosity if self.star is not None and self.exozodi.host_star_luminosity is None else None),
+                 self.star.luminosity if self.star is not None else self.exozodi.host_star_luminosity),
                 (self.exozodi, "host_star_distance",
-                 self.star.distance if self.star is not None and self.exozodi.host_star_distance is None else None),
+                 self.star.distance if self.star is not None else self.exozodi.host_star_distance),
                 (self.exozodi, "_instrument", self._instrument if self._instrument is not None else None),
             ]
         if hasattr(self, "local_zodi") and self.local_zodi is not None:
@@ -78,7 +79,9 @@ class Scene(BaseEntity):
         if isinstance(source, Star):
             self.star = source
         elif isinstance(source, Planet):
-            self.planets.append(source)
+            planets = copy(self.planets)
+            planets.append(source)
+            self.planets = planets
         elif isinstance(source, Exozodi):
             self.exozodi = source
         elif isinstance(source, LocalZodi):

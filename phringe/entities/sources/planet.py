@@ -10,7 +10,6 @@ from poliastro.twobody import Orbit
 from pydantic import field_validator
 from pydantic_core.core_schema import ValidationInfo
 from torch import Tensor
-from tqdm import tqdm
 
 from phringe.core.observing_entity import observing_property
 from phringe.entities.sources.base_source import BaseSource
@@ -209,9 +208,7 @@ class Planet(BaseSource):
                 (2, len(self._simulation_time_steps), self._grid_size, self._grid_size),
                 device=self._device
             )
-            for index_time, time_step in tqdm(enumerate(self._simulation_time_steps),
-                                              total=len(self._simulation_time_steps),
-                                              desc="Propagating planet along its orbit..."):
+            for index_time, time_step in enumerate(self._simulation_time_steps):
                 sky_coordinates[:, index_time] = self._get_coordinates(
                     time_step.item(),
                     index_time,
