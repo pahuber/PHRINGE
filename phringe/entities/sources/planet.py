@@ -179,13 +179,13 @@ class Planet(BaseSource):
                 1, self.grid_position[1], self.grid_position[0]]
         else:
             sky_brightness_distribution = torch.zeros(
-                (number_of_wavelength_steps, self._grid_size, self._grid_size))
+                (number_of_wavelength_steps, self._grid_size, self._grid_size), device=self._device)
             # device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-            index_x = get_index_of_closest_value(torch.asarray(self.sky_coordinates[0, :, 0]),
-                                                 self.angular_separation_from_star_x[0])
-            index_y = get_index_of_closest_value(torch.asarray(self.sky_coordinates[1, 0, :]),
-                                                 self.angular_separation_from_star_y[0])
-            sky_brightness_distribution[:, index_x, index_y] = self.spectral_flux_density
+            index_x = get_index_of_closest_value(torch.asarray(self._sky_coordinates[0, :, 0], device=self._device),
+                                                 self._angular_separation_from_star_x[0])
+            index_y = get_index_of_closest_value(torch.asarray(self._sky_coordinates[1, 0, :], device=self._device),
+                                                 self._angular_separation_from_star_y[0])
+            sky_brightness_distribution[:, index_x, index_y] = self._spectral_energy_distribution
         return sky_brightness_distribution
 
     @observing_property(

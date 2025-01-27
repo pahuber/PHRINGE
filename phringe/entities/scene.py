@@ -26,33 +26,62 @@ class Scene(BaseEntity):
     _simulation_time_steps: Any = None
     _field_of_view: Any = None
 
+    def __setattr__(self, key, value):
+        super().__setattr__(key, value)
+        assignments = []
+
+        if hasattr(self, "planets") and len(self.planets) > 0:
+            for planet in self.planets:
+                assignments += [
+                    (planet, "_simulation_time_steps", self._simulation_time_steps),
+                    (planet, "host_star_distance",
+                     self.star.distance if self.star is not None else planet.host_star_distance),
+                    (planet, "host_star_mass", self.star.mass if self.star is not None else planet.host_star_mass),
+                    (planet, "_instrument", self._instrument if self._instrument is not None else None),
+                ]
+        if hasattr(self, "exozodi") and self.exozodi is not None:
+            assignments += [
+                (self.exozodi, "host_star_luminosity",
+                 self.star.luminosity if self.star is not None and self.exozodi.host_star_luminosity is None else None),
+                (self.exozodi, "host_star_distance",
+                 self.star.distance if self.star is not None and self.exozodi.host_star_distance is None else None),
+                (self.exozodi, "_instrument", self._instrument if self._instrument is not None else None),
+            ]
+        if hasattr(self, "local_zodi") and self.local_zodi is not None:
+            assignments += [
+                (self.local_zodi, "host_star_right_ascension",
+                 self.star.right_ascension if self.star is not None else None),
+                (self.local_zodi, "host_star_declination", self.star.declination if self.star is not None else None),
+                (self.local_zodi, "solar_ecliptic_latitude",
+                 self._observation.solar_ecliptic_latitude if self._observation is not None else None),
+                (self.local_zodi, "_instrument", self._instrument if self._instrument is not None else None),
+            ]
+        if hasattr(self, "star") and self.star is not None:
+            assignments += [
+                (self.star, "_instrument", self._instrument if self._instrument is not None else None)
+            ]
+
+        for obj, attr, value in assignments:
+            try:
+                setattr(obj, attr, value)
+            except AttributeError as e:
+                print(f"Failed to set {attr} on {obj}: {e}")
+
     def add_source(self, source: BaseSource):
         """Add a source to the scene.
 
         :param source: The source to add
         """
         source._device = self._device
-        source._instrument = self._instrument
         source._grid_size = self._grid_size
 
         if isinstance(source, Star):
             self.star = source
         elif isinstance(source, Planet):
-            source._simulation_time_steps = self._simulation_time_steps
-            source.host_star_distance = self.star.distance if self.star is not None else source.host_star_distance
-            source.host_star_mass = self.star.mass if self.star is not None else source.host_star_mass
             self.planets.append(source)
         elif isinstance(source, Exozodi):
-            # If the user has not provided the host star luminosity and distance, use the values from the star
-            if source.host_star_luminosity is None:
-                source.host_star_luminosity = self.star.luminosity if self.star is not None else None
-            if source.host_star_distance is None:
-                source.host_star_distance = self.star.distance if self.star is not None else None
             self.exozodi = source
         elif isinstance(source, LocalZodi):
-            source.host_star_right_ascension = self.star.right_ascension if self.star is not None else None
-            source.host_star_declination = self.star.declination if self.star is not None else None
-            source.solar_ecliptic_latitude = self._observation.solar_ecliptic_latitude if self._observation is not None else None
             self.local_zodi = source
 
     def remove_source(self, name: str):
