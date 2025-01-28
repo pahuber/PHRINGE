@@ -376,8 +376,11 @@ class PHRINGE:
         elif isinstance(entity, Scene):
             self._scene = entity
         elif isinstance(entity, Configuration):
-            self._instrument = Instrument(**entity.dict['instrument'])
-            self._observation = Observation(**entity.dict['observation'])
-            self._scene = Scene(**entity.dict['scene'])
+            self._instrument = Instrument(**entity.config_dict['instrument'], _device=self._device)
+            self._instrument._device = self._device
+            self._observation = Observation(**entity.config_dict['observation'], _device=self._device)
+            self._observation._device = self._device
+            self._scene = Scene(**entity.config_dict['scene'], _device=self._device)
+            self._scene._device = self._device
         else:
             raise ValueError(f'Invalid entity type: {type(entity)}')

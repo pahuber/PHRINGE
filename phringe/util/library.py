@@ -26,7 +26,7 @@ diff_out = [(2, 3)]
 sep_at_max_mod_eff = [0.6]
 
 
-class LIFEBaselineDesign(Instrument):
+class LIFEBaselineArchitecture(Instrument):
 
     def __init__(self):
         super().__init__(

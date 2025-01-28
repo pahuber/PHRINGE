@@ -19,6 +19,9 @@ class ObservingEntity(BaseEntity):
     # TODO: add usage example
     _cache: dict = {}
 
+    def __init__(self, **data):
+        super().__init__(**data)
+
     def _compare_tensors(self, old, new) -> bool:
         """
         Minimal custom comparison for Tensors & nested structures.

@@ -34,6 +34,8 @@ class Scene(BaseEntity):
         if hasattr(self, "planets") and len(self.planets) > 0:
             for planet in self.planets:
                 assignments += [
+                    (planet, "_grid_size", self._grid_size),
+                    (planet, "_device", self._device),
                     (planet, "_simulation_time_steps", self._simulation_time_steps),
                     (planet, "host_star_distance",
                      self.star.distance if self.star is not None else planet.host_star_distance),
@@ -42,6 +44,8 @@ class Scene(BaseEntity):
                 ]
         if hasattr(self, "exozodi") and self.exozodi is not None:
             assignments += [
+                (self.exozodi, "_grid_size", self._grid_size),
+                (self.exozodi, "_device", self._device),
                 (self.exozodi, "host_star_luminosity",
                  self.star.luminosity if self.star is not None else self.exozodi.host_star_luminosity),
                 (self.exozodi, "host_star_distance",
@@ -50,6 +54,8 @@ class Scene(BaseEntity):
             ]
         if hasattr(self, "local_zodi") and self.local_zodi is not None:
             assignments += [
+                (self.local_zodi, "_grid_size", self._grid_size),
+                (self.local_zodi, "_device", self._device),
                 (self.local_zodi, "host_star_right_ascension",
                  self.star.right_ascension if self.star is not None else None),
                 (self.local_zodi, "host_star_declination", self.star.declination if self.star is not None else None),
@@ -59,6 +65,8 @@ class Scene(BaseEntity):
             ]
         if hasattr(self, "star") and self.star is not None:
             assignments += [
+                (self.star, "_grid_size", self._grid_size),
+                (self.star, "_device", self._device),
                 (self.star, "_instrument", self._instrument if self._instrument is not None else None)
             ]
 
@@ -73,9 +81,6 @@ class Scene(BaseEntity):
 
         :param source: The source to add
         """
-        source._device = self._device
-        source._grid_size = self._grid_size
-
         if isinstance(source, Star):
             self.star = source
         elif isinstance(source, Planet):
