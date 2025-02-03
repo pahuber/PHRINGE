@@ -109,8 +109,6 @@ class PHRINGE:
             len(self.simulation_time_steps) // divisor
         )
 
-        nulling_baseline = 14  # TODO: implement correctly
-
         # Add the last index if it is not already included due to rounding issues
         if time_step_indices[-1] != len(self.simulation_time_steps):
             time_step_indices = torch.cat((time_step_indices, torch.tensor([len(self.simulation_time_steps)])))
@@ -173,7 +171,7 @@ class PHRINGE:
                                 sky_coordinates_x,
                                 sky_coordinates_y,
                                 torch.tensor(self._observation.modulation_period, device=self._device),
-                                torch.tensor(nulling_baseline, device=self._device),
+                                torch.tensor(self._instrument._nulling_baseline, device=self._device),
                                 *[self._instrument._get_amplitude(self._device) for _ in
                                   range(self._instrument.number_of_inputs)],
                                 *[self._instrument.perturbations.amplitude._time_series[k][None, it_low:it_high, None,
@@ -313,6 +311,9 @@ class PHRINGE:
             return response.cpu().numpy()
 
         return response
+
+    def get_nulling_baseline(self):
+        return self._instrument._nulling_baseline
 
     def get_source_spectrum(self, source_name: str):
         return self._scene.get_source(source_name)._spectral_energy_distribution

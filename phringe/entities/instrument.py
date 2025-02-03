@@ -154,6 +154,36 @@ class Instrument(ObservingEntity):
 
     @observing_property(
         observed_attributes=(
+                lambda s: s._phringe._scene.star._habitable_zone_central_angular_radius if s._phringe._scene.star else None,
+                lambda s: s._phringe._observation.optimized_star_separation,
+                lambda s: s._phringe._observation.optimized_differential_output,
+                lambda s: s._phringe._observation.optimized_wavelength,
+                lambda s: s.baseline_minimum,
+                lambda s: s.baseline_maximum,
+                lambda s: s.sep_at_max_mod_eff
+        )
+    )
+    def _nulling_baseline(self) -> float:
+        # Get the optimized separation in angular units, if it is not yet in angular units
+        if self._phringe._observation.optimized_star_separation == "habitable-zone":
+            optimized_star_separation = self._phringe._scene.star._habitable_zone_central_angular_radius
+
+        # Get the optimal baseline and check if it is within the allowed range
+
+        nulling_baseline = (
+                self.sep_at_max_mod_eff[self._phringe._observation.optimized_differential_output]
+                * self._phringe._observation.optimized_wavelength
+                / optimized_star_separation
+        )
+
+        if self.baseline_minimum <= nulling_baseline and nulling_baseline <= self.baseline_maximum:
+            return nulling_baseline
+        raise ValueError(
+            f"Nulling baseline of {nulling_baseline} is not within allowed ranges of baselines {self.baseline_minimum}-{self.baseline_maximum}"
+        )
+
+    @observing_property(
+        observed_attributes=(
                 lambda s: s.wavelength_max,
                 lambda s: s.wavelength_min,
                 lambda s: s.spectral_resolving_power
