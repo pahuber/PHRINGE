@@ -4,9 +4,9 @@ from pydantic import BaseModel
 
 
 class BaseEntity(BaseModel):
-    _device: Any
+    _phringe: Any = None
     name: str = None
 
     def __init__(self, **data):
         super().__init__(**data)
-        self._device = data.pop("_device", None)
+        self._phringe = data.pop("_phringe", None)

@@ -25,6 +25,7 @@ class BaseSource(ABC, ObservingEntity):
     # _solid_angle: Any = None
     _grid_size: int = None
     _instrument: Any = None
+    _observation: Any = None
 
     @observing_property()
     @abstractmethod

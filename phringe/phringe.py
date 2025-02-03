@@ -47,26 +47,25 @@ class PHRINGE:
 
     # def __setattr__(self, key, value):
     #     super().__setattr__(key, value)
-    #     assignments = []
-    #     if hasattr(self, "_instrument") and self._instrument is not None:
-    #         assignments += [
-    #             (self._instrument, "_observation", self._observation),
-    #             (self._instrument, "_number_of_simulation_time_steps",
-    #              len(self.simulation_time_steps) if self.simulation_time_steps is not None else None)
-    #         ]
-    #     if hasattr(self, "_scene") and self._scene is not None:
-    #         assignments += [(self._scene, "_device", self._device),
-    #                         (self._scene, "_instrument", self._instrument),
-    #                         (self._scene, "_observation", self._observation),
-    #                         (self._scene, "_grid_size", self._grid_size),
-    #                         (self._scene, "_simulation_time_steps", self.simulation_time_steps),
-    #                         ]
     #
-    #     for obj, attr, value in assignments:
-    #         try:
-    #             setattr(obj, attr, value)
-    #         except AttributeError as e:
-    #             print(f"Failed to set {attr} on {obj}: {e}")
+    #     if key == "_observation":
+    #         if hasattr(self, "_instrument") and self._instrument is not None: self._instrument._observation = value
+    #         if hasattr(self, "_scene") and self._scene is not None: self._scene._observation = value
+    #
+    #     if key == "_instrument":
+    #         if hasattr(self, "_scene") and self._scene is not None: self._scene._instrument = value
+    #
+    #     if key == "_device":
+    #         if hasattr(self, "_instrument") and self._instrument is not None: self._instrument._device = value
+    #         if hasattr(self, "_scene") and self._scene is not None: self._scene._device = value
+    #
+    #     if key == "_grid_size":
+    #         if hasattr(self, "_scene") and self._scene is not None: self._scene._grid_size = value
+    #
+    #     if key == "_simulation_time_steps":
+    #         if hasattr(self, "_scene") and self._scene is not None: self._scene._simulation_time_steps = value
+    #         if hasattr(self,
+    #                    "_instrument") and self._instrument is not None: self._instrument._simulation_time_steps = value
 
     @property
     def detector_time_steps(self):
@@ -79,12 +78,21 @@ class PHRINGE:
 
     @property
     def simulation_time_steps(self):
-        return torch.linspace(
+        simulation_time_steps = torch.linspace(
             0,
             self._observation.total_integration_time,
             int(self._observation.total_integration_time / self._simulation_time_step_size),
             device=self._device
         ) if self._observation is not None else None
+
+        # # Update the entities with the new simulation time steps
+        # if self._instrument is not None and simulation_time_steps is not None:
+        #     self._instrument._simulation_time_steps = simulation_time_steps
+        #
+        # if self._scene is not None and simulation_time_steps is not None:
+        #     self._scene._simulation_time_steps = simulation_time_steps
+
+        return simulation_time_steps
 
     def _get_device(self, gpu: int) -> torch.device:
         """Get the device.
@@ -135,22 +143,25 @@ class PHRINGE:
 
         nulling_baseline = 14  # TODO: implement correctly
 
-        amplitude_pert_time_series = self._instrument.perturbations.amplitude._time_series if self._instrument.perturbations.amplitude is not None else torch.zeros(
-            (self._instrument.number_of_inputs, len(self.simulation_time_steps)),
-            dtype=torch.float32,
-            device=self._device
-        )
-        phase_pert_time_series = self._instrument.perturbations.phase._time_series if self._instrument.perturbations.phase is not None else torch.zeros(
-            (self._instrument.number_of_inputs, len(self._instrument.wavelength_bin_centers),
-             len(self.simulation_time_steps)),
-            dtype=torch.float32,
-            device=self._device
-        )
-        polarization_pert_time_series = self._instrument.perturbations.polarization._time_series if self._instrument.perturbations.polarization is not None else torch.zeros(
-            (self._instrument.number_of_inputs, len(self.simulation_time_steps)),
-            dtype=torch.float32,
-            device=self._device
-        )
+        amplitude_pert_time_series = self._instrument.perturbations.amplitude._time_series
+        #     if self._instrument.perturbations.amplitude is not None else torch.zeros(
+        #     (self._instrument.number_of_inputs, len(self.simulation_time_steps)),
+        #     dtype=torch.float32,
+        #     device=self._device
+        # )
+        phase_pert_time_series = self._instrument.perturbations.phase._time_series
+        #     if self._instrument.perturbations.phase is not None else torch.zeros(
+        #     (self._instrument.number_of_inputs, len(self._instrument.wavelength_bin_centers),
+        #      len(self.simulation_time_steps)),
+        #     dtype=torch.float32,
+        #     device=self._device
+        # )
+        polarization_pert_time_series = self._instrument.perturbations.polarization._time_series
+        #     if self._instrument.perturbations.polarization is not None else torch.zeros(
+        #     (self._instrument.number_of_inputs, len(self.simulation_time_steps)),
+        #     dtype=torch.float32,
+        #     device=self._device
+        # )
 
         # Add the last index if it is not already included due to rounding issues
         if time_step_indices[-1] != len(self.simulation_time_steps):
@@ -368,7 +379,8 @@ class PHRINGE:
         pass
 
     def set(self, entity: Union[Instrument, Observation, Scene, Configuration]):
-        entity._device = self._device
+        entity._phringe = self
+        # entity._device = self._device
         if isinstance(entity, Instrument):
             self._instrument = entity
         elif isinstance(entity, Observation):
@@ -376,24 +388,8 @@ class PHRINGE:
         elif isinstance(entity, Scene):
             self._scene = entity
         elif isinstance(entity, Configuration):
-            # self._instrument._device = self._device
-            self._instrument = Instrument(**entity.config_dict['instrument'], _device=self._device)
-            self._observation = Observation(**entity.config_dict['observation'], _device=self._device)
-            self._observation._device = self._device
-            self._scene = Scene(**entity.config_dict['scene'], _device=self._device)
-            self._scene._device = self._device
+            self._observation = Observation(**entity.config_dict['observation'], _phringe=self)
+            self._instrument = Instrument(**entity.config_dict['instrument'], _phringe=self)
+            self._scene = Scene(**entity.config_dict['scene'], _phringe=self)
         else:
             raise ValueError(f'Invalid entity type: {type(entity)}')
-
-        # Link the entities
-        if self._instrument is not None:
-            self._instrument._observation = self._observation
-            self._instrument._number_of_simulation_time_steps = len(
-                self.simulation_time_steps) if self.simulation_time_steps is not None else None
-
-        if self._scene is not None:
-            self._scene._device = self._device  # update
-            self._scene._instrument = self._instrument
-            self._scene._observation = self._observation
-            self._scene._grid_size = self._grid_size  # update
-            self._scene._simulation_time_steps = self.simulation_time_steps if self.simulation_time_steps is not None else None

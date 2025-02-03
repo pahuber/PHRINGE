@@ -9,10 +9,10 @@ from pydantic_core.core_schema import ValidationInfo
 from scipy.fft import irfft, fftshift
 from torch import Tensor
 
-from phringe.core.observing_entity import ObservingEntity, observing_property
+from phringe.core.base_entity import BaseEntity
 
 
-class BasePerturbation(ABC, ObservingEntity):
+class BasePerturbation(ABC, BaseEntity):
     rms: str = None
     color: str = None
     # _device: Any = None
@@ -20,8 +20,8 @@ class BasePerturbation(ABC, ObservingEntity):
     _has_manually_set_time_series: bool = False
 
     # _number_of_inputs: int = None
-    # _number_of_simulation_time_steps: int = None
-    _instrument: Any = None
+    # _simulation_time_steps: Any = None
+    # _observation: Any = None
 
     # _observation: Any = None
 
@@ -47,7 +47,7 @@ class BasePerturbation(ABC, ObservingEntity):
             raise ValueError(f'{value} is not a valid input for {info.field_name}. Must be one of white, pink, brown.')
         return value
 
-    @observing_property()
+    @property
     @abstractmethod
     def _time_series(self) -> Union[Tensor, None]:
         pass
@@ -55,18 +55,6 @@ class BasePerturbation(ABC, ObservingEntity):
     # @abstractmethod
     # def _calculate_time_series(self) -> Tensor:
     #     pass
-
-    @property
-    def _number_of_inputs(self):
-        return self._instrument.number_of_inputs
-
-    @property
-    def _number_of_simulation_time_steps(self):
-        return self._instrument._number_of_simulation_time_steps
-
-    @property
-    def _observation(self):
-        return self._instrument._observation
 
     def _get_color_coeff(self) -> int:
         match self.color:
@@ -76,6 +64,8 @@ class BasePerturbation(ABC, ObservingEntity):
                 coeff = 1
             case 'brown':
                 coeff = 2
+            case _:
+                coeff = None
         return coeff
 
     def _calculate_time_series_from_psd(
@@ -104,7 +94,7 @@ class BasePerturbation(ABC, ObservingEntity):
         time_series /= np.sqrt(np.mean(time_series ** 2))
         time_series *= self.rms
 
-        return torch.tensor(time_series, dtype=torch.float32, device=self._device)
+        return torch.tensor(time_series, dtype=torch.float32, device=self._phringe._device)
 
     def set_time_series(self, time_series: Any):
         # TODO: implement set time series correctly

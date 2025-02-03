@@ -139,8 +139,10 @@ class Planet(BaseSource):
 
     @observing_property(
         observed_attributes=(
-                lambda s: s._instrument.wavelength_bin_centers,
-                lambda s: s._grid_size,
+                lambda s: s._phringe._instrument.wavelength_bin_centers,
+                lambda s: s._phringe._grid_size,
+                # lambda s: s.radius,
+                lambda s: s._solid_angle
         )
     )
     def _sky_brightness_distribution(self) -> np.ndarray:
@@ -149,13 +151,13 @@ class Planet(BaseSource):
         :param context: The context
         :return: The sky brightness distribution
         """
-        number_of_wavelength_steps = len(self._instrument.wavelength_bin_centers)
+        number_of_wavelength_steps = len(self._phringe._instrument.wavelength_bin_centers)
 
         if self.has_orbital_motion:
             sky_brightness_distribution = torch.zeros(
-                (len(self._sky_coordinates[1]), number_of_wavelength_steps, self._grid_size,
-                 self._grid_size),
-                device=self._device)
+                (len(self._sky_coordinates[1]), number_of_wavelength_steps, self._phringe._grid_size,
+                 self._phringe._grid_size),
+                device=self._phringe._device)
             for index_time in range(len(self._sky_coordinates[1])):
                 sky_coordinates = self._sky_coordinates[:, index_time]
                 index_x = get_index_of_closest_value(
@@ -169,7 +171,8 @@ class Planet(BaseSource):
                 sky_brightness_distribution[index_time, :, index_x, index_y] = self._spectral_energy_distribution
         elif self.grid_position:
             sky_brightness_distribution = torch.zeros(
-                (number_of_wavelength_steps, self._grid_size, self._grid_size))
+                (number_of_wavelength_steps, self._phringe._grid_size, self._phringe._grid_size),
+                device=self._phringe._device)
             sky_brightness_distribution[:, self.grid_position[1],
             self.grid_position[0]] = self._spectral_energy_distribution
             self._angular_separation_from_star_x = self._sky_coordinates[
@@ -178,81 +181,87 @@ class Planet(BaseSource):
                 1, self.grid_position[1], self.grid_position[0]]
         else:
             sky_brightness_distribution = torch.zeros(
-                (number_of_wavelength_steps, self._grid_size, self._grid_size), device=self._device)
+                (number_of_wavelength_steps, self._phringe._grid_size, self._phringe._grid_size),
+                device=self._phringe._device)
             # device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-            index_x = get_index_of_closest_value(torch.asarray(self._sky_coordinates[0, :, 0], device=self._device),
-                                                 self._angular_separation_from_star_x[0])
-            index_y = get_index_of_closest_value(torch.asarray(self._sky_coordinates[1, 0, :], device=self._device),
-                                                 self._angular_separation_from_star_y[0])
+            index_x = get_index_of_closest_value(
+                torch.asarray(self._sky_coordinates[0, :, 0], device=self._phringe._device),
+                self._angular_separation_from_star_x[0])
+            index_y = get_index_of_closest_value(
+                torch.asarray(self._sky_coordinates[1, 0, :], device=self._phringe._device),
+                self._angular_separation_from_star_y[0])
             sky_brightness_distribution[:, index_x, index_y] = self._spectral_energy_distribution
         return sky_brightness_distribution
 
     @observing_property(
         observed_attributes=(
-                lambda s: s._instrument.wavelength_bin_centers,
-                lambda s: s._grid_size,
+                lambda s: s._phringe._instrument.wavelength_bin_centers,
+                lambda s: s._phringe._grid_size,
                 lambda s: s.has_orbital_motion,
-                lambda s: s._simulation_time_steps,
-                lambda s: s.host_star_distance,
-                lambda s: s.host_star_mass
+                lambda s: s._phringe.simulation_time_steps,
+                lambda s: s.host_star_distance if s.host_star_distance is not None else s._phringe._scene.star.distance,
+                lambda s: s.host_star_mass if s.host_star_mass is not None else s._phringe._scene.star.mass,
         )
     )
     def _sky_coordinates(self) -> Union[Tensor, None]:
-        self._angular_separation_from_star_x = torch.zeros(len(self._simulation_time_steps), device=self._device)
-        self._angular_separation_from_star_y = torch.zeros(len(self._simulation_time_steps), device=self._device)
+        self._angular_separation_from_star_x = torch.zeros(len(self._phringe.simulation_time_steps),
+                                                           device=self._phringe._device)
+        self._angular_separation_from_star_y = torch.zeros(len(self._phringe.simulation_time_steps),
+                                                           device=self._phringe._device)
 
         # If planet motion is being considered, then the sky coordinates may change with each time step and thus
         # coordinates are created for each time step, rather than just once
         if self.has_orbital_motion:
             sky_coordinates = torch.zeros(
-                (2, len(self._simulation_time_steps), self._grid_size, self._grid_size),
-                device=self._device
+                (2, len(self._phringe.simulation_time_steps), self._phringe._grid_size, self._phringe._grid_size),
+                device=self._phringe._device
             )
-            for index_time, time_step in enumerate(self._simulation_time_steps):
+            for index_time, time_step in enumerate(self._phringe.simulation_time_steps):
                 sky_coordinates[:, index_time] = self._get_coordinates(
                     time_step.item(),
                     index_time,
                 )
             return sky_coordinates
         else:
-            return self._get_coordinates(self._simulation_time_steps[0], 0)
+            return self._get_coordinates(self._phringe.simulation_time_steps[0], 0)
 
     @observing_property(
         observed_attributes=(
-                lambda s: s.host_star_distance,
-                lambda s: s.radius
+                lambda s: s.host_star_distance if s.host_star_distance is not None else s._phringe._scene.star.distance,
+                lambda s: s.radius,
         )
     )
     def _solid_angle(self):
-        return torch.pi * (self.radius / self.host_star_distance) ** 2
+        host_star_distance = self.host_star_distance if self.host_star_distance is not None else self._phringe._scene.star.distance
+        return torch.pi * (self.radius / host_star_distance) ** 2
 
     @observing_property(
         observed_attributes=(
-                lambda s: s._instrument.wavelength_bin_centers,
-                lambda s: s._grid_size,
+                lambda s: s._phringe._instrument.wavelength_bin_centers,
+                lambda s: s._phringe._grid_size,
                 lambda s: s.temperature,
                 lambda s: s.path_to_spectrum,
-                lambda s: s._solid_angle
+                lambda s: s._solid_angle,
         )
     )
     def _spectral_energy_distribution(self) -> Union[Tensor, None]:
         if self.path_to_spectrum:
             fluxes, wavelengths = TXTReader.read(self.path_to_spectrum)
             binned_spectral_flux_density = spectres.spectres(
-                self._instrument.wavelength_bin_centers.numpy(),
+                self._phringe._instrument.wavelength_bin_centers.numpy(),
                 wavelengths.numpy(),
                 fluxes.numpy(),
                 fill=0,
                 verbose=False
-            ) * self._get_solid_angle
-            return torch.asarray(binned_spectral_flux_density, dtype=torch.float32, device=self._device)
+            ) * self._solid_angle
+            return torch.asarray(binned_spectral_flux_density, dtype=torch.float32, device=self._phringe._device)
         else:
             binned_spectral_flux_density = torch.asarray(
                 create_blackbody_spectrum(
                     self.temperature,
-                    self._instrument.wavelength_bin_centers
+                    self._phringe._instrument.wavelength_bin_centers
                 )
-                , dtype=torch.float32, device=self._device) * self._solid_angle
+                , dtype=torch.float32, device=self._phringe._device) * self._solid_angle
             return binned_spectral_flux_density
 
     def _get_coordinates(
@@ -279,7 +288,8 @@ class Planet(BaseSource):
             + self._angular_separation_from_star_y[index_time] ** 2
         )
 
-        sky_coordinates_at_time_step = get_meshgrid(2 * (1.2 * angular_radius), self._grid_size, device=self._device)
+        sky_coordinates_at_time_step = get_meshgrid(2 * (1.2 * angular_radius), self._phringe._grid_size,
+                                                    device=self._phringe._device)
 
         return torch.stack((sky_coordinates_at_time_step[0], sky_coordinates_at_time_step[1]))
 
@@ -325,9 +335,10 @@ class Planet(BaseSource):
         :param star_mass: The mass of the star
         :return: A tuple containing the x- and y- coordinates
         """
+        host_star_distance = self.host_star_distance if self.host_star_distance is not None else self._phringe._scene.star.distance
         separation_from_star_x, separation_from_star_y = self._get_x_y_separation_from_star(time_step)
-        angular_separation_from_star_x = separation_from_star_x / self.host_star_distance
-        angular_separation_from_star_y = separation_from_star_y / self.host_star_distance
+        angular_separation_from_star_x = separation_from_star_x / host_star_distance
+        angular_separation_from_star_y = separation_from_star_y / host_star_distance
         return (angular_separation_from_star_x, angular_separation_from_star_y)
 
     def _get_x_y_separation_from_star(self, time_step: float, ) -> Tuple:
@@ -339,7 +350,8 @@ class Planet(BaseSource):
         :param star_mass: The mass of the star
         :return: A tuple containing the x- and y- coordinates
         """
-        star = Body(parent=None, k=G * (self.host_star_mass + self.mass) * u.kg, name='Star')
+        host_star_mass = self.host_star_mass if self.host_star_mass is not None else self._phringe._scene.star.mass
+        star = Body(parent=None, k=G * (host_star_mass + self.mass) * u.kg, name='Star')
         orbit = Orbit.from_classical(star, a=self.semi_major_axis * u.m, ecc=u.Quantity(self.eccentricity),
                                      inc=self.inclination * u.rad,
                                      raan=self.raan * u.rad,

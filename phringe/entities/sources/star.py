@@ -118,16 +118,17 @@ class Star(BaseSource):
 
     @observing_property(
         observed_attributes=(
-                lambda s: s._instrument.wavelength_bin_centers,
+                lambda s: s._phringe._instrument.wavelength_bin_centers,
                 lambda s: s._sky_coordinates,
                 lambda s: s._spectral_energy_distribution,
-                lambda s: s._grid_size
+                lambda s: s._phringe._grid_size
         )
     )
     def _sky_brightness_distribution(self) -> np.ndarray:
-        number_of_wavelength_steps = len(self._instrument.wavelength_bin_centers)
-        sky_brightness_distribution = torch.zeros((number_of_wavelength_steps, self._grid_size, self._grid_size),
-                                                  device=self._device)
+        number_of_wavelength_steps = len(self._phringe._instrument.wavelength_bin_centers)
+        sky_brightness_distribution = torch.zeros(
+            (number_of_wavelength_steps, self._phringe._grid_size, self._phringe._grid_size),
+            device=self._phringe._device)
         radius_map = (torch.sqrt(self._sky_coordinates[0] ** 2 + self._sky_coordinates[1] ** 2) <= self._angular_radius)
 
         for index_wavelength in range(len(self._spectral_energy_distribution)):
@@ -136,9 +137,10 @@ class Star(BaseSource):
 
         return sky_brightness_distribution
 
-    @observing_property(observed_attributes=(lambda s: s._angular_radius, lambda s: s._grid_size))
+    @observing_property(observed_attributes=(lambda s: s._angular_radius, lambda s: s._phringe._grid_size))
     def _sky_coordinates(self) -> Coordinates:
-        sky_coordinates = get_meshgrid(2 * (1.05 * self._angular_radius), self._grid_size, device=self._device)
+        sky_coordinates = get_meshgrid(2 * (1.05 * self._angular_radius), self._phringe._grid_size,
+                                       device=self._phringe._device)
         return torch.stack((sky_coordinates[0], sky_coordinates[1]))
 
     @observing_property(observed_attributes=(lambda s: s.radius, lambda s: s.distance))
@@ -147,7 +149,7 @@ class Star(BaseSource):
 
     @observing_property(
         observed_attributes=(
-                lambda s: s._instrument.wavelength_bin_centers,
+                lambda s: s._phringe._instrument.wavelength_bin_centers,
                 lambda s: s.radius,
                 lambda s: s.temperature
         )
@@ -155,5 +157,5 @@ class Star(BaseSource):
     def _spectral_energy_distribution(self) -> Tensor:
         return create_blackbody_spectrum(
             self.temperature,
-            self._instrument.wavelength_bin_centers
+            self._phringe._instrument.wavelength_bin_centers
         ) * self._solid_angle

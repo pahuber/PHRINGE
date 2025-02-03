@@ -17,9 +17,9 @@ from phringe.io.validators import validate_quantity_units
 
 
 class _Perturbations(BaseModel):
-    amplitude: AmplitudePerturbation = None
-    phase: PhasePerturbation = None
-    polarization: PolarizationPerturbation = None
+    amplitude: AmplitudePerturbation = AmplitudePerturbation()
+    phase: PhasePerturbation = PhasePerturbation()
+    polarization: PolarizationPerturbation = PolarizationPerturbation()
 
 
 class Instrument(ObservingEntity):
@@ -60,83 +60,29 @@ class Instrument(ObservingEntity):
     wavelength_max: str
     throughput: float
     quantum_efficiency: float
-    perturbations: _Perturbations = None
+    perturbations: _Perturbations = _Perturbations()
     # field_of_view: Any = None
     response: Any = None
     number_of_inputs: int = None
     number_of_outputs: int = None
-    _observation: Any = None
-    _number_of_simulation_time_steps: int = None
+
+    # _observation: Any = None
+    # _simulation_time_steps: Any = None
+
+    # _number_of_simulation_time_steps: int = None
 
     def __init__(self, **data):
-
         super().__init__(**data)
-
-        if self.perturbations is None:
-            self.perturbations = _Perturbations()
-        else:
-            if self.perturbations.amplitude is not None:
-                self.perturbations.amplitude._device = self._device
-                # self.perturbations.amplitude._number_of_inputs = self.number_of_inputs
-                # self.perturbations.amplitude._number_of_simulation_time_steps = self._number_of_simulation_time_steps
-                # self.perturbations.amplitude._observation = self._observation
-                self.perturbations.amplitude._instrument = self
-            if self.perturbations.phase is not None:
-                self.perturbations.phase._device = self._device
-                # self.perturbations.phase._number_of_inputs = self.number_of_inputs
-                # self.perturbations.phase._number_of_simulation_time_steps = self._number_of_simulation_time_steps
-                # self.perturbations.phase._observation = self._observation
-                # self.perturbations.phase._wavelength_bin_centers = self.wavelength_bin_centers
-                self.perturbations.phase._instrument = self
-            if self.perturbations.polarization is not None:
-                self.perturbations.polarization._device = self._device
-                # self.perturbations.polarization._number_of_inputs = self.number_of_inputs
-                # self.perturbations.polarization._number_of_simulation_time_steps = self._number_of_simulation_time_steps
-                # self.perturbations.polarization._observation = self._observation
-                self.perturbations.polarization._instrument = self
-
         self.number_of_inputs = self.complex_amplitude_transfer_matrix.shape[1]
         self.number_of_outputs = self.complex_amplitude_transfer_matrix.shape[0]
         self.response = self.get_lambdafied_response()
 
-    # def __setattr__(self, key, value):
-    #     super().__setattr__(key, value)
-    #     assignments = []
-    #
-    #     if hasattr(self, "perturbations") and self.perturbations is not None:
-    #         assignments += [
-    #             (self.perturbations.amplitude, "_device",
-    #              self._device if self.perturbations.amplitude is not None else None),
-    #             (self.perturbations.amplitude, "_number_of_inputs",
-    #              self.number_of_inputs if self.perturbations.amplitude is not None else None),
-    #             (self.perturbations.amplitude, "_number_of_simulation_time_steps",
-    #              self._number_of_simulation_time_steps if self.perturbations.amplitude is not None else None),
-    #             (self.perturbations.amplitude, "_observation",
-    #              self._observation if self.perturbations.amplitude is not None else None),
-    #             (self.perturbations.phase, "_device", self._device if self.perturbations.phase is not None else None),
-    #             (self.perturbations.phase, "_number_of_inputs",
-    #              self.number_of_inputs if self.perturbations.phase is not None else None),
-    #             (self.perturbations.phase, "_number_of_simulation_time_steps",
-    #              self._number_of_simulation_time_steps if self.perturbations.phase is not None else None),
-    #             (self.perturbations.phase, "_observation",
-    #              self._observation if self.perturbations.phase is not None else None),
-    #             (self.perturbations.phase, "_wavelength_bin_centers",
-    #              self.wavelength_bin_centers if self.perturbations.phase is not None else None),
-    #             (self.perturbations.polarization, "_device",
-    #              self._device if self.perturbations.polarization is not None else None),
-    #             (self.perturbations.polarization, "_number_of_inputs",
-    #              self.number_of_inputs if self.perturbations.polarization is not None else None),
-    #             (self.perturbations.polarization, "_number_of_simulation_time_steps",
-    #              self._number_of_simulation_time_steps if self.perturbations.polarization is not None else None),
-    #             (self.perturbations.polarization, "_observation",
-    #              self._observation if self.perturbations.polarization is not None else None),
-    #         ]
-
-    # for obj, attr, value in assignments:
-    #     try:
-    #         setattr(obj, attr, value)
-    #     except AttributeError as e:
-    #         print(f"Failed to set {attr} on {obj}: {e}")
+    def __setattr__(self, key, value):
+        super().__setattr__(key, value)
+        if key == "_phringe":
+            self.perturbations.amplitude._phringe = self._phringe
+            self.perturbations.phase._phringe = self._phringe
+            self.perturbations.polarization._phringe = self._phringe
 
     @field_validator('aperture_diameter')
     def _validate_aperture_diameter(cls, value: Any, info: ValidationInfo) -> Tensor:
@@ -201,6 +147,10 @@ class Instrument(ObservingEntity):
                 self.aperture_diameter
             )
         )
+
+    @property
+    def _number_of_simulation_time_steps(self):
+        return len(self._simulation_time_steps)
 
     @observing_property(
         observed_attributes=(
@@ -278,14 +228,15 @@ class Instrument(ObservingEntity):
                 break
 
         return (
-            torch.asarray(wavelength_bin_centers, dtype=torch.float32, device=self._device),
-            torch.asarray(wavelength_bin_widths, dtype=torch.float32, device=self._device)
+            torch.asarray(wavelength_bin_centers, dtype=torch.float32, device=self._phringe._device),
+            torch.asarray(wavelength_bin_widths, dtype=torch.float32, device=self._phringe._device)
         )
 
     def add_perturbation(self, perturbation: BasePerturbation):
 
-        perturbation._device = self._device
-        perturbation._instrument = self
+        # perturbation._device = self._device
+        # perturbation._instrument = self
+        perturbation._phringe = self._phringe
 
         if isinstance(perturbation, AmplitudePerturbation):
             self.perturbations.amplitude = perturbation
