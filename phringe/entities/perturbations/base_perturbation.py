@@ -16,25 +16,7 @@ from phringe.core.base_entity import BaseEntity
 class BasePerturbation(ABC, BaseEntity):
     rms: Union[str, float, Quantity] = None
     color: str = None
-    # _device: Any = None
-    # __time_series: Any = None
     _has_manually_set_time_series: bool = False
-
-    # _number_of_inputs: int = None
-    # _simulation_time_steps: Any = None
-    # _observation: Any = None
-
-    # _observation: Any = None
-
-    def __init__(self, **data):
-        super().__init__(**data)
-        # TODO: implement this correctly
-        # if (
-        #         (self.rms is not None and self.color is not None and self._time_series is not None) or
-        #         (self.rms is not None and self.color is None) or
-        #         (self.rms is None and self.color is not None)
-        # ):
-        #     raise ValueError('Either both the rms and color or only the time series needs to be specified')
 
     @field_validator('color')
     def _validate_color(cls, value: Any, info: ValidationInfo) -> float:
@@ -52,10 +34,6 @@ class BasePerturbation(ABC, BaseEntity):
     @abstractmethod
     def _time_series(self) -> Union[Tensor, None]:
         pass
-
-    # @abstractmethod
-    # def _calculate_time_series(self) -> Tensor:
-    #     pass
 
     def _get_color_coeff(self) -> int:
         match self.color:
