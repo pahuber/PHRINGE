@@ -45,28 +45,28 @@ class PHRINGE:
         self._normalize = False
         self._extra_memory = 1
 
-    def __setattr__(self, key, value):
-        super().__setattr__(key, value)
-        assignments = []
-        if hasattr(self, "_instrument") and self._instrument is not None:
-            assignments += [
-                (self._instrument, "_observation", self._observation),
-                (self._instrument, "_number_of_simulation_time_steps",
-                 len(self.simulation_time_steps) if self.simulation_time_steps is not None else None)
-            ]
-        if hasattr(self, "_scene") and self._scene is not None:
-            assignments += [(self._scene, "_device", self._device),
-                            (self._scene, "_instrument", self._instrument),
-                            (self._scene, "_observation", self._observation),
-                            (self._scene, "_grid_size", self._grid_size),
-                            (self._scene, "_simulation_time_steps", self.simulation_time_steps),
-                            ]
-
-        for obj, attr, value in assignments:
-            try:
-                setattr(obj, attr, value)
-            except AttributeError as e:
-                print(f"Failed to set {attr} on {obj}: {e}")
+    # def __setattr__(self, key, value):
+    #     super().__setattr__(key, value)
+    #     assignments = []
+    #     if hasattr(self, "_instrument") and self._instrument is not None:
+    #         assignments += [
+    #             (self._instrument, "_observation", self._observation),
+    #             (self._instrument, "_number_of_simulation_time_steps",
+    #              len(self.simulation_time_steps) if self.simulation_time_steps is not None else None)
+    #         ]
+    #     if hasattr(self, "_scene") and self._scene is not None:
+    #         assignments += [(self._scene, "_device", self._device),
+    #                         (self._scene, "_instrument", self._instrument),
+    #                         (self._scene, "_observation", self._observation),
+    #                         (self._scene, "_grid_size", self._grid_size),
+    #                         (self._scene, "_simulation_time_steps", self.simulation_time_steps),
+    #                         ]
+    #
+    #     for obj, attr, value in assignments:
+    #         try:
+    #             setattr(obj, attr, value)
+    #         except AttributeError as e:
+    #             print(f"Failed to set {attr} on {obj}: {e}")
 
     @property
     def detector_time_steps(self):
@@ -377,10 +377,23 @@ class PHRINGE:
             self._scene = entity
         elif isinstance(entity, Configuration):
             self._instrument = Instrument(**entity.config_dict['instrument'], _device=self._device)
-            self._instrument._device = self._device
+            # self._instrument._device = self._device
             self._observation = Observation(**entity.config_dict['observation'], _device=self._device)
             self._observation._device = self._device
             self._scene = Scene(**entity.config_dict['scene'], _device=self._device)
             self._scene._device = self._device
         else:
             raise ValueError(f'Invalid entity type: {type(entity)}')
+
+        # Link the entities
+        if self._instrument is not None:
+            self._instrument._observation = self._observation
+            self._instrument._number_of_simulation_time_steps = len(
+                self.simulation_time_steps) if self.simulation_time_steps is not None else None
+
+        if self._scene is not None:
+            self._scene._device = self._device  # update
+            self._scene._instrument = self._instrument
+            self._scene._observation = self._observation
+            self._scene._grid_size = self._grid_size  # update
+            self._scene._simulation_time_steps = self.simulation_time_steps if self.simulation_time_steps is not None else None

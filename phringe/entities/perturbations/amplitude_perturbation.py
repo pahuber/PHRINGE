@@ -7,6 +7,7 @@ from pydantic import field_validator
 from pydantic_core.core_schema import ValidationInfo
 from torch import Tensor
 
+from phringe.core.observing_entity import observing_property
 from phringe.entities.perturbations.base_perturbation import BasePerturbation
 from phringe.io.validators import validate_quantity_units
 
@@ -17,12 +18,14 @@ class AmplitudePerturbation(BasePerturbation):
     def _validate_rms(cls, value: Any, info: ValidationInfo) -> float:
         return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.percent,)).si.value
 
-    def _calculate_time_series(
-            self,
-            # modulation_period: float,
-            # number_of_simulation_time_steps: int,
-            # **kwargs
-    ) -> Tensor:
+    @observing_property(
+        observed_attributes=(
+                lambda s: s._number_of_inputs,
+                lambda s: s._observation.modulation_period,
+                lambda s: s._number_of_simulation_time_steps
+        )
+    )
+    def _time_series(self) -> Tensor:
         time_series = np.zeros((self._number_of_inputs, self._number_of_simulation_time_steps))
 
         color_coeff = self._get_color_coeff()

@@ -1,4 +1,3 @@
-import warnings
 from abc import abstractmethod, ABC
 from typing import Any, Union
 
@@ -9,14 +8,13 @@ from pydantic_core.core_schema import ValidationInfo
 from scipy.fft import irfft, fftshift
 from torch import Tensor
 
-from phringe.core.observing_entity import ObservingEntity
-from phringe.util.warning import MissingRequirementWarning
+from phringe.core.observing_entity import ObservingEntity, observing_property
 
 
 class BasePerturbation(ABC, ObservingEntity):
     rms: str = None
     color: str = None
-    _device: Any = None
+    # _device: Any = None
     __time_series: Any = None
     _has_manually_set_time_series: bool = False
 
@@ -26,12 +24,13 @@ class BasePerturbation(ABC, ObservingEntity):
 
     def __init__(self, **data):
         super().__init__(**data)
-        if (
-                (self.rms is not None and self.color is not None and self._time_series is not None) or
-                (self.rms is not None and self.color is None) or
-                (self.rms is None and self.color is not None)
-        ):
-            raise ValueError('Either both the rms and color or only the time series needs to be specified')
+        # TODO: implement this correctly
+        # if (
+        #         (self.rms is not None and self.color is not None and self._time_series is not None) or
+        #         (self.rms is not None and self.color is None) or
+        #         (self.rms is None and self.color is not None)
+        # ):
+        #     raise ValueError('Either both the rms and color or only the time series needs to be specified')
 
     @field_validator('color')
     def _validate_color(cls, value: Any, info: ValidationInfo) -> float:
@@ -45,29 +44,14 @@ class BasePerturbation(ABC, ObservingEntity):
             raise ValueError(f'{value} is not a valid input for {info.field_name}. Must be one of white, pink, brown.')
         return value
 
-    @property
-    def _time_series(self) -> Union[Tensor, None]:
-        if self._observation is None:
-            warnings.warn(MissingRequirementWarning('Observation', '_time_series'))
-            return None
-
-        if self._number_of_simulation_time_steps is None:
-            warnings.warn(MissingRequirementWarning('Number of simulation time steps', '_time_series'))
-            return None
-
-        return self._get_cached_value(
-            attribute_name='_time_series',
-            compute_func=self._calculate_time_series,
-            required_attributes=(
-                self._number_of_inputs,
-                self._observation.modulation_period if self._observation else None,
-                self._number_of_simulation_time_steps
-            )
-        )
-
+    @observing_property()
     @abstractmethod
-    def _calculate_time_series(self) -> Tensor:
+    def _time_series(self) -> Union[Tensor, None]:
         pass
+
+    # @abstractmethod
+    # def _calculate_time_series(self) -> Tensor:
+    #     pass
 
     def _get_color_coeff(self) -> int:
         match self.color:
@@ -105,7 +89,7 @@ class BasePerturbation(ABC, ObservingEntity):
         time_series /= np.sqrt(np.mean(time_series ** 2))
         time_series *= self.rms
 
-        return time_series
+        return Tensor(time_series)  # Create tensor directly
 
     def set_time_series(self, time_series: Any):
         # TODO: implement set time series correctly

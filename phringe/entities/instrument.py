@@ -79,44 +79,44 @@ class Instrument(ObservingEntity):
         self.number_of_outputs = self.complex_amplitude_transfer_matrix.shape[0]
         self.response = self.get_lambdafied_response()
 
-    def __setattr__(self, key, value):
-        super().__setattr__(key, value)
-        assignments = []
+    # def __setattr__(self, key, value):
+    #     super().__setattr__(key, value)
+    #     assignments = []
+    #
+    #     if hasattr(self, "perturbations") and self.perturbations is not None:
+    #         assignments += [
+    #             (self.perturbations.amplitude, "_device",
+    #              self._device if self.perturbations.amplitude is not None else None),
+    #             (self.perturbations.amplitude, "_number_of_inputs",
+    #              self.number_of_inputs if self.perturbations.amplitude is not None else None),
+    #             (self.perturbations.amplitude, "_number_of_simulation_time_steps",
+    #              self._number_of_simulation_time_steps if self.perturbations.amplitude is not None else None),
+    #             (self.perturbations.amplitude, "_observation",
+    #              self._observation if self.perturbations.amplitude is not None else None),
+    #             (self.perturbations.phase, "_device", self._device if self.perturbations.phase is not None else None),
+    #             (self.perturbations.phase, "_number_of_inputs",
+    #              self.number_of_inputs if self.perturbations.phase is not None else None),
+    #             (self.perturbations.phase, "_number_of_simulation_time_steps",
+    #              self._number_of_simulation_time_steps if self.perturbations.phase is not None else None),
+    #             (self.perturbations.phase, "_observation",
+    #              self._observation if self.perturbations.phase is not None else None),
+    #             (self.perturbations.phase, "_wavelength_bin_centers",
+    #              self.wavelength_bin_centers if self.perturbations.phase is not None else None),
+    #             (self.perturbations.polarization, "_device",
+    #              self._device if self.perturbations.polarization is not None else None),
+    #             (self.perturbations.polarization, "_number_of_inputs",
+    #              self.number_of_inputs if self.perturbations.polarization is not None else None),
+    #             (self.perturbations.polarization, "_number_of_simulation_time_steps",
+    #              self._number_of_simulation_time_steps if self.perturbations.polarization is not None else None),
+    #             (self.perturbations.polarization, "_observation",
+    #              self._observation if self.perturbations.polarization is not None else None),
+    #         ]
 
-        if hasattr(self, "perturbations") and self.perturbations is not None:
-            assignments += [
-                (self.perturbations.amplitude, "_device",
-                 self._device if self.perturbations.amplitude is not None else None),
-                (self.perturbations.amplitude, "_number_of_inputs",
-                 self.number_of_inputs if self.perturbations.amplitude is not None else None),
-                (self.perturbations.amplitude, "_number_of_simulation_time_steps",
-                 self._number_of_simulation_time_steps if self.perturbations.amplitude is not None else None),
-                (self.perturbations.amplitude, "_observation",
-                 self._observation if self.perturbations.amplitude is not None else None),
-                (self.perturbations.phase, "_device", self._device if self.perturbations.phase is not None else None),
-                (self.perturbations.phase, "_number_of_inputs",
-                 self.number_of_inputs if self.perturbations.phase is not None else None),
-                (self.perturbations.phase, "_number_of_simulation_time_steps",
-                 self._number_of_simulation_time_steps if self.perturbations.phase is not None else None),
-                (self.perturbations.phase, "_observation",
-                 self._observation if self.perturbations.phase is not None else None),
-                (self.perturbations.phase, "_wavelength_bin_centers",
-                 self.wavelength_bin_centers if self.perturbations.phase is not None else None),
-                (self.perturbations.polarization, "_device",
-                 self._device if self.perturbations.polarization is not None else None),
-                (self.perturbations.polarization, "_number_of_inputs",
-                 self.number_of_inputs if self.perturbations.polarization is not None else None),
-                (self.perturbations.polarization, "_number_of_simulation_time_steps",
-                 self._number_of_simulation_time_steps if self.perturbations.polarization is not None else None),
-                (self.perturbations.polarization, "_observation",
-                 self._observation if self.perturbations.polarization is not None else None),
-            ]
-
-        for obj, attr, value in assignments:
-            try:
-                setattr(obj, attr, value)
-            except AttributeError as e:
-                print(f"Failed to set {attr} on {obj}: {e}")
+    # for obj, attr, value in assignments:
+    #     try:
+    #         setattr(obj, attr, value)
+    #     except AttributeError as e:
+    #         print(f"Failed to set {attr} on {obj}: {e}")
 
     @field_validator('aperture_diameter')
     def _validate_aperture_diameter(cls, value: Any, info: ValidationInfo) -> Tensor:
@@ -264,10 +264,15 @@ class Instrument(ObservingEntity):
 
     def add_perturbation(self, perturbation: BasePerturbation):
 
+        perturbation._device = self._device
+        perturbation._number_of_inputs = self.number_of_inputs
+        perturbation._number_of_simulation_time_steps = self._number_of_simulation_time_steps
+        perturbation._observation = self._observation
+
         if isinstance(perturbation, AmplitudePerturbation):
             self.perturbations.amplitude = perturbation
         elif isinstance(perturbation, PhasePerturbation):
-            # perturbation._wavelength_bin_centers = self.wavelength_bin_centers
+            perturbation._wavelength_bin_centers = self.wavelength_bin_centers
             self.perturbations.phase = perturbation
         elif isinstance(perturbation, PolarizationPerturbation):
             self.perturbations.polarization = perturbation
