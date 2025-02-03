@@ -45,28 +45,6 @@ class PHRINGE:
         self._normalize = False
         self._extra_memory = 1
 
-    # def __setattr__(self, key, value):
-    #     super().__setattr__(key, value)
-    #
-    #     if key == "_observation":
-    #         if hasattr(self, "_instrument") and self._instrument is not None: self._instrument._observation = value
-    #         if hasattr(self, "_scene") and self._scene is not None: self._scene._observation = value
-    #
-    #     if key == "_instrument":
-    #         if hasattr(self, "_scene") and self._scene is not None: self._scene._instrument = value
-    #
-    #     if key == "_device":
-    #         if hasattr(self, "_instrument") and self._instrument is not None: self._instrument._device = value
-    #         if hasattr(self, "_scene") and self._scene is not None: self._scene._device = value
-    #
-    #     if key == "_grid_size":
-    #         if hasattr(self, "_scene") and self._scene is not None: self._scene._grid_size = value
-    #
-    #     if key == "_simulation_time_steps":
-    #         if hasattr(self, "_scene") and self._scene is not None: self._scene._simulation_time_steps = value
-    #         if hasattr(self,
-    #                    "_instrument") and self._instrument is not None: self._instrument._simulation_time_steps = value
-
     @property
     def detector_time_steps(self):
         return torch.linspace(
@@ -78,21 +56,12 @@ class PHRINGE:
 
     @property
     def simulation_time_steps(self):
-        simulation_time_steps = torch.linspace(
+        return torch.linspace(
             0,
             self._observation.total_integration_time,
             int(self._observation.total_integration_time / self._simulation_time_step_size),
             device=self._device
         ) if self._observation is not None else None
-
-        # # Update the entities with the new simulation time steps
-        # if self._instrument is not None and simulation_time_steps is not None:
-        #     self._instrument._simulation_time_steps = simulation_time_steps
-        #
-        # if self._scene is not None and simulation_time_steps is not None:
-        #     self._scene._simulation_time_steps = simulation_time_steps
-
-        return simulation_time_steps
 
     def _get_device(self, gpu: int) -> torch.device:
         """Get the device.
@@ -349,16 +318,16 @@ class PHRINGE:
         return self._scene.get_source(source_name)._spectral_energy_distribution
 
     def get_time_steps(self):
-        pass
+        return self.detector_time_steps
 
     def get_wavelength_bin_centers(self):
         return self._instrument.wavelength_bin_centers
 
     def get_wavelength_bin_widths(self):
-        pass
+        return self._instrument.wavelength_bin_widths
 
     def get_wavelength_bin_edges(self):
-        pass
+        return self._instrument.wavelength_bin_edges
 
     def set(self, entity: Union[Instrument, Observation, Scene, Configuration]):
         entity._phringe = self
