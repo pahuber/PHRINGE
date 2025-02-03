@@ -2,10 +2,10 @@ from typing import Any, Tuple
 
 import astropy.units
 from astropy import units as u
-from astropy.units import Quantity, Unit
+from astropy.units import Unit
 
 
-def validate_quantity_units(value: Any, field_name: str, unit_equivalency: Tuple[Unit]) -> Quantity:
+def validate_quantity_units(value: Any, field_name: str, unit_equivalency: Tuple[Unit]) -> float:
     """Return the value as an astropy Quantity if it contains the correct units.
 
     :param value: THe value to be validated
@@ -14,12 +14,12 @@ def validate_quantity_units(value: Any, field_name: str, unit_equivalency: Tuple
     :return: THe value as an astropy Quantity
     """
     if isinstance(value, astropy.units.Quantity) and value.unit.is_equivalent(unit_equivalency):
+        return value.si.value
+    elif isinstance(value, (int, float)):
         return value
-    try:
-        if isinstance(value, str):
-            for unit in unit_equivalency:
-                if u.Quantity(value).unit.is_equivalent(unit):
-                    return u.Quantity(value)
-    except TypeError:
-        raise TypeError(f'{value} is not a valid input for {field_name}')
-    raise ValueError(f'{value} is not a valid input for {field_name}')
+    elif isinstance(value, str):
+        for unit in unit_equivalency:
+            if u.Quantity(value).unit.is_equivalent(unit):
+                return u.Quantity(value).si.value
+    else:
+        raise ValueError(f'{value} is not a valid input for {field_name}')

@@ -1,8 +1,9 @@
-from typing import Tuple, Any
+from typing import Tuple, Any, Union
 
 import numpy as np
 import torch
 from astropy import units as u
+from astropy.units import Quantity
 from pydantic import field_validator, BaseModel
 from pydantic_core.core_schema import ValidationInfo
 from sympy import symbols, Symbol, exp, I, pi, cos, sin, Abs, lambdify, sqrt
@@ -51,13 +52,13 @@ class Instrument(ObservingEntity):
     array_configuration_matrix: Any
     complex_amplitude_transfer_matrix: Any
     differential_outputs: Any
-    baseline_maximum: str
-    baseline_minimum: str
+    baseline_maximum: Union[str, float, Quantity]
+    baseline_minimum: Union[str, float, Quantity]
     sep_at_max_mod_eff: Any
-    aperture_diameter: str
+    aperture_diameter: Union[str, float, Quantity]
     spectral_resolving_power: int
-    wavelength_min: str
-    wavelength_max: str
+    wavelength_min: Union[str, float, Quantity]
+    wavelength_max: Union[str, float, Quantity]
     throughput: float
     quantum_efficiency: float
     perturbations: _Perturbations = _Perturbations()
@@ -93,7 +94,7 @@ class Instrument(ObservingEntity):
         :return: The aperture diameter in units of length
         """
         return torch.tensor(
-            validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,)).si.value,
+            validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,)),
             dtype=torch.float32
         )
 
@@ -105,7 +106,7 @@ class Instrument(ObservingEntity):
         :param info: ValidationInfo object
         :return: The minimum baseline in units of length
         """
-        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,)).si.value
+        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,))
 
     @field_validator('baseline_maximum')
     def _validate_baseline_maximum(cls, value: Any, info: ValidationInfo) -> float:
@@ -115,7 +116,7 @@ class Instrument(ObservingEntity):
         :param info: ValidationInfo object
         :return: The maximum baseline in units of length
         """
-        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,)).si.value
+        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,))
 
     @field_validator('wavelength_min')
     def _validate_wavelength_min(cls, value: Any, info: ValidationInfo) -> float:
@@ -125,7 +126,7 @@ class Instrument(ObservingEntity):
         :param info: ValidationInfo object
         :return: The lower wavelength range limit in units of length
         """
-        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,)).si.value
+        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,))
 
     @field_validator('wavelength_max')
     def _validate_wavelength_max(cls, value: Any, info: ValidationInfo) -> float:
@@ -135,7 +136,7 @@ class Instrument(ObservingEntity):
         :param info: ValidationInfo object
         :return: The upper wavelength range limit in units of length
         """
-        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,)).si.value
+        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,))
 
     @property
     def _field_of_view(self):

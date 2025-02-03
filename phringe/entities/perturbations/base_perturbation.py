@@ -3,6 +3,7 @@ from typing import Any, Union
 
 import numpy as np
 import torch
+from astropy.units import Quantity
 from numpy.random import normal
 from pydantic import field_validator
 from pydantic_core.core_schema import ValidationInfo
@@ -13,7 +14,7 @@ from phringe.core.base_entity import BaseEntity
 
 
 class BasePerturbation(ABC, BaseEntity):
-    rms: str = None
+    rms: Union[str, float, Quantity] = None
     color: str = None
     # _device: Any = None
     # __time_series: Any = None

@@ -1,8 +1,9 @@
-from typing import Any
+from typing import Any, Union
 
 import numpy as np
 import torch
 from astropy import units as u
+from astropy.units import Quantity
 from pydantic import field_validator
 from pydantic_core.core_schema import ValidationInfo
 from scipy.constants import sigma
@@ -25,17 +26,16 @@ class Star(BaseSource):
     :param radius: The radius of the star
     :param temperature: The temperature of the star
     :param luminosity: The luminosity of the star
-    :param right_ascension: The right ascension of the star
+    :param right_ascension: The right ascension of the star with units or else in seconds (not hours)
     :param declination: The declination of the star
     """
     name: str
-    distance: str
-    mass: str
-    radius: str
-    temperature: str
-    # luminosity: str
-    right_ascension: str
-    declination: str
+    distance: Union[str, float, Quantity]
+    mass: Union[str, float, Quantity]
+    radius: Union[str, float, Quantity]
+    temperature: Union[str, float, Quantity]
+    right_ascension: Union[str, float, Quantity]
+    declination: Union[str, float, Quantity]
 
     @field_validator('distance')
     def _validate_distance(cls, value: Any, info: ValidationInfo) -> float:
@@ -45,7 +45,7 @@ class Star(BaseSource):
         :param info: ValidationInfo object
         :return: The distance in units of length
         """
-        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,)).si.value
+        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,))
 
     @field_validator('mass')
     def _validate_mass(cls, value: Any, info: ValidationInfo) -> float:
@@ -55,7 +55,7 @@ class Star(BaseSource):
         :param info: ValidationInfo object
         :return: The mass in units of weight
         """
-        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.kg,)).si.value
+        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.kg,))
 
     @field_validator('radius')
     def _validate_radius(cls, value: Any, info: ValidationInfo) -> float:
@@ -65,7 +65,7 @@ class Star(BaseSource):
         :param info: ValidationInfo object
         :return: The radius in units of length
         """
-        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,)).si.value
+        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,))
 
     @field_validator('temperature')
     def _validate_temperature(cls, value: Any, info: ValidationInfo) -> float:
@@ -75,7 +75,27 @@ class Star(BaseSource):
         :param info: ValidationInfo object
         :return: The temperature in units of temperature
         """
-        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.K,)).si.value
+        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.K,))
+
+    @field_validator('right_ascension')
+    def _validate_right_ascension(cls, value: Any, info: ValidationInfo) -> float:
+        """Validate the right ascension input.
+
+        :param value: Value given as input
+        :param info: ValidationInfo object
+        :return: The right ascension in units of seconds
+        """
+        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.s,))
+
+    @field_validator('declination')
+    def _validate_declination(cls, value: Any, info: ValidationInfo) -> float:
+        """Validate the declination input.
+
+        :param value: Value given as input
+        :param info: ValidationInfo object
+        :return: The declination in units of degrees
+        """
+        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.deg,))
 
     @observing_property(observed_attributes=(lambda s: s.radius, lambda s: s.distance))
     def _angular_radius(self) -> float:
@@ -108,13 +128,13 @@ class Star(BaseSource):
                                        + parameter_b_outer * temperature_difference ** 2 + parameter_c_outer
                                        * temperature_difference ** 3)
 
-        radius_inner = np.sqrt(self.luminosity / incident_stellar_flux_inner)
-        radius_outer = np.sqrt(self.luminosity / incident_stellar_flux_outer)
+        radius_inner = np.sqrt(self.luminosity / 3.86e26 / incident_stellar_flux_inner)
+        radius_outer = np.sqrt(self.luminosity / 3.86e26 / incident_stellar_flux_outer)
         return ((radius_outer + radius_inner) / 2 * u.au).si.value
 
     @observing_property(observed_attributes=(lambda s: s.radius, lambda s: s.temperature,))
     def luminosity(self):
-        return 4 * np.pi * self.radius ** 2 * sigma * self.temperature ** 4 / 3.86e26  # TODO: make SI units
+        return 4 * np.pi * self.radius ** 2 * sigma * self.temperature ** 4
 
     @observing_property(
         observed_attributes=(

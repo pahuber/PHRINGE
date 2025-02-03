@@ -5,6 +5,7 @@ import spectres
 import torch
 from astropy import units as u
 from astropy.constants.codata2018 import G
+from astropy.units import Quantity
 from poliastro.bodies import Body
 from poliastro.twobody import Orbit
 from pydantic import field_validator
@@ -38,19 +39,19 @@ class Planet(BaseSource):
     """
     name: str
     has_orbital_motion: bool
-    mass: str
-    radius: str
-    temperature: str
-    semi_major_axis: str
+    mass: Union[str, float, Quantity]
+    radius: Union[str, float, Quantity]
+    temperature: Union[str, float, Quantity]
+    semi_major_axis: Union[str, float, Quantity]
     eccentricity: float
-    inclination: str
-    raan: str
-    argument_of_periapsis: str
-    true_anomaly: str
+    inclination: Union[str, float, Quantity]
+    raan: Union[str, float, Quantity]
+    argument_of_periapsis: Union[str, float, Quantity]
+    true_anomaly: Union[str, float, Quantity]
     path_to_spectrum: Any
     grid_position: Tuple = None
-    host_star_distance: Any = None
-    host_star_mass: Any = None
+    host_star_distance: Union[str, float, Quantity] = None
+    host_star_mass: Union[str, float, Quantity] = None
     _angular_separation_from_star_x: Any = None
     _angular_separation_from_star_y: Any = None
     _simulation_time_steps: Any = None
@@ -63,7 +64,7 @@ class Planet(BaseSource):
         :param info: ValidationInfo object
         :return: The argument of periapsis in units of degrees
         """
-        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.deg,)).si.value
+        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.deg,))
 
     @field_validator('inclination')
     def _validate_inclination(cls, value: Any, info: ValidationInfo) -> float:
@@ -73,7 +74,7 @@ class Planet(BaseSource):
         :param info: ValidationInfo object
         :return: The inclination in units of degrees
         """
-        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.deg,)).si.value
+        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.deg,))
 
     @field_validator('mass')
     def _validate_mass(cls, value: Any, info: ValidationInfo) -> float:
@@ -83,7 +84,7 @@ class Planet(BaseSource):
         :param info: ValidationInfo object
         :return: The mass in units of weight
         """
-        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.kg,)).si.value
+        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.kg,))
 
     @field_validator('raan')
     def _validate_raan(cls, value: Any, info: ValidationInfo) -> float:
@@ -93,7 +94,7 @@ class Planet(BaseSource):
         :param info: ValidationInfo object
         :return: The raan in units of degrees
         """
-        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.deg,)).si.value
+        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.deg,))
 
     @field_validator('radius')
     def _validate_radius(cls, value: Any, info: ValidationInfo) -> float:
@@ -103,7 +104,7 @@ class Planet(BaseSource):
         :param info: ValidationInfo object
         :return: The radius in units of length
         """
-        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,)).si.value
+        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,))
 
     @field_validator('semi_major_axis')
     def _validate_semi_major_axis(cls, value: Any, info: ValidationInfo) -> float:
@@ -113,7 +114,7 @@ class Planet(BaseSource):
         :param info: ValidationInfo object
         :return: The semi-major axis in units of length
         """
-        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,)).si.value
+        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,))
 
     @field_validator('temperature')
     def _validate_temperature(cls, value: Any, info: ValidationInfo) -> float:
@@ -123,7 +124,7 @@ class Planet(BaseSource):
         :param info: ValidationInfo object
         :return: The temperature in units of temperature
         """
-        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.K,)).si.value
+        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.K,))
 
     @field_validator('true_anomaly')
     def _validate_true_anomaly(cls, value: Any, info: ValidationInfo) -> float:
@@ -133,7 +134,27 @@ class Planet(BaseSource):
         :param info: ValidationInfo object
         :return: The true anomaly in units of degrees
         """
-        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.deg,)).si.value
+        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.deg,))
+
+    @field_validator('host_star_distance')
+    def _validate_host_star_distance(cls, value: Any, info: ValidationInfo) -> float:
+        """Validate the host star distance input.
+
+        :param value: Value given as input
+        :param info: ValidationInfo object
+        :return: The host star distance in units of length
+        """
+        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,))
+
+    @field_validator('host_star_mass')
+    def _validate_host_star_mass(cls, value: Any, info: ValidationInfo) -> float:
+        """Validate the host star mass input.
+
+        :param value: Value given as input
+        :param info: ValidationInfo object
+        :return: The host star mass in units of weight
+        """
+        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.kg,))
 
     @observing_property(
         observed_attributes=(

@@ -17,7 +17,7 @@ class PhasePerturbation(BasePerturbation):
 
     @field_validator('rms')
     def _validate_rms(cls, value: Any, info: ValidationInfo) -> float:
-        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.meter,)).si.value
+        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.meter,))
 
     # OVerwrite property of base class because an additional attribute, wavelengths, is required here
     @property

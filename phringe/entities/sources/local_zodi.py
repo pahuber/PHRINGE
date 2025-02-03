@@ -1,20 +1,55 @@
-from typing import Tuple
+from typing import Tuple, Union, Any
 
+import numpy as np
 import torch
 from astropy import units as u
 from astropy.coordinates import SkyCoord, GeocentricTrueEcliptic
+from astropy.units import Quantity
+from pydantic import field_validator
+from pydantic_core.core_schema import ValidationInfo
 
 from phringe.core.observing_entity import observing_property
 from phringe.entities.sources.base_source import BaseSource
+from phringe.io.validators import validate_quantity_units
 from phringe.util.grid import get_meshgrid
 from phringe.util.spectrum import create_blackbody_spectrum
 
 
 class LocalZodi(BaseSource):
     """Class representation of a local zodi."""
-    host_star_right_ascension: str = None
-    host_star_declination: str = None
-    solar_ecliptic_latitude: str = None
+    host_star_right_ascension: Union[str, float, Quantity] = None
+    host_star_declination: Union[str, float, Quantity] = None
+    solar_ecliptic_latitude: Union[str, float, Quantity] = None
+
+    @field_validator('host_star_right_ascension')
+    def _validate_right_ascension(cls, value: Any, info: ValidationInfo) -> float:
+        """Validate the right ascension input.
+
+        :param value: Value given as input
+        :param info: ValidationInfo object
+        :return: The right ascension in units of degrees
+        """
+        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.s,))
+
+    @field_validator('host_star_declination')
+    def _validate_declination(cls, value: Any, info: ValidationInfo) -> float:
+        """Validate the declination input.
+
+        :param value: Value given as input
+        :param info: ValidationInfo object
+        :return: The declination in units of degrees
+        """
+        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.deg,))
+
+    @field_validator('solar_ecliptic_latitude')
+    def _validate_solar_ecliptic_latitude(cls, value: Any, info: ValidationInfo) -> float:
+        """Validate the solar ecliptic latitude input.
+
+        :param value: Value given as input
+        :param info: ValidationInfo object
+        :return: The solar ecliptic latitude in units of degrees
+        """
+        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.deg,))
 
     def _get_ecliptic_coordinates(self, star_right_ascension, star_declination, solar_ecliptic_latitude) -> Tuple:
         """Return the ecliptic latitude and relative ecliptic longitude that correspond to the star position in the sky.
@@ -24,7 +59,8 @@ class LocalZodi(BaseSource):
         :param solar_ecliptic_latitude: The ecliptic latitude of the sun
         :return: Tuple containing the two coordinates
         """
-        coordinates = SkyCoord(ra=star_right_ascension, dec=star_declination, frame='icrs')
+        ra = star_right_ascension * 15 / 3600 * np.pi / 180 * u.rad
+        coordinates = SkyCoord(ra=ra, dec=star_declination * u.rad, frame='icrs')
         coordinates_ecliptic = coordinates.transform_to(GeocentricTrueEcliptic)
         ecliptic_latitude = coordinates_ecliptic.lat.to(u.rad).value
         ecliptic_longitude = coordinates_ecliptic.lon.to(u.rad).value

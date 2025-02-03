@@ -1,11 +1,15 @@
 from typing import Any
 
+import astropy.units as u
 import numpy as np
 import torch
 from astropy.units import Quantity
+from pydantic import field_validator
+from pydantic_core.core_schema import ValidationInfo
 
 from phringe.core.observing_entity import observing_property
 from phringe.entities.sources.base_source import BaseSource
+from phringe.io.validators import validate_quantity_units
 from phringe.util.grid import get_radial_map, get_meshgrid
 from phringe.util.spectrum import create_blackbody_spectrum
 
@@ -18,6 +22,26 @@ class Exozodi(BaseSource):
     # field_of_view_in_au_radial_maps: Any = None
     host_star_luminosity: Any = None
     host_star_distance: Any = None
+
+    @field_validator('host_star_luminosity')
+    def _validate_host_star_luminosity(cls, value: Any, info: ValidationInfo) -> float:
+        """Validate the host star luminosity input.
+
+        :param value: Value given as input
+        :param info: ValidationInfo object
+        :return: The host star luminosity in units of luminosity
+        """
+        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.W,))
+
+    @field_validator('host_star_distance')
+    def _validate_host_star_distance(cls, value: Any, info: ValidationInfo) -> float:
+        """Validate the host star distance input.
+
+        :param value: Value given as input
+        :param info: ValidationInfo object
+        :return: The host star distance in units of length
+        """
+        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,))
 
     @observing_property(
         observed_attributes=(
@@ -51,7 +75,7 @@ class Exozodi(BaseSource):
     )
     def _sky_brightness_distribution(self):
         host_star_luminosity = self.host_star_luminosity if self.host_star_luminosity is not None else self._phringe._scene.star.luminosity
-        reference_radius_in_au = torch.sqrt(torch.tensor(host_star_luminosity))
+        reference_radius_in_au = torch.sqrt(torch.tensor(host_star_luminosity / 3.86e26, device=self._phringe._device))
         surface_maps = self.level * 7.12e-8 * (self._field_of_view_in_au_radial_map / reference_radius_in_au) ** (-0.34)
         return surface_maps * self._spectral_energy_distribution
 
@@ -119,5 +143,5 @@ class Exozodi(BaseSource):
         :param star_luminosity: The luminosity of the star
         :return: The temperature distribution map
         """
-        return (278.3 * star_luminosity ** 0.25 * maximum_stellar_separations_radial_map ** (
+        return (278.3 * (star_luminosity / 3.86e26) ** 0.25 * maximum_stellar_separations_radial_map ** (
             -0.5))

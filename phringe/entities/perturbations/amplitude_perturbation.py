@@ -14,7 +14,7 @@ class AmplitudePerturbation(BasePerturbation):
 
     @field_validator('rms')
     def _validate_rms(cls, value: Any, info: ValidationInfo) -> float:
-        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.percent,)).si.value
+        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.percent,))
 
     @property
     def _time_series(self) -> Tensor:

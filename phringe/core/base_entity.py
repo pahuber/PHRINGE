@@ -10,3 +10,6 @@ class BaseEntity(BaseModel):
     def __init__(self, **data):
         super().__init__(**data)
         self._phringe = data.pop("_phringe", None)
+
+    class Config:
+        arbitrary_types_allowed = True

@@ -1,6 +1,7 @@
-from typing import Any
+from typing import Any, Union
 
 from astropy import units as u
+from astropy.units import Quantity
 from pydantic import field_validator
 from pydantic_core.core_schema import ValidationInfo
 
@@ -22,13 +23,13 @@ class Observation(BaseEntity):
     :param optimized_star_separation: The optimized star separation
     :param optimized_wavelength: The optimized wavelength
     """
-    solar_ecliptic_latitude: Any
-    total_integration_time: str
-    detector_integration_time: str
-    modulation_period: str
+    solar_ecliptic_latitude: Union[str, float, Quantity]
+    total_integration_time: Union[str, float, Quantity]
+    detector_integration_time: Union[str, float, Quantity]
+    modulation_period: Union[str, float, Quantity]
     optimized_differential_output: int
-    optimized_star_separation: str
-    optimized_wavelength: str
+    optimized_star_separation: Union[str, float, Quantity]
+    optimized_wavelength: Union[str, float, Quantity]
 
     @field_validator('detector_integration_time')
     def _validate_detector_integration_time(cls, value: Any, info: ValidationInfo) -> float:
@@ -38,7 +39,7 @@ class Observation(BaseEntity):
         :param info: ValidationInfo object
         :return: The detector integration time in units of time
         """
-        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.s,)).si.value
+        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.s,))
 
     @field_validator('modulation_period')
     def _validate_modulation_period(cls, value: Any, info: ValidationInfo) -> float:
@@ -48,7 +49,7 @@ class Observation(BaseEntity):
         :param info: ValidationInfo object
         :return: The modulation period in units of time
         """
-        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.s,)).si.value
+        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.s,))
 
     @field_validator('optimized_star_separation')
     def _validate_optimized_star_separation(cls, value: Any, info: ValidationInfo) -> float:
@@ -60,7 +61,7 @@ class Observation(BaseEntity):
         """
         if value == 'habitable-zone':
             return value
-        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.rad,)).si.value
+        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.rad,))
 
     @field_validator('optimized_wavelength')
     def _validate_optimized_wavelength(cls, value: Any, info: ValidationInfo) -> float:
@@ -70,7 +71,7 @@ class Observation(BaseEntity):
         :param info: ValidationInfo object
         :return: The optimized wavelength in units of length
         """
-        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,)).si.value
+        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,))
 
     @field_validator('solar_ecliptic_latitude')
     def _validate_solar_ecliptic_latitude(cls, value: Any, info: ValidationInfo) -> float:
@@ -80,7 +81,7 @@ class Observation(BaseEntity):
         :param info: ValidationInfo object
         :return: The solar ecliptic latitude in units of degrees
         """
-        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.deg,)).si.value
+        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.deg,))
 
     @field_validator('total_integration_time')
     def _validate_total_integration_time(cls, value: Any, info: ValidationInfo) -> float:
@@ -90,4 +91,4 @@ class Observation(BaseEntity):
         :param info: ValidationInfo object
         :return: The total integration time in units of time
         """
-        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.s,)).si.value
+        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.s,))
