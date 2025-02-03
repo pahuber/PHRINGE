@@ -113,7 +113,6 @@ class PHRINGE:
         the output is not yet binned to detector time steps.
 
         """
-
         # Prepare output tensor
         counts = torch.zeros(
             (self._instrument.number_of_outputs,
@@ -142,26 +141,6 @@ class PHRINGE:
         )
 
         nulling_baseline = 14  # TODO: implement correctly
-
-        amplitude_pert_time_series = self._instrument.perturbations.amplitude._time_series
-        #     if self._instrument.perturbations.amplitude is not None else torch.zeros(
-        #     (self._instrument.number_of_inputs, len(self.simulation_time_steps)),
-        #     dtype=torch.float32,
-        #     device=self._device
-        # )
-        phase_pert_time_series = self._instrument.perturbations.phase._time_series
-        #     if self._instrument.perturbations.phase is not None else torch.zeros(
-        #     (self._instrument.number_of_inputs, len(self._instrument.wavelength_bin_centers),
-        #      len(self.simulation_time_steps)),
-        #     dtype=torch.float32,
-        #     device=self._device
-        # )
-        polarization_pert_time_series = self._instrument.perturbations.polarization._time_series
-        #     if self._instrument.perturbations.polarization is not None else torch.zeros(
-        #     (self._instrument.number_of_inputs, len(self.simulation_time_steps)),
-        #     dtype=torch.float32,
-        #     device=self._device
-        # )
 
         # Add the last index if it is not already included due to rounding issues
         if time_step_indices[-1] != len(self.simulation_time_steps):
@@ -228,13 +207,16 @@ class PHRINGE:
                                 torch.tensor(nulling_baseline, device=self._device),
                                 *[self._instrument._get_amplitude(self._device) for _ in
                                   range(self._instrument.number_of_inputs)],
-                                *[amplitude_pert_time_series[k][None, it_low:it_high, None, None] for k in
+                                *[self._instrument.perturbations.amplitude._time_series[k][None, it_low:it_high, None,
+                                  None] for k in
                                   range(self._instrument.number_of_inputs)],
-                                *[phase_pert_time_series[k][:, it_low:it_high, None, None] for k in
+                                *[self._instrument.perturbations.phase._time_series[k][:, it_low:it_high, None, None]
+                                  for k in
                                   range(self._instrument.number_of_inputs)],
                                 *[torch.tensor(0, device=self._device) for _ in
                                   range(self._instrument.number_of_inputs)],
-                                *[polarization_pert_time_series[k][None, it_low:it_high, None, None] for k in
+                                *[self._instrument.perturbations.polarization._time_series[k][None, it_low:it_high,
+                                  None, None] for k in
                                   range(self._instrument.number_of_inputs)]
                             )
                             * sky_brightness_distribution

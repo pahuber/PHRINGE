@@ -19,12 +19,6 @@ class Scene(BaseEntity):
     exozodi: Exozodi = None
     local_zodi: LocalZodi = None
 
-    # _instrument: Any = None
-    # _observation: Any = None
-    # _grid_size: int = None
-    # _simulation_time_steps: Any = None
-    # _field_of_view: Any = None
-
     def __setattr__(self, key, value):
         super().__setattr__(key, value)
         if key == "_phringe":
@@ -38,35 +32,12 @@ class Scene(BaseEntity):
         """
         source._phringe = self._phringe
         if isinstance(source, Star):
-            # source._device = self._device
-            # source._grid_size = self._grid_size
-            # source._instrument = self._instrument if self._instrument is not None else None
             self.star = source
         elif isinstance(source, Planet):
-            # planets = copy(self.planets)
-            # source._device = self._device
-            # source._grid_size = self._grid_size
-            # source._simulation_time_steps = self._simulation_time_steps
-            # source.host_star_distance = self.star.distance if self.star is not None else source.host_star_distance
-            # source.host_star_mass = self.star.mass if self.star is not None else source.host_star_mass
-            # source._instrument = self._instrument if self._instrument is not None else None
             self.planets.append(source)
-            # self.planets = planets
         elif isinstance(source, Exozodi):
-            # source._device = self._device
-            # source._grid_size = self._grid_size
-            # source.host_star_luminosity = self.star.luminosity if self.star is not None else source.host_star_luminosity
-            # source.host_star_distance = self.star.distance if self.star is not None else source.host_star_distance
-            # source._instrument = self._instrument if self._instrument is not None else None
-
             self.exozodi = source
         elif isinstance(source, LocalZodi):
-            # source._device = self._device
-            # source._grid_size = self._grid_size
-            # source.host_star_right_ascension = self.star.right_ascension if self.star is not None else source.host_star_right_ascension
-            # source.host_star_declination = self.star.declination if self.star is not None else source.host_star_declination
-            # source.solar_ecliptic_latitude = self._phringe._observation.solar_ecliptic_latitude if self._phringe._observation is not None else source.solar_ecliptic_latitude
-            # source._instrument = self._instrument if self._instrument is not None else None
             self.local_zodi = source
 
     def remove_source(self, name: str):

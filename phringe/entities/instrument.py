@@ -233,15 +233,10 @@ class Instrument(ObservingEntity):
         )
 
     def add_perturbation(self, perturbation: BasePerturbation):
-
-        # perturbation._device = self._device
-        # perturbation._instrument = self
         perturbation._phringe = self._phringe
-
         if isinstance(perturbation, AmplitudePerturbation):
             self.perturbations.amplitude = perturbation
         elif isinstance(perturbation, PhasePerturbation):
-            # perturbation._wavelength_bin_centers = self.wavelength_bin_centers
             self.perturbations.phase = perturbation
         elif isinstance(perturbation, PolarizationPerturbation):
             self.perturbations.polarization = perturbation
