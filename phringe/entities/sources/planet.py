@@ -55,8 +55,6 @@ class Planet(BaseSource):
     _angular_separation_from_star_y: Any = None
     _simulation_time_steps: Any = None
 
-    # TODO: add option to manually set host star mass and distance in case no star has been added to the scene
-
     @field_validator('argument_of_periapsis')
     def _validate_argument_of_periapsis(cls, value: Any, info: ValidationInfo) -> float:
         """Validate the argument of periapsis input.
