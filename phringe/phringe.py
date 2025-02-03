@@ -30,7 +30,7 @@ class PHRINGE:
             gpu: int = None,
             device: torch.device = None,
             grid_size=40,
-            time_step_size: float = 600  # TODO: imeplement this
+            time_step_size: float = None
     ):
         self._device = self._get_device(gpu) if device is None else device
         self._instrument = None
@@ -38,12 +38,19 @@ class PHRINGE:
         self._scene = None
         self.seed = seed
         self._grid_size = grid_size
-        self._simulation_time_step_size = time_step_size
+        self._time_step_size = time_step_size
         self._simulation_time_steps = None
         self._detector_time_steps = None
         self._detailed = False
         self._normalize = False
         self._extra_memory = 1
+
+    @property
+    def _simulation_time_step_size(self):
+        if self._time_step_size is not None and self._time_step_size < self._observation.detector_integration_time:
+            return self._time_step_size
+        else:
+            return self._observation.detector_integration_time
 
     @property
     def detector_time_steps(self):
@@ -332,7 +339,6 @@ class PHRINGE:
 
     def set(self, entity: Union[Instrument, Observation, Scene, Configuration]):
         entity._phringe = self
-        # entity._device = self._device
         if isinstance(entity, Instrument):
             self._instrument = entity
         elif isinstance(entity, Observation):
