@@ -1,7 +1,6 @@
 from typing import Any
 
 import astropy.units as u
-import numpy as np
 import torch
 from pydantic import field_validator
 from pydantic_core.core_schema import ValidationInfo
@@ -21,7 +20,7 @@ class PolarizationPerturbation(BasePerturbation):
     @observing_property(
         observed_attributes=(
                 lambda s: s._number_of_inputs,
-                lambda s: s._observation.modulation_period,
+                lambda s: s._instrument._observation.modulation_period,
                 lambda s: s._number_of_simulation_time_steps
         )
     )
@@ -31,14 +30,15 @@ class PolarizationPerturbation(BasePerturbation):
             # number_of_simulation_time_steps: int,
             # **kwargs
     ) -> Tensor:
-        time_series = np.zeros((self._number_of_inputs, self._number_of_simulation_time_steps))
+        time_series = torch.zeros((self._number_of_inputs, self._number_of_simulation_time_steps), dtype=torch.float32,
+                                  device=self._device)
         color_coeff = self._get_color_coeff()
 
         for k in range(self._number_of_inputs):
             time_series[k] = self._calculate_time_series_from_psd(
                 color_coeff,
-                self._observation.modulation_period,
+                self._instrument._observation.modulation_period,
                 self._number_of_simulation_time_steps
             )
 
-        return torch.tensor(time_series, dtype=torch.float32, device=self._device)
+        return time_series

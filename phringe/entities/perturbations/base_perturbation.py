@@ -2,6 +2,7 @@ from abc import abstractmethod, ABC
 from typing import Any, Union
 
 import numpy as np
+import torch
 from numpy.random import normal
 from pydantic import field_validator
 from pydantic_core.core_schema import ValidationInfo
@@ -15,12 +16,14 @@ class BasePerturbation(ABC, ObservingEntity):
     rms: str = None
     color: str = None
     # _device: Any = None
-    __time_series: Any = None
+    # __time_series: Any = None
     _has_manually_set_time_series: bool = False
 
-    _number_of_inputs: int = None
-    _observation: Any = None
-    _number_of_simulation_time_steps: int = None
+    # _number_of_inputs: int = None
+    # _number_of_simulation_time_steps: int = None
+    _instrument: Any = None
+
+    # _observation: Any = None
 
     def __init__(self, **data):
         super().__init__(**data)
@@ -52,6 +55,18 @@ class BasePerturbation(ABC, ObservingEntity):
     # @abstractmethod
     # def _calculate_time_series(self) -> Tensor:
     #     pass
+
+    @property
+    def _number_of_inputs(self):
+        return self._instrument.number_of_inputs
+
+    @property
+    def _number_of_simulation_time_steps(self):
+        return self._instrument._number_of_simulation_time_steps
+
+    @property
+    def _observation(self):
+        return self._instrument._observation
 
     def _get_color_coeff(self) -> int:
         match self.color:
@@ -89,7 +104,7 @@ class BasePerturbation(ABC, ObservingEntity):
         time_series /= np.sqrt(np.mean(time_series ** 2))
         time_series *= self.rms
 
-        return Tensor(time_series)  # Create tensor directly
+        return torch.tensor(time_series, dtype=torch.float32, device=self._device)
 
     def set_time_series(self, time_series: Any):
         # TODO: implement set time series correctly

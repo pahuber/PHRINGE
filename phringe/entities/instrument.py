@@ -74,6 +74,26 @@ class Instrument(ObservingEntity):
 
         if self.perturbations is None:
             self.perturbations = _Perturbations()
+        else:
+            if self.perturbations.amplitude is not None:
+                self.perturbations.amplitude._device = self._device
+                # self.perturbations.amplitude._number_of_inputs = self.number_of_inputs
+                # self.perturbations.amplitude._number_of_simulation_time_steps = self._number_of_simulation_time_steps
+                # self.perturbations.amplitude._observation = self._observation
+                self.perturbations.amplitude._instrument = self
+            if self.perturbations.phase is not None:
+                self.perturbations.phase._device = self._device
+                # self.perturbations.phase._number_of_inputs = self.number_of_inputs
+                # self.perturbations.phase._number_of_simulation_time_steps = self._number_of_simulation_time_steps
+                # self.perturbations.phase._observation = self._observation
+                # self.perturbations.phase._wavelength_bin_centers = self.wavelength_bin_centers
+                self.perturbations.phase._instrument = self
+            if self.perturbations.polarization is not None:
+                self.perturbations.polarization._device = self._device
+                # self.perturbations.polarization._number_of_inputs = self.number_of_inputs
+                # self.perturbations.polarization._number_of_simulation_time_steps = self._number_of_simulation_time_steps
+                # self.perturbations.polarization._observation = self._observation
+                self.perturbations.polarization._instrument = self
 
         self.number_of_inputs = self.complex_amplitude_transfer_matrix.shape[1]
         self.number_of_outputs = self.complex_amplitude_transfer_matrix.shape[0]
@@ -265,14 +285,12 @@ class Instrument(ObservingEntity):
     def add_perturbation(self, perturbation: BasePerturbation):
 
         perturbation._device = self._device
-        perturbation._number_of_inputs = self.number_of_inputs
-        perturbation._number_of_simulation_time_steps = self._number_of_simulation_time_steps
-        perturbation._observation = self._observation
+        perturbation._instrument = self
 
         if isinstance(perturbation, AmplitudePerturbation):
             self.perturbations.amplitude = perturbation
         elif isinstance(perturbation, PhasePerturbation):
-            perturbation._wavelength_bin_centers = self.wavelength_bin_centers
+            # perturbation._wavelength_bin_centers = self.wavelength_bin_centers
             self.perturbations.phase = perturbation
         elif isinstance(perturbation, PolarizationPerturbation):
             self.perturbations.polarization = perturbation

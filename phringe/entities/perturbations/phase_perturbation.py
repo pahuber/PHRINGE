@@ -14,7 +14,7 @@ from phringe.io.validators import validate_quantity_units
 
 
 class PhasePerturbation(BasePerturbation):
-    _wavelength_bin_center: Any = None
+    # _wavelength_bin_center: Any = None
 
     @field_validator('rms')
     def _validate_rms(cls, value: Any, info: ValidationInfo) -> float:
@@ -24,7 +24,7 @@ class PhasePerturbation(BasePerturbation):
     @observing_property(
         observed_attributes=(
                 lambda s: s._number_of_inputs,
-                lambda s: s._observation.modulation_period,
+                lambda s: s._instrument._observation.modulation_period,
                 lambda s: s._number_of_simulation_time_steps,
                 lambda s: s._wavelength_bin_centers
         )
@@ -38,11 +38,15 @@ class PhasePerturbation(BasePerturbation):
         for k in range(self._number_of_inputs):
             time_series[k] = self._calculate_time_series_from_psd(
                 color_coeff,
-                self._observation.modulation_period,
+                self._instrument._observation.modulation_period,
                 self._number_of_simulation_time_steps
             )
 
         for il, l in enumerate(self._wavelength_bin_centers):
             time_series[:, il] = 2 * np.pi * time_series[:, il] / l
 
-        return torch.tensor(time_series, dtype=torch.float32, device=self._device)
+        return time_series
+
+    @property
+    def _wavelength_bin_centers(self):
+        return self._instrument.wavelength_bin_centers

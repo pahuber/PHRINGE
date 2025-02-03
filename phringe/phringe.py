@@ -30,7 +30,7 @@ class PHRINGE:
             gpu: int = None,
             device: torch.device = None,
             grid_size=40,
-            time_step_size: float = 60000  # TODO: imeplement this
+            time_step_size: float = 600  # TODO: imeplement this
     ):
         self._device = self._get_device(gpu) if device is None else device
         self._instrument = None
@@ -376,8 +376,8 @@ class PHRINGE:
         elif isinstance(entity, Scene):
             self._scene = entity
         elif isinstance(entity, Configuration):
-            self._instrument = Instrument(**entity.config_dict['instrument'], _device=self._device)
             # self._instrument._device = self._device
+            self._instrument = Instrument(**entity.config_dict['instrument'], _device=self._device)
             self._observation = Observation(**entity.config_dict['observation'], _device=self._device)
             self._observation._device = self._device
             self._scene = Scene(**entity.config_dict['scene'], _device=self._device)
