@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Union
 
 import numpy as np
@@ -15,6 +16,7 @@ from phringe.entities.sources.exozodi import Exozodi
 from phringe.entities.sources.local_zodi import LocalZodi
 from phringe.entities.sources.planet import Planet
 from phringe.entities.sources.star import Star
+from phringe.io.fits_writer import FITSWriter
 from phringe.util.grid import get_meshgrid
 from phringe.util.memory import get_available_memory
 
@@ -46,13 +48,6 @@ class PHRINGE:
         self._extra_memory = 1
 
     @property
-    def _simulation_time_step_size(self):
-        if self._time_step_size is not None and self._time_step_size < self._observation.detector_integration_time:
-            return self._time_step_size
-        else:
-            return self._observation.detector_integration_time
-
-    @property
     def detector_time_steps(self):
         return torch.linspace(
             0,
@@ -60,6 +55,13 @@ class PHRINGE:
             int(self._observation.total_integration_time / self._observation.detector_integration_time),
             device=self._device
         ) if self._observation is not None else None
+
+    @property
+    def _simulation_time_step_size(self):
+        if self._time_step_size is not None and self._time_step_size < self._observation.detector_integration_time:
+            return self._time_step_size
+        else:
+            return self._observation.detector_integration_time
 
     @property
     def simulation_time_steps(self):
@@ -209,6 +211,9 @@ class PHRINGE:
 
         return counts, binning_factor
 
+    def export_nifits(self, data: Tensor, path: Path = Path('.'), filename: str = None, name_suffix: str = ''):
+        FITSWriter().write(data, path, name_suffix)
+
     def get_counts(self):
         # Move all tensors to the device
         self._instrument.aperture_diameter = self._instrument.aperture_diameter.to(self._device)
@@ -331,11 +336,11 @@ class PHRINGE:
     def get_wavelength_bin_centers(self):
         return self._instrument.wavelength_bin_centers
 
-    def get_wavelength_bin_widths(self):
-        return self._instrument.wavelength_bin_widths
-
     def get_wavelength_bin_edges(self):
         return self._instrument.wavelength_bin_edges
+
+    def get_wavelength_bin_widths(self):
+        return self._instrument.wavelength_bin_widths
 
     def set(self, entity: Union[Instrument, Observation, Scene, Configuration]):
         entity._phringe = self
