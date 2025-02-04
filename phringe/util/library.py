@@ -34,7 +34,7 @@ class LIFEBaselineArchitecture(Instrument):
             complex_amplitude_transfer_matrix=catm,
             differential_outputs=diff_out,
             baseline_maximum='600 m',
-            baseline_minimum='10 m',
+            baseline_minimum='9 m',
             sep_at_max_mod_eff=sep_at_max_mod_eff,
             aperture_diameter='2 m',
             spectral_resolving_power='20',
@@ -43,10 +43,3 @@ class LIFEBaselineArchitecture(Instrument):
             throughput=0.05,
             quantum_efficiency=0.7
         )
-
-        # ampl_pert = PolarizationPerturbation(
-        #     rms='0.1 rad',
-        #     color='white'
-        # )
-        #
-        # self.add_perturbation(ampl_pert)

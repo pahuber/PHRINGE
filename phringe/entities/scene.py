@@ -62,11 +62,11 @@ class Scene(BaseEntity):
         all_sources = []
         if self.planets:
             all_sources.extend(self.planets)
-        if self.star:
+        if self.star is not None:
             all_sources.append(self.star)
-        if self.local_zodi:
+        if self.local_zodi is not None:
             all_sources.append(self.local_zodi)
-        if self.exozodi:
+        if self.exozodi is not None:
             all_sources.append(self.exozodi)
         return all_sources
 
@@ -78,4 +78,4 @@ class Scene(BaseEntity):
         for source in self.get_all_sources():
             if source.name == name:
                 return source
-            raise ValueError(f'No source with name {name} found in the scene')
+        raise ValueError(f'No source with name {name} found in the scene')

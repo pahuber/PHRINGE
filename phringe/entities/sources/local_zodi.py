@@ -18,7 +18,7 @@ class LocalZodi(BaseSource):
     """Class representation of a local zodi."""
     host_star_right_ascension: Union[str, float, Quantity] = None
     host_star_declination: Union[str, float, Quantity] = None
-    solar_ecliptic_latitude: Union[str, float, Quantity] = None
+    _solar_ecliptic_latitude: Union[str, float, Quantity] = None
 
     @field_validator('host_star_right_ascension')
     def _validate_right_ascension(cls, value: Any, info: ValidationInfo) -> float:
@@ -28,7 +28,7 @@ class LocalZodi(BaseSource):
         :param info: ValidationInfo object
         :return: The right ascension in units of degrees
         """
-        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.s,))
+        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.deg,))
 
     @field_validator('host_star_declination')
     def _validate_declination(cls, value: Any, info: ValidationInfo) -> float:
@@ -37,16 +37,6 @@ class LocalZodi(BaseSource):
         :param value: Value given as input
         :param info: ValidationInfo object
         :return: The declination in units of degrees
-        """
-        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.deg,))
-
-    @field_validator('solar_ecliptic_latitude')
-    def _validate_solar_ecliptic_latitude(cls, value: Any, info: ValidationInfo) -> float:
-        """Validate the solar ecliptic latitude input.
-
-        :param value: Value given as input
-        :param info: ValidationInfo object
-        :return: The solar ecliptic latitude in units of degrees
         """
         return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.deg,))
 
@@ -113,7 +103,7 @@ class LocalZodi(BaseSource):
                 lambda s: s._solid_angle,
                 lambda s: s.host_star_right_ascension if s.host_star_right_ascension is not None else s._phringe._scene.star.right_ascension,
                 lambda s: s.host_star_declination if s.host_star_declination is not None else s._phringe._scene.star.declination,
-                lambda s: s.solar_ecliptic_latitude if s.solar_ecliptic_latitude is not None else s._phringe._observation.solar_ecliptic_latitude
+                lambda s: s._solar_ecliptic_latitude if s._solar_ecliptic_latitude is not None else s._phringe._observation.solar_ecliptic_latitude
         )
     )
     def _spectral_energy_distribution(self) -> torch.Tensor:
@@ -122,7 +112,7 @@ class LocalZodi(BaseSource):
 
         host_star_right_ascension = self.host_star_right_ascension if self.host_star_right_ascension is not None else self._phringe._scene.star.right_ascension
         host_star_declination = self.host_star_declination if self.host_star_declination is not None else self._phringe._scene.star.declination
-        solar_ecliptic_latitude = self.solar_ecliptic_latitude if self.solar_ecliptic_latitude is not None else self._phringe._observation.solar_ecliptic_latitude
+        solar_ecliptic_latitude = self._solar_ecliptic_latitude if self._solar_ecliptic_latitude is not None else self._phringe._observation.solar_ecliptic_latitude
 
         ecliptic_latitude, relative_ecliptic_longitude = self._get_ecliptic_coordinates(
             host_star_right_ascension,

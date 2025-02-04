@@ -224,7 +224,7 @@ class PHRINGE:
 
     def get_counts(self):
         # Move all tensors to the device
-        self._instrument.aperture_diameter = self._instrument.aperture_diameter.to(self._device)
+        # self._instrument.aperture_diameter = self._instrument.aperture_diameter.to(self._device)
 
         counts, binning_factor = self._get_unbinned_counts(diff_only=True)
 
