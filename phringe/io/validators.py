@@ -21,5 +21,6 @@ def validate_quantity_units(value: Any, field_name: str, unit_equivalency: Tuple
         for unit in unit_equivalency:
             if u.Quantity(value).unit.is_equivalent(unit):
                 return u.Quantity(value).si.value
+        raise ValueError(f'{value} is not a valid input for {field_name}')
     else:
         raise ValueError(f'{value} is not a valid input for {field_name}')

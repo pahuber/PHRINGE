@@ -47,6 +47,8 @@ class PHRINGE:
         self._normalize = False
         self._extra_memory = 1
 
+        self._set_seed(self.seed if self.seed is not None else np.random.randint(0, 2 ** 31 - 1))
+
     @property
     def detector_time_steps(self):
         return torch.linspace(
@@ -91,6 +93,7 @@ class PHRINGE:
         the output is not yet binned to detector time steps.
 
         """
+        if self.seed is not None: self._set_seed(self.seed)
         # Prepare output tensor
         counts = torch.zeros(
             (self._instrument.number_of_outputs,
@@ -211,6 +214,11 @@ class PHRINGE:
 
         return counts, binning_factor
 
+    @staticmethod
+    def _set_seed(seed: int):
+        torch.manual_seed(seed)
+        np.random.seed(seed)
+
     def export_nifits(self, data: Tensor, path: Path = Path('.'), filename: str = None, name_suffix: str = ''):
         FITSWriter().write(data, path, name_suffix)
 
@@ -231,7 +239,6 @@ class PHRINGE:
         return counts
 
     def get_diff_counts(self):
-
         diff_counts = torch.zeros(
             (len(self._instrument.differential_outputs),
              len(self._instrument.wavelength_bin_centers),
@@ -265,6 +272,7 @@ class PHRINGE:
             nulling_baseline: float = None,
             output_as_numpy: bool = False,
     ):
+        if self.seed is not None: self._set_seed(self.seed)
 
         # Handle broadcasting and type conversions
         if isinstance(times, ndarray) or isinstance(times, float) or isinstance(times, int):
