@@ -85,7 +85,7 @@ class Star(BaseSource):
         :param info: ValidationInfo object
         :return: The right ascension in units of seconds
         """
-        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.s,))
+        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.deg,))
 
     @field_validator('declination')
     def _validate_declination(cls, value: Any, info: ValidationInfo) -> float:

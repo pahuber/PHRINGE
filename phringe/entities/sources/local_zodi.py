@@ -1,6 +1,5 @@
 from typing import Tuple, Union, Any
 
-import numpy as np
 import torch
 from astropy import units as u
 from astropy.coordinates import SkyCoord, GeocentricTrueEcliptic
@@ -59,8 +58,7 @@ class LocalZodi(BaseSource):
         :param solar_ecliptic_latitude: The ecliptic latitude of the sun
         :return: Tuple containing the two coordinates
         """
-        ra = star_right_ascension * 15 / 3600 * np.pi / 180 * u.rad
-        coordinates = SkyCoord(ra=ra, dec=star_declination * u.rad, frame='icrs')
+        coordinates = SkyCoord(ra=star_right_ascension * u.rad, dec=star_declination * u.rad, frame='icrs')
         coordinates_ecliptic = coordinates.transform_to(GeocentricTrueEcliptic)
         ecliptic_latitude = coordinates_ecliptic.lat.to(u.rad).value
         ecliptic_longitude = coordinates_ecliptic.lon.to(u.rad).value
