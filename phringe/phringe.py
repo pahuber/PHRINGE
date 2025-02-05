@@ -4,10 +4,6 @@ from typing import Union
 import numpy as np
 import torch
 from numpy import ndarray
-from skimage.measure import block_reduce
-from torch import Tensor
-from tqdm import tqdm
-
 from phringe.entities.configuration import Configuration
 from phringe.entities.instrument import Instrument
 from phringe.entities.observation import Observation
@@ -19,6 +15,9 @@ from phringe.entities.sources.star import Star
 from phringe.io.fits_writer import FITSWriter
 from phringe.util.grid import get_meshgrid
 from phringe.util.memory import get_available_memory
+from skimage.measure import block_reduce
+from torch import Tensor
+from tqdm import tqdm
 
 
 class PHRINGE:
@@ -364,3 +363,7 @@ class PHRINGE:
             self._scene = Scene(**entity.config_dict['scene'], _phringe=self)
         else:
             raise ValueError(f'Invalid entity type: {type(entity)}')
+
+    @staticmethod
+    def which_animals_have_fringes():
+        print('Zebras!')
