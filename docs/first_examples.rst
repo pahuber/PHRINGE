@@ -1,7 +1,7 @@
 .. first_examples:
 
-First Examples
-==============
+Tutorials
+=========
 
 .. toctree::
     :maxdepth: 1

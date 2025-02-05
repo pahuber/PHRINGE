@@ -9,13 +9,13 @@ import torch
 from torch import Tensor
 
 from phringe.core.director import Director
-from phringe.core.entities.instrument import Instrument
-from phringe.core.entities.observation_mode import ObservationMode
-from phringe.core.entities.photon_sources.exozodi import Exozodi
-from phringe.core.entities.photon_sources.local_zodi import LocalZodi
-from phringe.core.entities.photon_sources.planet import Planet
-from phringe.core.entities.scene import Scene
-from phringe.core.entities.simulation import Simulation
+from phringe.entities import Instrument
+from phringe.entities.observation import Observation
+from phringe.entities import Scene
+from phringe.entities import Simulation
+from phringe.entities.sources.exozodi import Exozodi
+from phringe.entities.sources.local_zodi import LocalZodi
+from phringe.entities import Planet
 from phringe.io.fits_writer import FITSWriter
 from phringe.io.utils import load_config
 
@@ -132,14 +132,14 @@ class PHRINGE():
         source = [source for source in self._director._sources if source.name == source_name][0]
 
         if isinstance(source, LocalZodi) or isinstance(source, Exozodi):
-            sky_coordinates_x = source.sky_coordinates[0][:, None, :, :]
-            sky_coordinates_y = source.sky_coordinates[1][:, None, :, :]
+            sky_coordinates_x = source._sky_coordinates[0][:, None, :, :]
+            sky_coordinates_y = source._sky_coordinates[1][:, None, :, :]
         elif isinstance(source, Planet) and self._director._has_planet_orbital_motion:
-            sky_coordinates_x = source.sky_coordinates[0][None, :, :, :]
-            sky_coordinates_y = source.sky_coordinates[1][None, :, :, :]
+            sky_coordinates_x = source._sky_coordinates[0][None, :, :, :]
+            sky_coordinates_y = source._sky_coordinates[1][None, :, :, :]
         else:
-            sky_coordinates_x = source.sky_coordinates[0][None, None, :, :]
-            sky_coordinates_y = source.sky_coordinates[1][None, None, :, :]
+            sky_coordinates_x = source._sky_coordinates[0][None, None, :, :]
+            sky_coordinates_y = source._sky_coordinates[1][None, None, :, :]
 
         num_in = self._director._number_of_inputs
         num_out = self._director._number_of_outputs
@@ -370,7 +370,7 @@ class PHRINGE():
             self,
             simulation: Simulation,
             instrument: Instrument,
-            observation_mode: ObservationMode,
+            observation_mode: Observation,
             scene: Scene,
             seed: int = None,
             gpu: int = None,
@@ -389,7 +389,7 @@ class PHRINGE():
             config_file_path: Path = None,
             simulation: Simulation = None,
             instrument: Instrument = None,
-            observation_mode: ObservationMode = None,
+            observation_mode: Observation = None,
             scene: Scene = None,
             seed: int = None,
             gpu: int = None,
@@ -424,7 +424,7 @@ class PHRINGE():
 
         simulation = Simulation(**config_dict['simulation']) if not simulation else simulation
         instrument = Instrument(**config_dict['instrument']) if not instrument else instrument
-        observation_mode = ObservationMode(
+        observation_mode = Observation(
             **config_dict['observation_mode']
         ) if not observation_mode else observation_mode
         scene = Scene(**config_dict['scene']) if not scene else scene
@@ -432,7 +432,7 @@ class PHRINGE():
         # If seed is None, set torch and numpy seeds to a random number to prevent the same seed from being used when
         # PHRINGE.run is called several times in a row
         if seed is None:
-            seed = np.random.randint(0, 2 ** 32 - 1)
+            seed = np.random.randint(0, 2 ** 31 - 1)
         torch.manual_seed(seed)
         np.random.seed(seed)
 

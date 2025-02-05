@@ -1,25 +1,23 @@
 from typing import Union
 
 import numpy as np
-import sympy
 import torch
 from skimage.measure import block_reduce
-from sympy import Symbol, exp, I, pi, cos, sin, Abs, symbols
 from torch import Tensor
 from tqdm import tqdm
 
-from phringe.core.entities.instrument import Instrument
-from phringe.core.entities.observation_mode import ObservationMode
-from phringe.core.entities.perturbations.amplitude_perturbation import AmplitudePerturbation
-from phringe.core.entities.perturbations.phase_perturbation import PhasePerturbation
-from phringe.core.entities.perturbations.polarization_perturbation import PolarizationPerturbation
-from phringe.core.entities.photon_sources.base_photon_source import BasePhotonSource
-from phringe.core.entities.photon_sources.exozodi import Exozodi
-from phringe.core.entities.photon_sources.local_zodi import LocalZodi
-from phringe.core.entities.photon_sources.planet import Planet
-from phringe.core.entities.photon_sources.star import Star
-from phringe.core.entities.scene import Scene
-from phringe.core.entities.simulation import Simulation
+from phringe.entities import BaseSource
+from phringe.entities import Instrument
+from phringe.entities import PhasePerturbation
+from phringe.entities import Planet
+from phringe.entities import PolarizationPerturbation
+from phringe.entities import Scene
+from phringe.entities import Simulation
+from phringe.entities import Star
+from phringe.entities.observation import Observation
+from phringe.entities.perturbations.amplitude_perturbation import AmplitudePerturbation
+from phringe.entities.sources.exozodi import Exozodi
+from phringe.entities.sources.local_zodi import LocalZodi
 from phringe.util.memory import get_available_memory
 
 
@@ -76,7 +74,7 @@ class Director():
             self,
             simulation: Simulation,
             instrument: Instrument,
-            observation_mode: ObservationMode,
+            observation_mode: Observation,
             scene: Scene,
             gpu: int = None,
             normalize: bool = False,
@@ -135,8 +133,8 @@ class Director():
         self._wavelength_bin_centers = instrument.wavelength_bin_centers
         self._wavelength_bin_edges = instrument.wavelength_bin_edges
         self._wavelength_bin_widths = instrument.wavelength_bin_widths
-        self._wavelength_range_lower_limit = instrument.wavelength_range_lower_limit
-        self._wavelength_range_upper_limit = instrument.wavelength_range_upper_limit
+        self._wavelength_range_lower_limit = instrument.wavelength_min
+        self._wavelength_range_upper_limit = instrument.wavelength_max
 
     def _get_device(self, gpu: int) -> torch.device:
         """Get the device.
@@ -205,7 +203,7 @@ class Director():
              isinstance(perturbation, PolarizationPerturbation)][0]
 
         if self._has_amplitude_perturbations:
-            self.amplitude_pert_time_series = amplitude_perturbation.get_time_series(
+            self.amplitude_pert_time_series = amplitude_perturbation.__calculate_time_series(
                 self._number_of_inputs,
                 self._modulation_period,
                 len(self.simulation_time_steps)
@@ -217,7 +215,7 @@ class Director():
             )
 
         if self._has_phase_perturbations:
-            self.phase_pert_time_series = phase_perturbation.get_time_series(
+            self.phase_pert_time_series = phase_perturbation.__calculate_time_series(
                 self._number_of_inputs,
                 self._modulation_period,
                 len(self.simulation_time_steps),
@@ -230,7 +228,7 @@ class Director():
             )
 
         if self._has_polarization_perturbations:
-            self.polarization_pert_time_series = polarization_perturbation.get_time_series(
+            self.polarization_pert_time_series = polarization_perturbation.__calculate_time_series(
                 self._number_of_inputs,
                 self._modulation_period,
                 len(self.simulation_time_steps),
@@ -243,7 +241,7 @@ class Director():
 
     def _prepare_sources(
             self,
-            sources: list[BasePhotonSource],
+            sources: list[BaseSource],
             simulation_time_steps: Tensor,
             simulation_wavelength_bin_centers: Tensor,
             grid_size: int,
@@ -254,7 +252,7 @@ class Director():
             has_stellar_leakage: bool,
             has_local_zodi_leakage: bool,
             has_exozodi_leakage: bool
-    ) -> list[BasePhotonSource]:
+    ) -> list[BaseSource]:
         """Return the spectral flux densities, brightness distributions and coordinates for all sources in the scene.
 
         :param sources: The sources in the scene
@@ -334,97 +332,6 @@ class Director():
         if self._simulation_time_step_size > self._detector_integration_time:
             raise ValueError('The simulation time step size must be smaller than the detector integration time.')
 
-        ################################################################################################################
-        # Symbolic expressions
-        ################################################################################################################
-
-        # Define symbols for symbolic expressions
-        catm = self._complex_amplitude_transfer_matrix
-        acm = self._array_configuration_matrix
-        ex = {}
-        ey = {}
-        a = {}
-        da = {}
-        dphi = {}
-        th = {}
-        dth = {}
-        t, tm, b, l, alpha, beta = symbols('t tm b l alpha beta')
-
-        # Define complex amplitudes
-        for k in range(self._number_of_inputs):
-            a[k] = Symbol(f'a_{k}', real=True)
-            da[k] = Symbol(f'da_{k}', real=True)
-            dphi[k] = Symbol(f'dphi_{k}', real=True)
-            th[k] = Symbol(f'th_{k}', real=True)
-            dth[k] = Symbol(f'dth_{k}', real=True)
-            ex[k] = a[k] * (da[k] + 1) * exp(I * (2 * pi / l * (acm[0, k] * alpha + acm[1, k] * beta) + dphi[k])) * cos(
-                th[k] + dth[k])
-            ey[k] = a[k] * (da[k] + 1) * exp(I * (2 * pi / l * (acm[0, k] * alpha + acm[1, k] * beta) + dphi[k])) * sin(
-                th[k] + dth[k])
-
-        # Define intensity response and save the symbolic expression
-        r = {}
-        rx = {}
-        ry = {}
-        r_torch = {}
-        r_numpy = {}
-
-        self._symbolic_intensity_response = {}
-        for j in range(self._number_of_outputs):
-            rx[j] = 0
-            ry[j] = 0
-            for k in range(self._number_of_inputs):
-                rx[j] += catm[j, k] * ex[k]
-                ry[j] += catm[j, k] * ey[k]
-            r[j] = Abs(rx[j]) ** 2 + Abs(ry[j]) ** 2
-            self._symbolic_intensity_response[j] = r[j]
-
-        # Compile the intensity response functions for numerical calculations and save the lambdified functions
-        def _torch_sqrt(x):
-            if not isinstance(x, torch.Tensor):
-                x = torch.tensor(x)
-            return torch.sqrt(x)
-
-        torch_func_dict = {
-            'sin': torch.sin,
-            'cos': torch.cos,
-            'exp': torch.exp,
-            'log': torch.log,
-            'sqrt': _torch_sqrt
-        }
-
-        self._diff_ir_torch = {}
-        self._diff_ir_numpy = {}
-
-        for i in range(len(self._differential_outputs)):
-            # Lambdify differential output for torch
-            self._diff_ir_torch[i] = sympy.lambdify(
-                [t, l, alpha, beta, tm, b, *a.values(), *da.values(), *dphi.values(), *th.values(), *dth.values(), ],
-                r[self._differential_outputs[i][0]] - r[self._differential_outputs[i][1]],
-                [torch_func_dict]
-            )
-
-            # Lambdify differential output for numpy
-            self._diff_ir_numpy[i] = sympy.lambdify(
-                [t, l, alpha, beta, tm, b, *a.values(), *da.values(), *dphi.values(), *th.values(), *dth.values(), ],
-                r[self._differential_outputs[i][0]] - r[self._differential_outputs[i][1]],
-                'numpy'
-            )
-
-        for j in range(self._number_of_outputs):
-            # Lambdify intensity response for torch
-            r[j] = sympy.lambdify(
-                [t, l, alpha, beta, tm, b, *a.values(), *da.values(), *dphi.values(), *th.values(), *dth.values(), ],
-                r[j],
-                [torch_func_dict]
-            )
-
-        self._intensity_response_torch = r
-
-        ################################################################################################################
-        # Numerical calculations
-        ################################################################################################################
-
         # Calculate simulation and detector time steps
         self.simulation_time_steps = torch.linspace(
             0,
@@ -442,7 +349,7 @@ class Director():
 
         # Calculate the nulling baseline
         self.nulling_baseline = self._get_nulling_baseline(
-            self._star.habitable_zone_central_angular_radius,
+            self._star._habitable_zone_central_angular_radius,
             self._optimized_star_separation,
             self._optimized_differential_output,
             self._optimized_wavelength,
@@ -483,8 +390,8 @@ class Director():
 
         for index_source, source in enumerate(self._sources):
             self._sources[index_source].spectral_flux_density = source.spectral_flux_density.to(self._device)
-            self._sources[index_source].sky_coordinates = source.sky_coordinates.to(self._device)
-            self._sources[index_source].sky_brightness_distribution = source.sky_brightness_distribution.to(
+            self._sources[index_source].sky_coordinates = source._sky_coordinates.to(self._device)
+            self._sources[index_source].sky_brightness_distribution = source._sky_brightness_distribution.to(
                 self._device)
 
         # Calculate amplitude (assumed to be identical for each collector)
@@ -543,27 +450,27 @@ class Director():
 
                 # Broadcast sky coordinates to the correct shape
                 if isinstance(source, LocalZodi) or isinstance(source, Exozodi):
-                    sky_coordinates_x = source.sky_coordinates[0][:, None, :, :]
-                    sky_coordinates_y = source.sky_coordinates[1][:, None, :, :]
+                    sky_coordinates_x = source._sky_coordinates[0][:, None, :, :]
+                    sky_coordinates_y = source._sky_coordinates[1][:, None, :, :]
                 elif isinstance(source, Planet) and self._has_planet_orbital_motion:
-                    sky_coordinates_x = source.sky_coordinates[0][None, it_low:it_high, :, :]
-                    sky_coordinates_y = source.sky_coordinates[1][None, it_low:it_high, :, :]
+                    sky_coordinates_x = source._sky_coordinates[0][None, it_low:it_high, :, :]
+                    sky_coordinates_y = source._sky_coordinates[1][None, it_low:it_high, :, :]
                 else:
-                    sky_coordinates_x = source.sky_coordinates[0][None, None, :, :]
-                    sky_coordinates_y = source.sky_coordinates[1][None, None, :, :]
+                    sky_coordinates_x = source._sky_coordinates[0][None, None, :, :]
+                    sky_coordinates_y = source._sky_coordinates[1][None, None, :, :]
 
                 # Broadcast sky brightness distribution to the correct shape
                 if isinstance(source, Planet) and self._has_planet_orbital_motion:
-                    sky_brightness_distribution = source.sky_brightness_distribution.swapaxes(0, 1)
+                    sky_brightness_distribution = source._sky_brightness_distribution.swapaxes(0, 1)
                 else:
-                    sky_brightness_distribution = source.sky_brightness_distribution[:, None, :, :]
+                    sky_brightness_distribution = source._sky_brightness_distribution[:, None, :, :]
 
                 # Define normalization
                 if isinstance(source, Planet):
                     normalization = 1
                 elif isinstance(source, Star):
                     normalization = len(
-                        source.sky_brightness_distribution[0][source.sky_brightness_distribution[0] > 0])
+                        source._sky_brightness_distribution[0][source._sky_brightness_distribution[0] > 0])
                 else:
                     normalization = self._grid_size ** 2
 
@@ -631,6 +538,8 @@ class Director():
                 np.sum
             )
         )
+
+        return self._data
         #
         # # Normalize data (used for template creation)
         # if self._normalize:

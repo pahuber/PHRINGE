@@ -1,12 +1,12 @@
-from abc import ABC, abstractmethod
+from abc import abstractmethod, ABC
 from typing import Any, Union
 
-import numpy as np
-from pydantic import BaseModel
 from torch import Tensor
 
+from phringe.core.observing_entity import ObservingEntity, observing_property
 
-class BasePhotonSource(ABC, BaseModel):
+
+class BaseSource(ABC, ObservingEntity):
     """Class representation of a photon source1.
 
     :param mean_spectral_flux_density: An array containing the mean spectral flux density of the photon source1 for each
@@ -18,15 +18,18 @@ class BasePhotonSource(ABC, BaseModel):
     :param sky_coordinates: An array containing the sky coordinates for each time and wavelength in units of radians.
         If the sky coordinates are constant over time and/or wavelength, the time/wavelength axes are omitted
     """
-    name: str = None
-    spectral_flux_density: Any = None
-    sky_brightness_distribution: Any = None
-    sky_coordinates: Any = None
-    solid_angle: Any = None
+    # name: str = None
+    # __spectral_energy_density: Any = None
+    # __sky_brightness_distribution: Any = None
+    # __sky_coordinates: Any = None
+    # _solid_angle: Any = None
+    _grid_size: int = None
+    _instrument: Any = None
+    _observation: Any = None
 
+    @observing_property()
     @abstractmethod
-    def _get_spectral_flux_density(self, wavelength_steps: np.ndarray, grid_size: int,
-                                   **kwargs) -> np.ndarray:
+    def _spectral_energy_distribution(self) -> Union[Tensor, None]:
         """Return the mean spectral flux density of the source1 object for each wavelength.
 
         :param wavelength_steps: The wavelength steps
@@ -36,8 +39,9 @@ class BasePhotonSource(ABC, BaseModel):
         """
         pass
 
+    @observing_property()
     @abstractmethod
-    def _get_sky_brightness_distribution(self, grid_size: int, **kwargs) -> np.ndarray:
+    def _sky_brightness_distribution(self) -> Union[Tensor, None]:
         """Calculate and return the sky brightness distribution of the source1 object for each (time and) wavelength as
         an array of shape N_wavelengths x N_pix x N_pix or N_time_steps x N_wavelengths x N_pix x N_pix (e.g. when
         accounting for planetary orbital motion).
@@ -48,8 +52,9 @@ class BasePhotonSource(ABC, BaseModel):
         """
         pass
 
+    @observing_property()
     @abstractmethod
-    def _get_sky_coordinates(self, grid_size: int, **kwargs) -> np.ndarray:
+    def _sky_coordinates(self) -> Union[Tensor, None]:
         """Calculate and return the sky coordinates of the source1 for a given time. For moving sources, such as planets,
          the sky coordinates might change over time to ensure optimal sampling, e.g. for a planet that moves in very
          close to the star). The sky coordinates for the different sources are of the following shapes:
@@ -64,24 +69,12 @@ class BasePhotonSource(ABC, BaseModel):
         """
         pass
 
+    @observing_property()
     @abstractmethod
-    def _get_solid_angle(self, **kwargs) -> Union[float, Tensor]:
+    def _solid_angle(self) -> Union[float, Tensor]:
         """Calculate and return the solid angle of the source1 object.
 
         :param kwargs: Additional keyword arguments
         :return: The solid angle
         """
         pass
-
-    def prepare(self, wavelength_bin_centers, grid_size, **kwargs):
-        """Prepare the photon source1 for the simulation. This method is called before the simulation starts and can be
-        used to pre-calculate values that are constant over time and/or wavelength.
-
-        :param wavelength_bin_centers: The wavelength steps
-        :param grid_size: The grid size
-        :param kwargs: Additional keyword arguments
-        """
-        self.solid_angle = self._get_solid_angle(**kwargs)
-        self.spectral_flux_density = self._get_spectral_flux_density(wavelength_bin_centers, grid_size, **kwargs)
-        self.sky_coordinates = self._get_sky_coordinates(grid_size, **kwargs)
-        self.sky_brightness_distribution = self._get_sky_brightness_distribution(grid_size, **kwargs)

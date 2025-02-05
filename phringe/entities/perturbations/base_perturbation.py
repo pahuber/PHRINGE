@@ -1,17 +1,22 @@
-from abc import ABC, abstractmethod
-from typing import Any
+from abc import abstractmethod, ABC
+from typing import Any, Union
 
 import numpy as np
+import torch
+from astropy.units import Quantity
 from numpy.random import normal
-from pydantic import BaseModel, field_validator
+from pydantic import field_validator
 from pydantic_core.core_schema import ValidationInfo
 from scipy.fft import irfft, fftshift
 from torch import Tensor
 
+from phringe.core.base_entity import BaseEntity
 
-class BasePerturbation(ABC, BaseModel):
-    rms: str
-    color: str
+
+class BasePerturbation(ABC, BaseEntity):
+    rms: Union[str, float, Quantity] = None
+    color: str = None
+    _has_manually_set_time_series: bool = False
 
     @field_validator('color')
     def _validate_color(cls, value: Any, info: ValidationInfo) -> float:
@@ -25,15 +30,9 @@ class BasePerturbation(ABC, BaseModel):
             raise ValueError(f'{value} is not a valid input for {info.field_name}. Must be one of white, pink, brown.')
         return value
 
+    @property
     @abstractmethod
-    def get_time_series(
-            self,
-            number_of_inputs: int,
-            modulation_period: float,
-            number_of_simulation_time_steps: int,
-            seed: int = None,
-            **kwargs
-    ) -> Tensor:
+    def _time_series(self) -> Union[Tensor, None]:
         pass
 
     def _get_color_coeff(self) -> int:
@@ -44,6 +43,8 @@ class BasePerturbation(ABC, BaseModel):
                 coeff = 1
             case 'brown':
                 coeff = 2
+            case _:
+                coeff = None
         return coeff
 
     def _calculate_time_series_from_psd(
@@ -72,4 +73,9 @@ class BasePerturbation(ABC, BaseModel):
         time_series /= np.sqrt(np.mean(time_series ** 2))
         time_series *= self.rms
 
-        return time_series
+        return torch.tensor(time_series, dtype=torch.float32, device=self._phringe._device)
+
+    def set_time_series(self, time_series: Any):
+        # TODO: implement set time series correctly
+        self._time_series = time_series
+        self._has_manually_set_time_series = True
