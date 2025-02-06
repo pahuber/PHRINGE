@@ -1,4 +1,4 @@
-.. first_examples:
+.. tutorials:
 
 Tutorials
 =========
@@ -8,4 +8,3 @@ Tutorials
 
     tutorials/example_basic.ipynb
     tutorials/example_advanced.ipynb
-    tutorials/example_cli

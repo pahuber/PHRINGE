@@ -4,20 +4,20 @@ import numpy as np
 import torch
 from astropy import units as u
 from astropy.units import Quantity
-from pydantic import field_validator, BaseModel
-from pydantic_core.core_schema import ValidationInfo
-from sympy import symbols, Symbol, exp, I, pi, cos, sin, Abs, lambdify, sqrt
-from torch import Tensor
-
 from phringe.core.observing_entity import ObservingEntity, observing_property
 from phringe.entities.perturbations.amplitude_perturbation import AmplitudePerturbation
 from phringe.entities.perturbations.base_perturbation import BasePerturbation
 from phringe.entities.perturbations.phase_perturbation import PhasePerturbation
 from phringe.entities.perturbations.polarization_perturbation import PolarizationPerturbation
 from phringe.io.validators import validate_quantity_units
+from pydantic import field_validator, BaseModel
+from pydantic_core.core_schema import ValidationInfo
+from sympy import Matrix
+from sympy import symbols, Symbol, exp, I, pi, cos, sin, Abs, lambdify, sqrt
+from torch import Tensor
 
 
-class _Perturbations(BaseModel):
+class Perturbations(BaseModel):
     amplitude: AmplitudePerturbation = AmplitudePerturbation()
     phase: PhasePerturbation = PhasePerturbation()
     polarization: PolarizationPerturbation = PolarizationPerturbation()
@@ -26,57 +26,67 @@ class _Perturbations(BaseModel):
 class Instrument(ObservingEntity):
     """Class representing the instrument.
 
-    :param amplitude_perturbation_lower_limit: The lower limit of the amplitude perturbation
-    :param amplitude_perturbation_upper_limit: The upper limit of the amplitude perturbation
-    :param array_configuration: The array configuration
-    :param aperture_diameter: The aperture diameter
-    :param beam_combination_scheme: The beam combination scheme
-    :param spectral_resolving_power: The spectral resolving power
-    :param wavelength_range_lower_limit: The lower limit of the wavelength range
-    :param wavelength_range_upper_limit: The upper limit of the wavelength range
-    :param throughput: The unperturbed instrument throughput
-    :param phase_perturbation_rms: The phase perturbation rms
-    :param phase_falloff_exponent: The phase falloff exponent
-    :param baseline_maximum: The maximum baseline
-    :param baseline_minimum: The minimum baseline
-    :param polarization_perturbation_rms: The polarization perturbation rms
-    :param polarization_falloff_exponent: The polarization falloff exponent
-    :param field_of_view: The field of view
-    :param amplitude_perturbation_time_series: The amplitude perturbation time series
-    :param phase_perturbation_time_series: The phase perturbation time series
-    :param polarization_perturbation_time_series: The polarization perturbation time series
-    """
+    Parameters
+    ----------
+    aperture_diameter : str or float or Quantity
+        The aperture diameter in meters.
+    array_configuration_matrix : Tensor
+        The array configuration matrix.
+    baseline_maximum : str or float or Quantity
+        The maximum baseline in meters.
+    baseline_minimum : str or float or Quantity
+        The minimum baseline in meters.
+    complex_amplitude_transfer_matrix : Tensor
+        The complex amplitude transfer matrix.
+    differential_outputs : list
+        The differential outputs.
+    perturbations : Perturbations
+        The perturbations.
+    quantum_efficiency : float
+        The quantum efficiency.
+    sep_at_max_mod_eff : list
+        The separation at maximum modulation efficiency.
+    spectral_resolving_power : int
+        The spectral resolving power.
+    throughput : float
+        The throughput.
+    wavelength_min : str or float or Quantity
+        The minimum wavelength in meters.
+    wavelength_max : str or float or Quantity
+        The maximum wavelength in meters.
 
-    # amplitude_perturbation_lower_limit: float
-    # amplitude_perturbation_upper_limit: float
-    array_configuration_matrix: Any
-    complex_amplitude_transfer_matrix: Any
-    differential_outputs: Any
+    Attributes
+    ----------
+    number_of_inputs : int
+        The number of inputs.
+    number_of_outputs : int
+        The number of outputs.
+    response : Tensor
+        The response.
+
+    """
+    aperture_diameter: Union[str, float, Quantity]
+    array_configuration_matrix: Matrix
     baseline_maximum: Union[str, float, Quantity]
     baseline_minimum: Union[str, float, Quantity]
-    sep_at_max_mod_eff: Any
-    aperture_diameter: Union[str, float, Quantity]
+    complex_amplitude_transfer_matrix: Matrix
+    differential_outputs: list
+    perturbations: Perturbations = Perturbations()
+    quantum_efficiency: float
+    sep_at_max_mod_eff: list
     spectral_resolving_power: int
+    throughput: float
     wavelength_min: Union[str, float, Quantity]
     wavelength_max: Union[str, float, Quantity]
-    throughput: float
-    quantum_efficiency: float
-    perturbations: _Perturbations = _Perturbations()
-    # field_of_view: Any = None
-    response: Any = None
     number_of_inputs: int = None
     number_of_outputs: int = None
-
-    # _observation: Any = None
-    # _simulation_time_steps: Any = None
-
-    # _number_of_simulation_time_steps: int = None
+    response: Tensor = None
 
     def __init__(self, **data):
         super().__init__(**data)
         self.number_of_inputs = self.complex_amplitude_transfer_matrix.shape[1]
         self.number_of_outputs = self.complex_amplitude_transfer_matrix.shape[0]
-        self.response = self.get_lambdafied_response()
+        self.response = self._get_lambdafied_response()
 
     def __setattr__(self, key, value):
         super().__setattr__(key, value)
@@ -264,6 +274,13 @@ class Instrument(ObservingEntity):
         )
 
     def add_perturbation(self, perturbation: BasePerturbation):
+        """Add a perturbation to the instrument.
+
+        Parameters
+        ----------
+        perturbation : BasePerturbation
+            The perturbation to add.
+        """
         perturbation._phringe = self._phringe
         if isinstance(perturbation, AmplitudePerturbation):
             self.perturbations.amplitude = perturbation
@@ -273,6 +290,13 @@ class Instrument(ObservingEntity):
             self.perturbations.polarization = perturbation
 
     def remove_perturbation(self, perturbation: BasePerturbation):
+        """Remove a perturbation from the instrument.
+
+        Parameters
+        ----------
+        perturbation : BasePerturbation
+            The perturbation to remove.
+        """
         if isinstance(perturbation, AmplitudePerturbation):
             self.perturbations.amplitude = None
         elif isinstance(perturbation, PhasePerturbation):
@@ -280,18 +304,7 @@ class Instrument(ObservingEntity):
         elif isinstance(perturbation, PolarizationPerturbation):
             self.perturbations.polarization = None
 
-    def get_all_perturbations(self) -> list[BasePerturbation]:
-        """Return all perturbations.
-
-        :return: A list containing all perturbations
-        """
-        return [
-            self.perturbations.amplitude_perturbation,
-            self.perturbations.phase_perturbation,
-            self.perturbations.polarization_perturbation
-        ]
-
-    def get_lambdafied_response(self):
+    def _get_lambdafied_response(self):
         # Define symbols for symbolic expressions
         catm = self.complex_amplitude_transfer_matrix
         acm = self.array_configuration_matrix
@@ -376,7 +389,3 @@ class Instrument(ObservingEntity):
             )
 
         return r
-
-    # @_wavelength_bins.setter
-    # def _wavelength_bins(self, value):
-    #     self.__wavelength_bins = value

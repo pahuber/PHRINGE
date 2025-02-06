@@ -9,10 +9,16 @@ from phringe.entities.sources.star import Star
 class Scene(BaseEntity):
     """Class representing the observation scene.
 
-    :param star: The star in the scene
-    :param planets: The planets in the scene
-    :param exozodi: The exozodi in the scene
-    :param local_zodi: The local zodi in the scene
+    Attributes
+    ----------
+    star : Star
+        The star in the scene
+    planets : list[Planet]
+        The planets in the scene
+    exozodi : Exozodi
+        The exozodiacal dust in the scene
+    local_zodi : LocalZodi
+        The local zodiacal dust in the scene
     """
     star: Star = None
     planets: list[Planet] = []
@@ -22,13 +28,16 @@ class Scene(BaseEntity):
     def __setattr__(self, key, value):
         super().__setattr__(key, value)
         if key == "_phringe":
-            for source in self.get_all_sources():
+            for source in self._get_all_sources():
                 source._phringe = value
 
     def add_source(self, source: BaseSource):
         """Add a source to the scene.
 
-        :param source: The source to add
+        Parameters
+        ----------
+        source : BaseSource
+            The source to add
         """
         source._phringe = self._phringe
         if isinstance(source, Star):
@@ -43,9 +52,12 @@ class Scene(BaseEntity):
     def remove_source(self, name: str):
         """Remove a source from the scene.
 
-        :param name: The name of the source to remove
+        Parameters
+        ----------
+        name : str
+            The name of the source to remove
         """
-        source = self.get_source(name)
+        source = self._get_source(name)
         if isinstance(source, Star):
             self.star = None
         elif isinstance(source, Planet):
@@ -55,7 +67,7 @@ class Scene(BaseEntity):
         elif isinstance(source, LocalZodi):
             self.local_zodi = None
 
-    def get_all_sources(self) -> list[BaseSource]:
+    def _get_all_sources(self) -> list[BaseSource]:
         """Return all sources in the scene.
 
         """
@@ -70,12 +82,12 @@ class Scene(BaseEntity):
             all_sources.append(self.exozodi)
         return all_sources
 
-    def get_source(self, name: str) -> BaseSource:
+    def _get_source(self, name: str) -> BaseSource:
         """Return the source with the given name.
 
         :param name: The name of the source
         """
-        for source in self.get_all_sources():
+        for source in self._get_all_sources():
             if source.name == name:
                 return source
         raise ValueError(f'No source with name {name} found in the scene')

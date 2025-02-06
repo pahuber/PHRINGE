@@ -4,6 +4,11 @@ API Documentation
 =================
 
 .. toctree::
-   :maxdepth: 3
+   :maxdepth: 2
+   :caption: API Documentation
 
-   source/modules
+   source/phringe
+   source/observation
+   source/instrument
+   source/scene
+   source/configuration

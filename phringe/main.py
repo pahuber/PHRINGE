@@ -23,28 +23,75 @@ from tqdm import tqdm
 class PHRINGE:
     """
     Main PHRINGE class.
+
+    Parameters
+    ----------
+    seed : int or None
+        Seed for the generation of random numbers. If None, a random seed is chosen.
+    gpu_index : int or None
+        Index corresponding to the GPU that should be used. If None or if the index is not available, the CPU is used.
+    device : torch.device or None
+        Device to use; alternatively to the index of the GPU. If None, the device is chosen based on the GPU index.
+    grid_size : int
+        Grid size used for the calculations.
+    time_step_size : float
+        Time step size used for the calculations. By default, this is the detector integration time. If it is smaller,
+        the generated data will be rebinned to the detector integration times at the end of the calculations.
+
+    Attributes
+    ----------
+    _detailed : bool
+        Detailed.
+    _detector_time_steps : torch.Tensor
+        Detector time steps.
+    _device : torch.device
+        Device.
+    _extra_memory : int
+        Extra memory.
+    _grid_size : int
+        Grid size.
+    _instrument : Instrument
+        Instrument.
+    _observation : Observation
+        Observation.
+    _scene : Scene
+        Scene.
+    _simulation_time_step_size : float
+        Simulation time step size.
+    _simulation_time_steps : torch.Tensor
+        Simulation time steps.
+    _time_step_size : float
+        Time step size.
+    _normalize : bool
+        Normalize.
+    detector_time_steps : torch.Tensor
+        Detector time steps.
+    seed : int
+        Seed.
+    simulation_time_steps : torch.Tensor
+        Simulation time steps.
     """
 
     def __init__(
             self,
             seed: int = None,
-            gpu: int = None,
+            gpu_index: int = None,
             device: torch.device = None,
             grid_size=40,
             time_step_size: float = None
     ):
-        self._device = self._get_device(gpu) if device is None else device
+        self._detailed = False  # TODO: implement correctly
+        self._detector_time_steps = None
+        self._device = self._get_device(gpu_index) if device is None else device
+        self._extra_memory = 1
+        self._grid_size = grid_size
         self._instrument = None
+        self._normalize = False
         self._observation = None
         self._scene = None
-        self.seed = seed
-        self._grid_size = grid_size
-        self._time_step_size = time_step_size
         self._simulation_time_steps = None
-        self._detector_time_steps = None
-        self._detailed = False
-        self._normalize = False
-        self._extra_memory = 1
+        self._time_step_size = time_step_size
+        self.seed = seed
 
         self._set_seed(self.seed if self.seed is not None else np.random.randint(0, 2 ** 31 - 1))
 
@@ -107,7 +154,7 @@ class PHRINGE:
                      * len(self._instrument.wavelength_bin_centers)
                      * self._instrument.number_of_outputs
                      * 4  # should be 2, but only works with 4 so there you go
-                     * len(self._scene.get_all_sources()))
+                     * len(self._scene._get_all_sources()))
 
         available_memory = get_available_memory(self._device) / self._extra_memory
 
@@ -134,7 +181,7 @@ class PHRINGE:
             else:
                 break
 
-            for source in self._scene.get_all_sources():
+            for source in self._scene._get_all_sources():
 
                 # Broadcast sky coordinates to the correct shape
                 if isinstance(source, LocalZodi) or isinstance(source, Exozodi):
@@ -221,7 +268,15 @@ class PHRINGE:
     def export_nifits(self, data: Tensor, path: Path = Path('.'), filename: str = None, name_suffix: str = ''):
         FITSWriter().write(data, path, name_suffix)
 
-    def get_counts(self):
+    def get_counts(self) -> Tensor:
+        """Calculate and return the raw photoelectron counts as a tensor of shape (N_outputs x N_wavelengths x N_time_steps).
+
+
+        Returns
+        -------
+        torch.Tensor
+            Raw photoelectron counts.
+        """
         # Move all tensors to the device
         # self._instrument.aperture_diameter = self._instrument.aperture_diameter.to(self._device)
 
@@ -237,7 +292,15 @@ class PHRINGE:
 
         return counts
 
-    def get_diff_counts(self):
+    def get_diff_counts(self) -> Tensor:
+        """Calculate and return the differential photoelectron counts as a tensor of shape (N_differential_outputs x N_wavelengths x N_time_steps).
+
+
+        Returns
+        -------
+        torch.Tensor
+            Differential photoelectron counts.
+        """
         diff_counts = torch.zeros(
             (len(self._instrument.differential_outputs),
              len(self._instrument.wavelength_bin_centers),
@@ -331,25 +394,86 @@ class PHRINGE:
 
         return response
 
-    def get_nulling_baseline(self):
+    def get_nulling_baseline(self) -> float:
+        """Return the nulling baseline. If it has not been set manually, it is calculated using the observation and instrument parameters.
+
+
+        Returns
+        -------
+        float
+            Nulling baseline.
+
+        """
         return self._instrument._nulling_baseline
 
-    def get_source_spectrum(self, source_name: str):
-        return self._scene.get_source(source_name)._spectral_energy_distribution
+    def get_source_spectrum(self, source_name: str) -> Tensor:
+        """Return the spectral energy distribution of a source.
 
-    def get_time_steps(self):
+        Parameters
+        ----------
+        source_name : str
+            Name of the source.
+
+        Returns
+        -------
+        torch.Tensor
+            Spectral energy distribution of the source.
+        """
+        return self._scene._get_source(source_name)._spectral_energy_distribution
+
+    def get_time_steps(self) -> Tensor:
+        """Return the detector time steps.
+
+
+        Returns
+        -------
+        torch.Tensor
+            Detector time steps.
+        """
+
         return self.detector_time_steps
 
-    def get_wavelength_bin_centers(self):
+    def get_wavelength_bin_centers(self) -> Tensor:
+        """Return the wavelength bin centers.
+
+
+        Returns
+        -------
+        torch.Tensor
+            Wavelength bin centers.
+        """
         return self._instrument.wavelength_bin_centers
 
-    def get_wavelength_bin_edges(self):
+    def get_wavelength_bin_edges(self) -> Tensor:
+        """Return the wavelength bin edges.
+
+
+        Returns
+        -------
+        torch.Tensor
+            Wavelength bin edges.
+        """
         return self._instrument.wavelength_bin_edges
 
-    def get_wavelength_bin_widths(self):
+    def get_wavelength_bin_widths(self) -> Tensor:
+        """Return the wavelength bin widths.
+
+
+        Returns
+        -------
+        torch.Tensor
+            Wavelength bin widths.
+        """
         return self._instrument.wavelength_bin_widths
 
     def set(self, entity: Union[Instrument, Observation, Scene, Configuration]):
+        """Set the instrument, observation, scene, or configuration.
+
+        Parameters
+        ----------
+        entity : Instrument or Observation or Scene or Configuration
+            Instrument, observation, scene, or configuration.
+        """
         entity._phringe = self
         if isinstance(entity, Instrument):
             self._instrument = entity
@@ -363,7 +487,3 @@ class PHRINGE:
             self._scene = Scene(**entity.config_dict['scene'], _phringe=self)
         else:
             raise ValueError(f'Invalid entity type: {type(entity)}')
-
-    @staticmethod
-    def which_animals_have_fringes():
-        print('Zebras!')

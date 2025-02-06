@@ -3,10 +3,8 @@
 Welcome to the PHRINGE Docs
 ===========================
 
-**PHRINGE** is a **PH**\ otoelectron counts generato\ **R** for null\ **ING** int\ **E**\ rferometers. It offers
+**PHRINGE** is a **PH**\ otoelectron counts generato\ **R** for null\ **ING** int\ **E**\ rferometers and offers
 GPU-accelerated generation of synthetic data for space-based nulling interferometers observing exoplanetary systems.
-`PHRINGE` is an open-source Python package and has been developed in the context of the `Large Interferometer For Exoplanets (LIFE) <https://www.life-space-mission.com>`_
-mission. It is also used within `LIFEsimMC <https://www.github.com/pahuber/lifesimmc>`_ for the data generation part.
 
 Features
 --------
@@ -18,7 +16,7 @@ Features
 * | **Custom Astrophysical Scenes:**
   | User-specifiable exoplanetary systems with the option for modeling planetary orbital motion.
 * | **Fast Computations:**
-  | Option for GPU-accelerated computations thanks to the integration of `PyTorch <https://pytorch.org>`_.
+  | Option for GPU-accelerated computations thanks to the integration of `PyTorch <https://pytorch.org>`_. It also be run on CPUs.
 * | **Support for NIFITS Data Standard:**
   | Option to export synthetic data sets as NIFITS files thanks to the integration of `nifits <https://www.github.com/rlaugier/nifits>`_.
 
@@ -34,14 +32,13 @@ For questions or other inquiries, please contact the main developer Philipp A. H
 
    installation
    usage
-   first_examples
+   tutorials
 
 .. toctree::
    :maxdepth: 2
    :caption: User Documentation
    :hidden:
 
-   input_files
    architecture
    api_documentation
 

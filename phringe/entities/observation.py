@@ -2,34 +2,39 @@ from typing import Any, Union
 
 from astropy import units as u
 from astropy.units import Quantity
-from pydantic import field_validator
-from pydantic_core.core_schema import ValidationInfo
-
 from phringe.core.base_entity import BaseEntity
 from phringe.io.validators import validate_quantity_units
+from pydantic import field_validator
+from pydantic_core.core_schema import ValidationInfo
 
 
 class Observation(BaseEntity):
     """Class representing the observation mode.
 
-    :param solar_ecliptic_latitude: The solar ecliptic latitude
-    :param total_integration_time: The total integration time
-    :param detector_integration_time: The detector integration time
-    :param modulation_period: The modulation period
-    :param baseline_ratio: The baseline ratio
-    :param baseline_maximum: The maximum baseline
-    :param baseline_minimum: The minimum baseline
-    :param optimized_differential_output: The optimized differential output
-    :param optimized_star_separation: The optimized star separation
-    :param optimized_wavelength: The optimized wavelength
+    Parameters
+    ----------
+    detector_integration_time : str or float or Quantity
+        The detector integration time in seconds.
+    modulation_period : str or float or Quantity
+        The modulation/rotation period of the array in seconds.
+    optimized_differential_output : int
+        Optimized differential output index. If the baseline is not set manually, it is set such that the transmission is optimum for the optimized differential output.
+    optimized_star_separation : str or float or Quantity
+        Optimized star separation in radians or the string 'habitable-zone'. If the baseline is not set manually, it is set such that the transmission is optimum for the optimized star separation.
+    optimized_wavelength : str or float or Quantity
+        Optimized wavelength in meters. If the baseline is not set manually, it is set such that the transmission is optimum for the optimized wavelength.
+    solar_ecliptic_latitude : str or float or Quantity
+        The solar ecliptic latitude in degrees. Used for the local zodi contribution calculation.
+    total_integration_time : str or float or Quantity
+        The total integration time in seconds.
     """
-    solar_ecliptic_latitude: Union[str, float, Quantity]
-    total_integration_time: Union[str, float, Quantity]
     detector_integration_time: Union[str, float, Quantity]
     modulation_period: Union[str, float, Quantity]
     optimized_differential_output: int
     optimized_star_separation: Union[str, float, Quantity]
     optimized_wavelength: Union[str, float, Quantity]
+    solar_ecliptic_latitude: Union[str, float, Quantity]
+    total_integration_time: Union[str, float, Quantity]
 
     @field_validator('detector_integration_time')
     def _validate_detector_integration_time(cls, value: Any, info: ValidationInfo) -> float:

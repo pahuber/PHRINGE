@@ -1,6 +1,4 @@
-from pathlib import Path
-
-from sympy import Matrix, sqrt, sin, exp, pi, I, cos, symbols
+from sympy import Matrix, sin, exp, pi, I, cos, symbols, sqrt
 
 ########################################################################################################################
 # Array Configuration Matrix (2 x N_in)
@@ -27,28 +25,30 @@ catm = 1 / 2 * Matrix([[0, 0, sqrt(2), sqrt(2)],
 diff_out = [(2, 3)]
 sep_at_max_mod_eff = [0.6]
 
+# ep = exp(I * pi / 2)
+# em = exp(-I * pi / 2)
+#
+# catm = 1 / 4 * Matrix([[2, 2, 2, 2],
+#                        [1 + ep, 1 - ep, -1 + ep, -1 - ep],
+#                        [1 - em, -1 - em, 1 + em, -1 + em],
+#                        [1 + ep, 1 - ep, -1 - ep, -1 + ep],
+#                        [1 - em, -1 - em, -1 + em, 1 + em],
+#                        [1 + ep, -1 - ep, 1 - ep, -1 + ep],
+#                        [1 - em, -1 + em, -1 - em, 1 + em]])
+#
+# diff_out = [(1, 2), (3, 4), (5, 6)]
+# sep_at_max_mod_eff = [0.31, 1, 0.6]
+
 ########################################################################################################################
 # Simulation, Observation Mode, Instrument and Scene
 ########################################################################################################################
 
 config = {
-    'simulation': {
-        'grid_size': 20,
-        'time_step_size': '1 d',
-        'has_planet_orbital_motion': False,
-        'has_planet_signal': True,
-        'has_stellar_leakage': True,
-        'has_local_zodi_leakage': True,
-        'has_exozodi_leakage': True,
-        'has_amplitude_perturbations': True,
-        'has_phase_perturbations': True,
-        'has_polarization_perturbations': True,
-    },
-    'observation_mode': {
+    'observation': {
         'solar_ecliptic_latitude': '0 deg',
-        'total_integration_time': '100 d',
-        'detector_integration_time': '1 d',
-        'modulation_period': '100 d',
+        'total_integration_time': '1 d',
+        'detector_integration_time': '600 s',
+        'modulation_period': '1 d',
         'optimized_differential_output': 0,
         'optimized_star_separation': 'habitable-zone',
         'optimized_wavelength': '10 um',
@@ -59,25 +59,24 @@ config = {
         'differential_outputs': diff_out,
         'sep_at_max_mod_eff': sep_at_max_mod_eff,
         'aperture_diameter': '2 m',
-        'baseline_ratio': 6,
         'baseline_maximum': '600 m',
         'baseline_minimum': '5 m',
-        'spectral_resolving_power': 20,
-        'wavelength_range_lower_limit': '4 um',
-        'wavelength_range_upper_limit': '18 um',
+        'spectral_resolving_power': 30,
+        'wavelength_min': '4 um',
+        'wavelength_max': '18.5 um',
         'throughput': 0.05,
         'quantum_efficiency': 0.7,
         'perturbations': {
-            'amplitude_perturbation': {
+            'amplitude': {
                 'rms': '0.1 %',
                 'color': 'pink',
             },
-            'phase_perturbation': {
-                'rms': '1 nm',
+            'phase': {
+                'rms': '1.5 nm',
                 'color': 'pink',
             },
-            'polarization_perturbation': {
-                'rms': '0.01 rad',
+            'polarization': {
+                'rms': '0.001 rad',
                 'color': 'pink',
             },
         }
@@ -89,9 +88,8 @@ config = {
             'mass': '1 Msun',
             'radius': '1 Rsun',
             'temperature': '5700 K',
-            'luminosity': '1 Lsun',
-            'right_ascension': '0 h',
-            'declination': '-75 deg',
+            'right_ascension': '10 hourangle',
+            'declination': '45 deg',
         },
         'exozodi': {
             'level': 3
@@ -99,17 +97,31 @@ config = {
         'planets': [
             {
                 'name': 'Earth',
+                'has_orbital_motion': False,
                 'mass': '1 Mearth',
                 'radius': '1 Rearth',
-                'temperature': '288 K',
+                'temperature': '254 K',
                 'semi_major_axis': '1 au',
                 'eccentricity': '0',
-                'inclination': '180 deg',
+                'inclination': '0 deg',
                 'raan': '0 deg',
-                'argument_of_periapsis': '0 deg',
+                'argument_of_periapsis': '135 deg',
                 'true_anomaly': '0 deg',
-                'path_to_spectrum': Path(r'C:\Users\huber\Desktop\PHRINGE\docs\_static\spectrum.txt')
+                'path_to_spectrum': None  # r'psg_rad_long.txt'
             },
+            # {
+            #     'name': 'Mars',
+            #     'mass': '1 Mearth',
+            #     'radius': '1 Rearth',
+            #     'temperature': '288 K',
+            #     'semi_major_axis': '1 au',
+            #     'eccentricity': '0',
+            #     'inclination': '0 deg',
+            #     'raan': '0 deg',
+            #     'argument_of_periapsis': '45 deg',
+            #     'true_anomaly': '0 deg',
+            #     'path_to_spectrum': r'psg_rad_long.txt'
+            # },
         ],
     },
 }

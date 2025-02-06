@@ -21,6 +21,16 @@ To install `PHRINGE` from PyPI, run the following command in your terminal:
 
     pip install phringe
 
+You can test the installation in a Python console with:
+
+.. code-block:: python
+
+    from phringe.util.installation import which_animals_have_fringes
+
+    which_animals_have_fringes()
+
+If everything worked well, you should get an approprioate answer.
+
 Installation From GitHub
 ------------------------
 To install `PHRINGE` from GitHub, run the following command in your terminal:
