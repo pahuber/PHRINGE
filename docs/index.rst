@@ -23,7 +23,7 @@ Features
 Contact
 -------
 
-For questions or other inquiries, please contact the main developer Philipp A. Huber (huberph@phys.ethz.ch).
+For questions or other inquiries, please contact Philipp A. Huber (huberph@phys.ethz.ch).
 
 .. toctree::
    :maxdepth: 2
