@@ -3,9 +3,6 @@
 Instrument
 ==========
 
-Class Documentation
--------------------
-
 .. autoclass:: phringe.entities.instrument.Instrument
 
     .. automethod:: phringe.entities.instrument.Instrument.add_perturbation

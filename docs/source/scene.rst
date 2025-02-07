@@ -3,9 +3,6 @@
 Scene
 =====
 
-Class Documentation
--------------------
-
 .. autoclass:: phringe.entities.scene.Scene
 
     .. automethod:: phringe.entities.scene.Scene.add_source

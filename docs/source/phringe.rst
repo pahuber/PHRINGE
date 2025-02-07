@@ -3,9 +3,6 @@
 PHRINGE
 =======
 
-Class Documentation
--------------------
-
 .. autoclass:: phringe.main.PHRINGE
 
     .. automethod:: phringe.main.PHRINGE.get_counts
