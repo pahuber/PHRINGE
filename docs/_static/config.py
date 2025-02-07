@@ -94,6 +94,7 @@ config = {
         'exozodi': {
             'level': 3
         },
+        'local_zodi': {},
         'planets': [
             {
                 'name': 'Earth',
