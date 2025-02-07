@@ -32,13 +32,20 @@ For questions or other inquiries, please contact Philipp A. Huber (huberph@phys.
 
    installation
    usage
-   tutorials
+   tutorials/first_example
 
 .. toctree::
    :maxdepth: 2
    :caption: User Documentation
    :hidden:
 
-   architecture
+   tutorials
    api_documentation
 
+.. toctree::
+   :maxdepth: 2
+   :caption: Developer Documentation
+   :hidden:
+
+   architecture
+   contribute

@@ -6,5 +6,5 @@ Tutorials
 .. toctree::
     :maxdepth: 1
 
-    tutorials/example_basic.ipynb
-    tutorials/example_advanced.ipynb
+    tutorials/first_example.ipynb
+    tutorials/interactive_example.ipynb

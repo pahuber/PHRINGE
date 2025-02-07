@@ -298,11 +298,14 @@ class Instrument(ObservingEntity):
             The perturbation to remove.
         """
         if isinstance(perturbation, AmplitudePerturbation):
-            self.perturbations.amplitude = None
+            self.perturbations.amplitude = AmplitudePerturbation()
+            self.perturbations.amplitude._phringe = self._phringe
         elif isinstance(perturbation, PhasePerturbation):
-            self.perturbations.phase = None
+            self.perturbations.phase = PhasePerturbation()
+            self.perturbations.phase._phringe = self._phringe
         elif isinstance(perturbation, PolarizationPerturbation):
-            self.perturbations.polarization = None
+            self.perturbations.polarization = PolarizationPerturbation()
+            self.perturbations.polarization._phringe = self._phringe
 
     def _get_lambdafied_response(self):
         # Define symbols for symbolic expressions
