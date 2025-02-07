@@ -3,41 +3,41 @@
 Architecture
 ============
 
+
+Overview
+--------
+
+
+A key feature of `PHRINGE` is its interactive user interface, meaning e.g. instrument parameters can be updated on-the-fly and the corresponding data
+regenerated, without having to run the whole initialization process again. This requires the consideration of two main issues:
+
+1. **Dependency Management**: The objects in the simulation are interdependent, meaning that changes to one object can affect the properties of other objects. For example, changing the spectral resolving power of the ``Instrument`` will affect the spectral energy distribution of the ``Planet``.
+2. **Efficiency**: These dependent properties should be recalculated only if the properties they depend on have changed, avoiding unnecessary calculations.
+
+To account for this issue, `PHRINGE` incroporates a custom implementation of an observer pattern: Objects without dependencies inherint from the ``BaseEntity`` class, while
+objects with dependencies inherit from the ``ObservingBaseEntity`` class. The latter offers a custom ``@observing_property`` decorator, handling recalculation of dependent properties upon change of the observed proeprties.
+The following shows an example of how to use this decorator:
+
+.. code-block:: python
+
+    @observing_property(
+            observed_attributes=(
+                    lambda s: s.attribute1,
+                    lambda s: s.attribute2,
+                    lambda s: s.attribute3,
+            )
+        )
+        def example_property(self) -> float:
+            # Calculate the example property
+
+Whenever ``example_property`` is accessed, the state of the observed attributes is checked. If any of the observed attributes have changed, the property is recalculated. Else, the cached value is returned.
+
+
 Class Diagram
 -------------
 
-The simplified class diagram of PHRINGE shown below gives an overview of the software architecture. The key components
-are a **user interface (UI)**, a **processing** component, an **input/output (IO)** component and the **entities**.
+The architecture is illustrated in the simplified class diagram shown below.
 
-.. image:: _static/architecture.png
+.. image:: _static/architecture.jpeg
     :alt: Architecture
     :width: 100%
-
-Components
-----------
-
-UI
-~~
-The UI contains the :ref:`PHRINGE <class.phringe>` class, which serves as an interface to let the user configure the simulation and retrieve the results thereof.
-
-Processing
-~~~~~~~~~~
-The processing component contains the :ref:`Director <class.director>`, which is responsible for coordinating the simulation.
-This includes the following steps:
-
-* Calculate the symbolic instrument response.
-* Calculate the simulation time steps.
-* Calculate the field of view of the observatory.
-* Calculate the nulling baseline.
-* Calculate the instrument perturbation time series, if applicable.
-* Calculate the spectral flux density, brightness distributions and coordinates of all sources in the scene.
-* Calculate the differential counts using the intensity response and the sources in the scene.
-
-IO
-~~
-
-The IO component contains the ``TXTReader`` and ``FITSWriter``classes to read text and write FITS files.
-
-Entities
-~~~~~~~~
-The entities are the classes that represent the objects in the simulation. The main objects are the :ref:`Simulation <class.simulation>`, :ref:`ObservationMode <class.observation_mode>`, :ref:`Instrument <class.instrument>` and :ref:`Scene <class.scene>` classes.
