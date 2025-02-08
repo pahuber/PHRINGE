@@ -68,7 +68,7 @@ class Scene(BaseEntity):
             self.local_zodi = None
 
     def _get_all_sources(self) -> list[BaseSource]:
-        """Return all sources in the scene.
+        """Return all all_sources in the scene.
 
         """
         all_sources = []

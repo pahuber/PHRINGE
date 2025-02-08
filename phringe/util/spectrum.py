@@ -1,8 +1,53 @@
+from pathlib import Path
+
 import numpy as np
+import spectres
 import torch
 from astropy import units as u
+from phringe.entities.instrument import Instrument
 from scipy.constants import c, h, k
 from torch import Tensor
+
+
+class InputSpectrum:
+
+    def __init__(
+            self,
+            path_to_spectrum: Path = None,
+            fluxes: Tensor = None,
+            wavelengths: Tensor = None,
+    ):
+        self.path_to_spectrum = path_to_spectrum
+        self.fluxes = fluxes
+        self.wavelengths = wavelengths
+
+    def get_spectral_energy_distribution(
+            self,
+            wavelength_bin_centers: Tensor,
+            solid_angle: Tensor,
+            device: torch.device
+    ) -> Tensor:
+        """Return the spectrum from a file."""
+        # fluxes, wavelengths = TXTReader.read(path_to_spectrum)
+        if self.path_to_spectrum is not None:
+            spectrum = np.loadtxt(self.path_to_spectrum, usecols=(0, 1))
+            fluxes = spectrum[:, 1] * 1e6 * u.W / u.sr / u.m ** 3
+            wavelengths = spectrum[:, 0] * 1e-6 * u.m
+            fluxes = convert_spectrum_from_joule_to_photons(fluxes, wavelengths)
+            fluxes = fluxes.value
+            wavelengths = wavelengths.value
+        else:
+            fluxes = self.fluxes
+            wavelengths = self.wavelengths
+
+        binned_spectral_flux_density = spectres.spectres(
+            wavelength_bin_centers.numpy(),
+            wavelengths,
+            fluxes,
+            fill=0,
+            verbose=False
+        ) * solid_angle
+        return torch.asarray(binned_spectral_flux_density, dtype=torch.float32, device=device)
 
 
 def create_blackbody_spectrum(

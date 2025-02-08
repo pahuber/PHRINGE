@@ -108,7 +108,7 @@ config = {
                 'raan': '0 deg',
                 'argument_of_periapsis': '135 deg',
                 'true_anomaly': '0 deg',
-                'path_to_spectrum': None  # r'psg_rad_long.txt'
+                'input_spectrum': None
             },
             # {
             #     'name': 'Mars',
@@ -121,7 +121,7 @@ config = {
             #     'raan': '0 deg',
             #     'argument_of_periapsis': '45 deg',
             #     'true_anomaly': '0 deg',
-            #     'path_to_spectrum': r'psg_rad_long.txt'
+            #     'input_spectrum': None
             # },
         ],
     },

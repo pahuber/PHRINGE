@@ -12,3 +12,4 @@ API Documentation
    source/instrument
    source/scene
    source/configuration
+   source/sources

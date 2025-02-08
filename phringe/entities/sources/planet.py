@@ -6,18 +6,18 @@ import torch
 from astropy import units as u
 from astropy.constants.codata2018 import G
 from astropy.units import Quantity
-from poliastro.bodies import Body
-from poliastro.twobody import Orbit
-from pydantic import field_validator
-from pydantic_core.core_schema import ValidationInfo
-from torch import Tensor
-
 from phringe.core.observing_entity import observing_property
 from phringe.entities.sources.base_source import BaseSource
 from phringe.io.txt_reader import TXTReader
 from phringe.io.validators import validate_quantity_units
 from phringe.util.grid import get_index_of_closest_value, get_meshgrid
+from phringe.util.spectrum import InputSpectrum
 from phringe.util.spectrum import create_blackbody_spectrum
+from poliastro.bodies import Body
+from poliastro.twobody import Orbit
+from pydantic import field_validator
+from pydantic_core.core_schema import ValidationInfo
+from torch import Tensor
 
 
 class Planet(BaseSource):
@@ -48,7 +48,8 @@ class Planet(BaseSource):
     raan: Union[str, float, Quantity]
     argument_of_periapsis: Union[str, float, Quantity]
     true_anomaly: Union[str, float, Quantity]
-    path_to_spectrum: Any
+    # path_to_spectrum: Any
+    input_spectrum: Union[InputSpectrum, None]
     grid_position: Tuple = None
     host_star_distance: Union[str, float, Quantity] = None
     host_star_mass: Union[str, float, Quantity] = None
@@ -259,21 +260,28 @@ class Planet(BaseSource):
                 lambda s: s._phringe._instrument.wavelength_bin_centers,
                 lambda s: s._phringe._grid_size,
                 lambda s: s.temperature,
-                lambda s: s.path_to_spectrum,
+                lambda s: s.input_spectrum,
                 lambda s: s._solid_angle,
         )
     )
     def _spectral_energy_distribution(self) -> Union[Tensor, None]:
-        if self.path_to_spectrum:
-            fluxes, wavelengths = TXTReader.read(self.path_to_spectrum)
-            binned_spectral_flux_density = spectres.spectres(
-                self._phringe._instrument.wavelength_bin_centers.numpy(),
-                wavelengths.numpy(),
-                fluxes.numpy(),
-                fill=0,
-                verbose=False
-            ) * self._solid_angle
-            return torch.asarray(binned_spectral_flux_density, dtype=torch.float32, device=self._phringe._device)
+        if self.input_spectrum is not None:
+            return self.input_spectrum.get_spectral_energy_distribution(
+                self._phringe._instrument.wavelength_bin_centers,
+                self._solid_angle,
+                self._phringe._device
+            )
+
+        # if self.path_to_spectrum:
+        #     fluxes, wavelengths = TXTReader.read(self.path_to_spectrum)
+        #     binned_spectral_flux_density = spectres.spectres(
+        #         self._phringe._instrument.wavelength_bin_centers.numpy(),
+        #         wavelengths.numpy(),
+        #         fluxes.numpy(),
+        #         fill=0,
+        #         verbose=False
+        #     ) * self._solid_angle
+        #     return torch.asarray(binned_spectral_flux_density, dtype=torch.float32, device=self._phringe._device)
         else:
             binned_spectral_flux_density = torch.asarray(
                 create_blackbody_spectrum(
