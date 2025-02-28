@@ -16,7 +16,7 @@ classifiers = [
 Changelog = "https://github.com/pahuber/phringe/releases"
 
 [tool.poetry.dependencies]
-python = ">=3.10,<3.11"
+python = ">=3.10"
 click = ">=8.0.1"
 numpy = "^1.26.3"
 astropy = ">=5.3,<6"
