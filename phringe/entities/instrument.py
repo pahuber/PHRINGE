@@ -4,17 +4,18 @@ import numpy as np
 import torch
 from astropy import units as u
 from astropy.units import Quantity
+from pydantic import field_validator, BaseModel
+from pydantic_core.core_schema import ValidationInfo
+from sympy import Matrix
+from sympy import symbols, Symbol, exp, I, pi, cos, sin, Abs, lambdify, sqrt
+from torch import Tensor
+
 from phringe.core.observing_entity import ObservingEntity, observing_property
 from phringe.entities.perturbations.amplitude_perturbation import AmplitudePerturbation
 from phringe.entities.perturbations.base_perturbation import BasePerturbation
 from phringe.entities.perturbations.phase_perturbation import PhasePerturbation
 from phringe.entities.perturbations.polarization_perturbation import PolarizationPerturbation
 from phringe.io.validators import validate_quantity_units
-from pydantic import field_validator, BaseModel
-from pydantic_core.core_schema import ValidationInfo
-from sympy import Matrix
-from sympy import symbols, Symbol, exp, I, pi, cos, sin, Abs, lambdify, sqrt
-from torch import Tensor
 
 
 class Perturbations(BaseModel):
@@ -178,6 +179,8 @@ class Instrument(ObservingEntity):
         # Get the optimized separation in angular units, if it is not yet in angular units
         if self._phringe._observation.optimized_star_separation == "habitable-zone":
             optimized_star_separation = self._phringe._scene.star._habitable_zone_central_angular_radius
+        else:
+            optimized_star_separation = self._phringe._observation.optimized_star_separation
 
         # Get the optimal baseline and check if it is within the allowed range
 
