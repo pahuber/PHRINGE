@@ -4,6 +4,10 @@ from typing import Union
 import numpy as np
 import torch
 from numpy import ndarray
+from skimage.measure import block_reduce
+from torch import Tensor
+from tqdm import tqdm
+
 from phringe.entities.configuration import Configuration
 from phringe.entities.instrument import Instrument
 from phringe.entities.observation import Observation
@@ -15,9 +19,6 @@ from phringe.entities.sources.star import Star
 from phringe.io.fits_writer import FITSWriter
 from phringe.util.grid import get_meshgrid
 from phringe.util.memory import get_available_memory
-from skimage.measure import block_reduce
-from torch import Tensor
-from tqdm import tqdm
 
 
 class PHRINGE:
@@ -345,7 +346,7 @@ class PHRINGE:
             wavelengths = torch.tensor(wavelengths, device=self._device)
         wavelengths = wavelengths[None, None, None, None]
 
-        x_coordinates, y_coordinates = get_meshgrid(field_of_view, self._grid_size)
+        x_coordinates, y_coordinates = get_meshgrid(field_of_view, self._grid_size, self._device)
         x_coordinates = x_coordinates.to(self._device)
         y_coordinates = y_coordinates.to(self._device)
         x_coordinates = x_coordinates[None, None, :, :]
