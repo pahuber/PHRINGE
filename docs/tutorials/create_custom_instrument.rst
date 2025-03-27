@@ -98,7 +98,7 @@ Separation at Maximum Modulation Efficiency
 -------------------------------------------
 The separation at maximum modulation efficiency describes the angular separation at which the instrument response modulates most efficiently and
 is used to calculate the optimal baseline length. For instance, for a dual Bracewell nuller, the angular separation for which
-the modulation efficiency is maximized is given by
+the modulation efficiency is maximized is given by (`Dannert et al. 2022 <https://www.aanda.org/articles/aa/abs/2022/08/aa41958-21/aa41958-21.html>`_)
 
 .. math::
     \theta_{\text{max}} \approx 0.6 \frac{\lambda}{b},
