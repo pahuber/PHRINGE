@@ -13,8 +13,15 @@ the ``sep_at_max_mod_eff`` arguments,
         array_configuration_matrix=acm,
         complex_amplitude_transfer_matrix=catm,
         differential_outputs=diff_outs,
-        sep_at_max_mod_eff=sep_at_max_mod_eff
-        # Other arguments
+        sep_at_max_mod_eff=sep_at_max_mod_eff,
+        aperture_diameter=aperture_diameter,
+        baseline_maximum=baseline_maximum,
+        baseline_minimum=baseline_minimum,
+        quantum_efficiency=quantum_efficiency,
+        spectral_resolving_power=spectral_resolving_power,
+        throughput=throughput,
+        wavelength_min=Union[str, float, Quantity],
+        wavelength_max=Union[str, float, Quantity]
     )
 
 as described in the :doc:`Instrument documentation <source/instrument>`.

@@ -3,4 +3,4 @@
 Contribute
 ==========
 
-TBW
+Please contact Philipp A. Huber (huberph@phys.ethz.ch) for questions regarding contributing.

@@ -28,7 +28,7 @@ The simplest way to use `PHRINGE` is by using a config file and a ``Configuratio
 
 .. code-block:: python
 
-    config = Configuration.from_file("path/to/config.yaml")
+    config = Configuration(path="path/to/config.py")
     phringe.set(config)
 
 Option 2: Manually Creating Objects
