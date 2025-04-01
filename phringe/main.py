@@ -121,7 +121,8 @@ class PHRINGE:
             device=self._device
         ) if self._observation is not None else None
 
-    def _get_device(self, gpu: int) -> torch.device:
+    @staticmethod
+    def _get_device(gpu: int) -> torch.device:
         """Get the device.
 
         :param gpu: The GPU
