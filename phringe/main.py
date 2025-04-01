@@ -79,12 +79,13 @@ class PHRINGE:
             gpu_index: int = None,
             device: torch.device = None,
             grid_size=40,
-            time_step_size: float = None
+            time_step_size: float = None,
+            extra_memory: int = 1
     ):
         self._detailed = False  # TODO: implement correctly
         self._detector_time_steps = None
         self._device = self._get_device(gpu_index) if device is None else device
-        self._extra_memory = 1
+        self._extra_memory = extra_memory
         self._grid_size = grid_size
         self._instrument = None
         self._observation = None
@@ -323,39 +324,38 @@ class PHRINGE:
 
         return diff_counts
 
-    def get_instrument_response(
-            self,
-            output: int,
-            times: Union[float, ndarray, Tensor],
-            wavelengths: Union[float, ndarray, Tensor],
-            field_of_view: float,
-            nulling_baseline: float = None,
-            output_as_numpy: bool = False,
-    ):
-        if self.seed is not None: self._set_seed(self.seed)
+    def get_field_of_view(self) -> Tensor:
+        """Return the field of view.
 
-        # Handle broadcasting and type conversions
-        if isinstance(times, ndarray) or isinstance(times, float) or isinstance(times, int):
-            times = torch.tensor(times, device=self._device)
-        times = times[None, None, None, None]
 
-        if isinstance(wavelengths, ndarray) or isinstance(wavelengths, float) or isinstance(wavelengths, int):
-            wavelengths = torch.tensor(wavelengths, device=self._device)
-        wavelengths = wavelengths[None, None, None, None]
+        Returns
+        -------
+        torch.Tensor
+            Field of view.
+        """
+        return self._instrument._field_of_view
 
-        x_coordinates, y_coordinates = get_meshgrid(field_of_view, self._grid_size, self._device)
-        x_coordinates = x_coordinates.to(self._device)
-        y_coordinates = y_coordinates.to(self._device)
+    def get_instrument_response_empirical(self) -> Tensor:
+        """Get the empirical instrument response. This corresponds to an n_out x n_wavelengths x n_time_steps x n_grid x n_grid
+        dimensional tensor that represents the response for the simulated observation, i.e. including perturbations (if
+        simulated). A high grid size (> 100) is recommended for a good result.
+
+
+        Returns
+        -------
+        torch.Tensor
+            Empirical instrument response.
+        """
+        times = self.simulation_time_steps[None, :, None, None]
+        wavelengths = self._instrument.wavelength_bin_centers[:, None, None, None]
+        x_coordinates, y_coordinates = get_meshgrid(
+            torch.max(self._instrument._field_of_view),
+            self._grid_size,
+            self._device
+        )
         x_coordinates = x_coordinates[None, None, :, :]
         y_coordinates = y_coordinates[None, None, :, :]
 
-        times = self.simulation_time_steps if times is None else times
-        wavelengths = self._instrument.wavelength_bin_centers if wavelengths is None else wavelengths
-        x_coordinates = self._scene.star._sky_coordinates[0] if x_coordinates is None else x_coordinates
-        y_coordinates = self._scene.star._sky_coordinates[1] if y_coordinates is None else y_coordinates
-
-        # Calculate perturbation time series unless they have been manually set by the user. If no seed is set, the time
-        # series are different every time this method is called
         amplitude_pert_time_series = self._instrument.perturbations.amplitude._time_series if self._instrument.perturbations.amplitude is not None else torch.zeros(
             (self._instrument.number_of_inputs, len(self.simulation_time_steps)),
             dtype=torch.float32
@@ -370,7 +370,100 @@ class PHRINGE:
             dtype=torch.float32
         )
 
-        response = torch.stack([self._instrument.response[output](
+        response = torch.stack([self._instrument.response[j](
+            times,
+            wavelengths,
+            x_coordinates,
+            y_coordinates,
+            self._observation.modulation_period,
+            self.get_nulling_baseline(),
+            *[self._instrument._get_amplitude(self._device) for _ in range(self._instrument.number_of_inputs)],
+            *[amplitude_pert_time_series[k][None, :, None, None] for k in
+              range(self._instrument.number_of_inputs)],
+            *[phase_pert_time_series[k][:, :, None, None] for k in
+              range(self._instrument.number_of_inputs)],
+            *[torch.tensor(0) for _ in range(self._instrument.number_of_inputs)],
+            *[polarization_pert_time_series[k][None, :, None, None] for k in
+              range(self._instrument.number_of_inputs)]
+        ) for j in range(self._instrument.number_of_outputs)])
+
+        return response
+
+    def get_instrument_response_theoretical(
+            self,
+            times: Union[float, ndarray, Tensor],
+            wavelengths: Union[float, ndarray, Tensor],
+            field_of_view: Union[float, ndarray, Tensor],
+            nulling_baseline: float,
+    ):
+        """Return the theoretical instrument response of an ideal (unperturbed) instrument for given time step(s),
+        wavelength(s), field of view and nulling baseline. This corresponds to an n_out x n_wavelengths x n_time_steps x n_grid x n_grid
+        dimensional tensor that represents the response for the simulated observation, i.e. including perturbations (if
+        simulated). A high grid size (> 100) is recommended for a good result.
+
+
+        Parameters
+        ----------
+        times : float or numpy.ndarray or torch.Tensor
+            Time step(s) in seconds.
+        wavelengths : float or numpy.ndarray or torch.Tensor
+            Wavelength(s) in meters.
+        field_of_view : float or numpy.ndarray or torch.Tensor
+            Field of view in radians.
+        nulling_baseline : float
+            Nulling baseline in meters.
+
+
+        Returns
+        -------
+        torch.Tensor
+            Theoretical instrument response.
+        """
+        # Handle broadcasting and type conversions
+        if isinstance(times, ndarray) or isinstance(times, float) or isinstance(times, int) or isinstance(times, list):
+            times = torch.tensor(times, device=self._device)
+        ndmin_times = times.ndim
+
+        if ndmin_times == 0:
+            times = times[None, None, None, None]
+        else:
+            times = times[None, :, None, None]
+
+        if (isinstance(wavelengths, ndarray) or isinstance(wavelengths, float) or
+                isinstance(wavelengths, int) or isinstance(wavelengths, list)):
+            wavelengths = torch.tensor(wavelengths, device=self._device)
+        ndim_wavelengths = wavelengths.ndim
+
+        if ndim_wavelengths == 0:
+            wavelengths = wavelengths[None, None, None, None]
+        else:
+            wavelengths = wavelengths[:, None, None, None]
+
+        x_coordinates, y_coordinates = get_meshgrid(field_of_view, self._grid_size, self._device)
+        x_coordinates = x_coordinates.to(self._device)
+        y_coordinates = y_coordinates.to(self._device)
+        x_coordinates = x_coordinates[None, None, :, :]
+        y_coordinates = y_coordinates[None, None, :, :]
+
+        # Calculate perturbation time series unless they have been manually set by the user. If no seed is set, the time
+        # series are different every time this method is called
+        amplitude_pert_time_series = torch.zeros(
+            (self._instrument.number_of_inputs, len(times)),
+            dtype=torch.float32,
+            device=self._device
+        )
+        phase_pert_time_series = torch.zeros(
+            (self._instrument.number_of_inputs, len(wavelengths), len(times)),
+            dtype=torch.float32,
+            device=self._device
+        )
+        polarization_pert_time_series = torch.zeros(
+            (self._instrument.number_of_inputs, len(times)),
+            dtype=torch.float32,
+            device=self._device
+        )
+
+        response = torch.stack([self._instrument.response[j](
             times,
             wavelengths,
             x_coordinates,
@@ -386,9 +479,6 @@ class PHRINGE:
             *[polarization_pert_time_series[k][None, :, None, None] for k in
               range(self._instrument.number_of_inputs)]
         ) for j in range(self._instrument.number_of_outputs)])
-
-        if output_as_numpy:
-            return response.cpu().numpy()
 
         return response
 
