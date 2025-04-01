@@ -287,7 +287,9 @@ class PHRINGE:
                 counts.cpu().numpy(),
                 (1, 1, binning_factor),
                 np.sum
-            )
+            ),
+            dtype=torch.float32,
+            device=self._device
         )
 
         return counts
@@ -320,7 +322,9 @@ class PHRINGE:
                 diff_counts.cpu().numpy(),
                 (1, 1, binning_factor),
                 np.sum
-            )
+            ),
+            dtype=torch.float32,
+            device=self._device
         )
 
         return diff_counts
