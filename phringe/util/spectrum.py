@@ -4,7 +4,6 @@ import numpy as np
 import spectres
 import torch
 from astropy import units as u
-from phringe.entities.instrument import Instrument
 from scipy.constants import c, h, k
 from torch import Tensor
 
@@ -41,7 +40,7 @@ class InputSpectrum:
             wavelengths = self.wavelengths
 
         binned_spectral_flux_density = spectres.spectres(
-            wavelength_bin_centers.numpy(),
+            wavelength_bin_centers.cpu().numpy(),
             wavelengths,
             fluxes,
             fill=0,
