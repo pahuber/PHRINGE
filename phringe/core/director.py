@@ -385,10 +385,15 @@ class Director():
                 x = torch.tensor(x)
             return torch.sqrt(x)
 
+        def _torch_exp(x):
+            if not isinstance(x, torch.Tensor):
+                x = torch.tensor(x)
+            return torch.exp(x)
+
         torch_func_dict = {
             'sin': torch.sin,
             'cos': torch.cos,
-            'exp': torch.exp,
+            'exp': _torch_exp,
             'log': torch.log,
             'sqrt': _torch_sqrt
         }
