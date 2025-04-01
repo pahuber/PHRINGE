@@ -87,7 +87,6 @@ class PHRINGE:
         self._extra_memory = 1
         self._grid_size = grid_size
         self._instrument = None
-        self._normalize = False
         self._observation = None
         self._scene = None
         self._simulation_time_steps = None
@@ -219,9 +218,6 @@ class PHRINGE:
                     if not diff_only and i not in np.array(self._instrument.differential_outputs).flatten():
                         continue
 
-                    if self._normalize:
-                        sky_brightness_distribution[sky_brightness_distribution > 0] = 1
-
                     current_counts = (
                         torch.sum(
                             self._instrument.response[i](
@@ -251,7 +247,8 @@ class PHRINGE:
                             * self._instrument.wavelength_bin_widths[:, None, None, None], axis=(2, 3)
                         )
                     )
-                    if not self._normalize:
+                    # Add photon (Poisson) noise unless the source is a planet that has no photon noise (i.e. template signal)
+                    if not (isinstance(source, Planet) and not source.has_photon_noise):
                         current_counts = torch.poisson(current_counts)
 
                     counts[i, :, it_low:it_high] += current_counts

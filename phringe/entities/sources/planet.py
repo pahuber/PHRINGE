@@ -1,23 +1,22 @@
 from typing import Any, Tuple, Union
 
 import numpy as np
-import spectres
 import torch
 from astropy import units as u
 from astropy.constants.codata2018 import G
 from astropy.units import Quantity
-from phringe.core.observing_entity import observing_property
-from phringe.entities.sources.base_source import BaseSource
-from phringe.io.txt_reader import TXTReader
-from phringe.io.validators import validate_quantity_units
-from phringe.util.grid import get_index_of_closest_value, get_meshgrid
-from phringe.util.spectrum import InputSpectrum
-from phringe.util.spectrum import create_blackbody_spectrum
 from poliastro.bodies import Body
 from poliastro.twobody import Orbit
 from pydantic import field_validator
 from pydantic_core.core_schema import ValidationInfo
 from torch import Tensor
+
+from phringe.core.observing_entity import observing_property
+from phringe.entities.sources.base_source import BaseSource
+from phringe.io.validators import validate_quantity_units
+from phringe.util.grid import get_index_of_closest_value, get_meshgrid
+from phringe.util.spectrum import InputSpectrum
+from phringe.util.spectrum import create_blackbody_spectrum
 
 
 class Planet(BaseSource):
@@ -39,6 +38,7 @@ class Planet(BaseSource):
     """
     name: str
     has_orbital_motion: bool
+    has_photon_noise: bool
     mass: Union[str, float, Quantity]
     radius: Union[str, float, Quantity]
     temperature: Union[str, float, Quantity]
