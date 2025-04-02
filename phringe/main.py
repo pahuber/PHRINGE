@@ -152,7 +152,7 @@ class PHRINGE:
         times = times[None, :, None, None]
         wavelength_bin_centers = wavelength_bin_centers[:, None, None, None]
         wavelength_bin_widths = wavelength_bin_widths[None, :, None, None, None]
-        if isinstance(flux, float) or isinstance(flux, int):
+        if np.array(flux).ndim == 0:
             flux = np.array(flux)[None, None, None, None, None]
         else:
             flux = flux[None, :, None, None, None]
