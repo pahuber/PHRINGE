@@ -136,6 +136,45 @@ class PHRINGE:
             device = torch.device('cpu')
         return device
 
+    def _get_template_diff_counts(
+            self,
+            times: np.ndarray,
+            wavelength_bin_centers: np.ndarray,
+            wavelength_bin_widths: np.ndarray,
+            flux: np.ndarray,
+            x_position: float,
+            y_position: float
+    ) -> np.ndarray:
+        """Return the planet template (model) differential counts for a certain flux and position as a numpy array of
+        shape (n_diff_out x n_wavelengths x n_time_steps). This is a helper function that is used within LIFEsimMC.
+
+        """
+        times = times[None, :, None, None]
+        wavelength_bin_centers = wavelength_bin_centers[:, None, None, None]
+        wavelength_bin_widths = wavelength_bin_widths[None, :, None, None, None]
+        flux = flux[None, :, None, None, None]
+        x_position = np.array([x_position])[None, None, None, None]
+        y_position = np.array([y_position])[None, None, None, None]
+        amplitude = self._instrument._get_amplitude(self._device).cpu().numpy()
+
+        diff_ir = np.concatenate([self._instrument._diff_ir_numpy[i](
+            times,
+            wavelength_bin_centers,
+            x_position,
+            y_position,
+            self._observation.modulation_period,
+            self._instrument._nulling_baseline,
+            *[amplitude for _ in range(self._instrument.number_of_inputs)],
+            *[0 for _ in range(self._instrument.number_of_inputs)],
+            *[0 for _ in range(self._instrument.number_of_inputs)],
+            *[0 for _ in range(self._instrument.number_of_inputs)],
+            *[0 for _ in range(self._instrument.number_of_inputs)]
+        ) for i in range(len(self._instrument.differential_outputs))])
+
+        diff_counts = diff_ir * flux * self._observation.detector_integration_time * wavelength_bin_widths
+
+        return diff_counts[:, :, :, 0, 0]
+
     def _get_unbinned_counts(self, diff_only: bool = False):
         """Calculate the differential counts for all time steps (, i.e. simulation time steps). Hence
         the output is not yet binned to detector time steps.
