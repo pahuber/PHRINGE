@@ -152,11 +152,10 @@ class PHRINGE:
         times = times[None, :, None, None]
         wavelength_bin_centers = wavelength_bin_centers[:, None, None, None]
         wavelength_bin_widths = wavelength_bin_widths[None, :, None, None, None]
-        if flux.size == 1:
-            flux = flux[None, None, None, None]
+        if isinstance(flux, float) or isinstance(flux, int):
+            flux = np.array(flux)[None, None, None, None, None]
         else:
             flux = flux[None, :, None, None, None]
-
         x_position = np.array([x_position])[None, None, None, None]
         y_position = np.array([y_position])[None, None, None, None]
         amplitude = self._instrument._get_amplitude(self._device).cpu().numpy()
