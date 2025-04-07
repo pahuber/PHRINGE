@@ -10,7 +10,7 @@ from scipy.constants import sigma
 from torch import Tensor
 
 from phringe.core.observing_entity import observing_property
-from phringe.core.entities.sources.base_source import BaseSource
+from phringe.entities.sources.base_source import BaseSource
 from phringe.io.validators import validate_quantity_units
 from phringe.util.grid import get_meshgrid
 from phringe.util.helpers import Coordinates
