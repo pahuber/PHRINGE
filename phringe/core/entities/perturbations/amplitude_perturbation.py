@@ -6,7 +6,7 @@ from pydantic import field_validator
 from pydantic_core.core_schema import ValidationInfo
 from torch import Tensor
 
-from phringe.entities.perturbations.base_perturbation import BasePerturbation
+from phringe.core.entities.perturbations.base_perturbation import BasePerturbation
 from phringe.io.validators import validate_quantity_units
 
 

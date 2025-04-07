@@ -8,14 +8,14 @@ from skimage.measure import block_reduce
 from torch import Tensor
 from tqdm import tqdm
 
-from phringe.entities.configuration import Configuration
-from phringe.entities.instrument import Instrument
-from phringe.entities.observation import Observation
-from phringe.entities.scene import Scene
-from phringe.entities.sources.exozodi import Exozodi
-from phringe.entities.sources.local_zodi import LocalZodi
-from phringe.entities.sources.planet import Planet
-from phringe.entities.sources.star import Star
+from phringe.core.entities.configuration import Configuration
+from phringe.core.entities.instrument import Instrument
+from phringe.core.entities.observation import Observation
+from phringe.core.entities.scene import Scene
+from phringe.core.entities.sources.exozodi import Exozodi
+from phringe.core.entities.sources.local_zodi import LocalZodi
+from phringe.core.entities.sources.planet import Planet
+from phringe.core.entities.sources.star import Star
 from phringe.io.fits_writer import FITSWriter
 from phringe.util.grid import get_meshgrid
 from phringe.util.memory import get_available_memory
@@ -291,10 +291,8 @@ class PHRINGE:
                             * self._instrument.wavelength_bin_widths[:, None, None, None], axis=(2, 3)
                         )
                     )
-                    # Add photon (Poisson) noise unless the source is a planet that has no photon noise (i.e. template signal)
-                    if not (isinstance(source, Planet) and not source.has_photon_noise):
-                        current_counts = torch.poisson(current_counts)
-
+                    # Add photon (Poisson) noise
+                    current_counts = torch.poisson(current_counts)
                     counts[i, :, it_low:it_high] += current_counts
 
         # Bin data to from simulation time steps detector time steps

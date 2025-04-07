@@ -11,10 +11,10 @@ from sympy import symbols, Symbol, exp, I, pi, cos, sin, Abs, lambdify, sqrt
 from torch import Tensor
 
 from phringe.core.observing_entity import ObservingEntity, observing_property
-from phringe.entities.perturbations.amplitude_perturbation import AmplitudePerturbation
-from phringe.entities.perturbations.base_perturbation import BasePerturbation
-from phringe.entities.perturbations.phase_perturbation import PhasePerturbation
-from phringe.entities.perturbations.polarization_perturbation import PolarizationPerturbation
+from phringe.core.entities.perturbations.amplitude_perturbation import AmplitudePerturbation
+from phringe.core.entities.perturbations.base_perturbation import BasePerturbation
+from phringe.core.entities.perturbations.phase_perturbation import PhasePerturbation
+from phringe.core.entities.perturbations.polarization_perturbation import PolarizationPerturbation
 from phringe.io.validators import validate_quantity_units
 
 

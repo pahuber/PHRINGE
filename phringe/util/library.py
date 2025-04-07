@@ -1,6 +1,6 @@
 from sympy import Matrix, sin, exp, pi, I, cos, symbols, sqrt
 
-from phringe.entities.instrument import Instrument
+from phringe.core.entities.instrument import Instrument
 
 t, tm, b = symbols('t tm b')  # Do not change this (t: time, tm: modulation period, b: baseline)
 
@@ -26,7 +26,7 @@ diff_out = [(2, 3)]
 sep_at_max_mod_eff = [0.6]
 
 
-class LIFEBaselineArchitecture(Instrument):
+class LIFEBaselineArchitecture2(Instrument):
 
     def __init__(self):
         super().__init__(
