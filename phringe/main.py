@@ -8,14 +8,14 @@ from skimage.measure import block_reduce
 from torch import Tensor
 from tqdm import tqdm
 
-from phringe.entities.configuration import Configuration
-from phringe.entities.instrument import Instrument
-from phringe.entities.observation import Observation
-from phringe.entities.scene import Scene
-from phringe.entities.sources.exozodi import Exozodi
-from phringe.entities.sources.local_zodi import LocalZodi
-from phringe.entities.sources.planet import Planet
-from phringe.entities.sources.star import Star
+from phringe.core.entities.configuration import Configuration
+from phringe.core.entities.instrument import Instrument
+from phringe.core.entities.observation import Observation
+from phringe.core.entities.scene import Scene
+from phringe.core.entities.sources.exozodi import Exozodi
+from phringe.core.entities.sources.local_zodi import LocalZodi
+from phringe.core.entities.sources.planet import Planet
+from phringe.core.entities.sources.star import Star
 from phringe.io.fits_writer import FITSWriter
 from phringe.util.grid import get_meshgrid
 from phringe.util.memory import get_available_memory

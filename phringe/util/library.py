@@ -1,6 +1,6 @@
 from sympy import Matrix, sin, exp, pi, I, cos, symbols, sqrt
 
-from phringe.entities.instrument import Instrument
+from phringe.core.entities.instrument import Instrument
 
 t, tm, b = symbols('t tm b')  # Do not change this (t: time, tm: modulation period, b: baseline)
 
