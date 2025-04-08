@@ -3,5 +3,5 @@
 ExoZodi
 =======
 
-.. autoclass:: phringe.entities.sources.exozodi.Exozodi
+.. autoclass:: phringe.core.entities.sources.exozodi.Exozodi
 

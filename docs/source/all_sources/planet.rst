@@ -3,5 +3,5 @@
 Planet
 ======
 
-.. autoclass:: phringe.entities.sources.planet.Planet
+.. autoclass:: phringe.core.entities.sources.planet.Planet
 
