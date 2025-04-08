@@ -3,5 +3,5 @@
 Configuration
 =============
 
-.. autoclass:: phringe.entities.configuration.Configuration
+.. autoclass:: phringe.core.entities.configuration.Configuration
 

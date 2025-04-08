@@ -3,4 +3,4 @@
 Observation
 ===========
 
-.. autoclass:: phringe.entities.observation.Observation
+.. autoclass:: phringe.core.entities.observation.Observation
