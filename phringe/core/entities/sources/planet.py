@@ -11,8 +11,8 @@ from pydantic import field_validator
 from pydantic_core.core_schema import ValidationInfo
 from torch import Tensor
 
-from phringe.core.observing_entity import observing_property
 from phringe.core.entities.sources.base_source import BaseSource
+from phringe.core.observing_entity import observing_property
 from phringe.io.validators import validate_quantity_units
 from phringe.util.grid import get_index_of_closest_value, get_meshgrid
 from phringe.util.spectrum import InputSpectrum
@@ -22,19 +22,36 @@ from phringe.util.spectrum import create_blackbody_spectrum
 class Planet(BaseSource):
     """Class representation of a planet.
 
-    :param name: The name of the planet
-    :param mass: The mass of the planet
-    :param radius: The radius of the planet
-    :param temperature: The temperature of the planet
-    :param semi_major_axis: The semi-major axis of the planet
-    :param eccentricity: The eccentricity of the planet
-    :param inclination: The inclination of the planet
-    :param raan: The right ascension of the ascending node of the planet
-    :param argument_of_periapsis: The argument of periapsis of the planet
-    :param true_anomaly: The true anomaly of the planet
-    :param _angular_separation_from_star_x: The angular separation of the planet from the star in x-direction
-    :param _angular_separation_from_star_y: The angular separation of the planet from the star in y-direction
-    :param grid_position: The grid position of the planet
+    Parameters
+    ----------
+    has_orbital_motion: bool
+        Whether the planet has orbital motion. If not, it is assumed to be static in its orbit throughout the simulation.
+    mass: float or str or Quantity
+        The mass of the planet in units of weight.
+    radius: float or str or Quantity
+        The radius of the planet in units of length.
+    temperature: float or str or Quantity
+        The effective temperature of the planet in units of temperature.
+    semi_major_axis: float or str or Quantity
+        The semi-major axis of the planet's orbit in units of length.
+    eccentricity: float
+        The eccentricity of the planet's orbit.
+    inclination: float or str or Quantity
+        The inclination of the planet's orbit in units of degrees.
+    raan: float or str or Quantity
+        The right ascension of the ascending node of the planet's orbit in units of degrees.
+    argument_of_periapsis: float or str or Quantity
+        The argument of periapsis of the planet's orbit in units of degrees.
+    true_anomaly: float or str or Quantity
+        The true anomaly of the planet's orbit in units of degrees.
+    input_spectrum: InputSpectrum, optional
+        The input spectrum of the planet. If None, a blackbody spectrum is generated.
+    grid_position: Tuple[int, int] , optional
+        The grid position of the planet in the sky. If None, the position is calculated from its orbital elements.
+    host_star_distance: float or str or Quantity, optional
+        The distance of the host star from the planet in units of length. Only required if no host star is specified in the scene.
+    host_star_mass: float or str or Quantity, optional
+        The mass of the host star in units of weight. Only required if no host star is specified in the scene.
     """
     name: str
     has_orbital_motion: bool
@@ -47,7 +64,6 @@ class Planet(BaseSource):
     raan: Union[str, float, Quantity]
     argument_of_periapsis: Union[str, float, Quantity]
     true_anomaly: Union[str, float, Quantity]
-    # path_to_spectrum: Any
     input_spectrum: Union[InputSpectrum, None]
     grid_position: Tuple = None
     host_star_distance: Union[str, float, Quantity] = None

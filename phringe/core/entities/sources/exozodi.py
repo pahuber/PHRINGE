@@ -7,8 +7,8 @@ from astropy.units import Quantity
 from pydantic import field_validator
 from pydantic_core.core_schema import ValidationInfo
 
-from phringe.core.observing_entity import observing_property
 from phringe.core.entities.sources.base_source import BaseSource
+from phringe.core.observing_entity import observing_property
 from phringe.io.validators import validate_quantity_units
 from phringe.util.grid import get_radial_map, get_meshgrid
 from phringe.util.spectrum import create_blackbody_spectrum
@@ -16,10 +16,17 @@ from phringe.util.spectrum import create_blackbody_spectrum
 
 class Exozodi(BaseSource):
     """Class representation of an exozodi.
+
+    Parameters
+    ----------
+    level : float
+        The level of the exozodi in local zodi levels.
+    host_star_luminosity : float, optional
+        The luminosity of the host star in units of luminosity. Only required if no host star is specified in the scene.
+    host_star_distance : float, optional
+        The distance to the host star in units of length. Only required if no host star is specified in the scene.
     """
     level: float
-    # inclination: Any
-    # field_of_view_in_au_radial_maps: Any = None
     host_star_luminosity: Any = None
     host_star_distance: Any = None
 

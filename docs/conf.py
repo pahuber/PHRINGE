@@ -36,6 +36,8 @@ html_context = {
     "display_github": False,  # Example of context variable
     "title": ""
 }
+pygments_style = "monokai"
+pygments_dark_style = "monokai"
 
 # -- General configuration ---------------------------------------------------
 

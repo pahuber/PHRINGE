@@ -9,8 +9,8 @@ from pydantic_core.core_schema import ValidationInfo
 from scipy.constants import sigma
 from torch import Tensor
 
-from phringe.core.observing_entity import observing_property
 from phringe.core.entities.sources.base_source import BaseSource
+from phringe.core.observing_entity import observing_property
 from phringe.io.validators import validate_quantity_units
 from phringe.util.grid import get_meshgrid
 from phringe.util.helpers import Coordinates
@@ -20,14 +20,21 @@ from phringe.util.spectrum import create_blackbody_spectrum
 class Star(BaseSource):
     """Class representation of a star.
 
-    :param name: The name of the star
-    :param distance: The distance to the star
-    :param mass: The mass of the star
-    :param radius: The radius of the star
-    :param temperature: The temperature of the star
-    :param luminosity: The luminosity of the star
-    :param right_ascension: The right ascension of the star with units or else in seconds (not hours)
-    :param declination: The declination of the star
+    Parameters
+    ----------
+
+    distance : str, float, or Quantity
+        Distance between the host star and the instrument in units of length.
+    mass : str, float, or Quantity
+        Mass of the host star in units of weight.
+    radius : str, float, or Quantity
+        Radius of the host star in units of length.
+    temperature : str, float, or Quantity
+        Temperature of the host star in units of temperature.
+    right_ascension : str, float, or Quantity
+        Right ascension of the host star in units of degrees.
+    declination : str, float, or Quantity
+        Declination of the host star in units of degrees.
     """
     name: str
     distance: Union[str, float, Quantity]
