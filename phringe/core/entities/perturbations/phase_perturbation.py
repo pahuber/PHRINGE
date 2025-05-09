@@ -23,22 +23,65 @@ class PhasePerturbation(BasePerturbation):
     @property
     def _time_series(self) -> Union[Tensor, None]:
         time_series = torch.zeros(
-            (self._phringe._instrument.number_of_inputs, len(self._phringe._instrument.wavelength_bin_centers),
-             len(self._phringe.simulation_time_steps)),
+            (
+                self._phringe._instrument.number_of_inputs,
+                len(self._phringe._instrument.wavelength_bin_centers),
+                len(self._phringe.simulation_time_steps)
+            ),
             dtype=torch.float32, device=self._phringe._device)
 
         if not self._has_manually_set_time_series and self.color is not None and self.rms is not None:
 
             color_coeff = self._get_color_coeff()
 
-            for k in range(self._phringe._instrument.number_of_inputs):
-                time_series[k] = self._calculate_time_series_from_psd(
-                    color_coeff,
-                    self._phringe._observation.modulation_period,
-                    len(self._phringe.simulation_time_steps)
-                )
+            wl_bounds = [7e-6, 10e-6, 13e-6]
+            num_bands = len(wl_bounds) + 1
+            wavelengths = self._phringe._instrument.wavelength_bin_centers
 
-            for il, l in enumerate(self._phringe._instrument.wavelength_bin_centers):
-                time_series[:, il] = 2 * np.pi * time_series[:, il] / l
+            index_low = 0
+            # num_wl_in_band = len(self._phringe._instrument.wavelength_bin_centers) // num_bands
+            # index_up = num_wl_in_band
+
+            for j in range(num_bands):
+
+                time_series_per_band = torch.zeros(
+                    (
+                        self._phringe._instrument.number_of_inputs,
+                        len(self._phringe._instrument.wavelength_bin_centers),
+                        len(self._phringe.simulation_time_steps)
+                    ),
+                    dtype=torch.float32, device=self._phringe._device)
+
+                for k in range(self._phringe._instrument.number_of_inputs):
+                    time_series_per_band[k] = self._calculate_time_series_from_psd(
+                        color_coeff,
+                        self._phringe._observation.modulation_period,
+                        len(self._phringe.simulation_time_steps)
+                    )
+
+                # Get the index of the closest wavelength value
+                if num_bands == 1:
+                    index_low = 0
+                    index_up = len(wavelengths)
+                elif j == 0:
+                    index_low = 0
+                    index_up = (torch.abs(wavelengths - wl_bounds[j])).argmin()
+                elif j == num_bands - 1:
+                    index_low = (torch.abs(wavelengths - wl_bounds[j - 1])).argmin()
+                    index_up = len(wavelengths)
+                else:
+                    index_low = (torch.abs(wavelengths - wl_bounds[j - 1])).argmin()
+                    index_up = (torch.abs(wavelengths - wl_bounds[j])).argmin()
+
+                time_series[:, index_low:index_up, :] = 2 * np.pi * time_series_per_band[:, index_low:index_up,
+                                                                    :] / wavelengths[
+                                                                         None,
+                                                                         index_low:index_up,
+                                                                         None]
+
+                # for il, l in enumerate(wavelengths[index_low:index_up]):
+                #     time_series[:, il] = 2 * np.pi * time_series[:, il] / l
+
+                a = 0
 
         return time_series
