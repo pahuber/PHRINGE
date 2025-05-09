@@ -50,8 +50,7 @@ extensions = ['sphinx_copybutton',
               'sphinx.ext.napoleon',
               'nbsphinx',
               'recommonmark',
-              # 'myst_nb',
-              # "myst_parser"
+              'myst_nb',
               ]
 
 # -- Options for HTML output -------------------------------------------------
