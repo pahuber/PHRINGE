@@ -1,7 +1,7 @@
 .. _create_custom_instrument:
 
-Creating A Custom Instrument
-============================
+Custom Instrument
+=================
 
 `PHRINGE` provides a couple predefined ``Instrument``s, but also allows the creation of custom instruments.
 This requires the specification of the ``array_configuration_matrix``, the ``complex_amplitude_transfer_matrix``, the ``differential_outputs``, and

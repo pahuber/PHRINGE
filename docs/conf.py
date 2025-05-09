@@ -49,7 +49,9 @@ extensions = ['sphinx_copybutton',
               'sphinx.ext.autodoc',
               'sphinx.ext.napoleon',
               'nbsphinx',
-              'recommonmark']
+              'recommonmark',
+              'myst_nb'
+              ]
 
 # -- Options for HTML output -------------------------------------------------
 

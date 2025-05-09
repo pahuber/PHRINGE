@@ -1,47 +1,5 @@
-from sympy import Matrix, sin, exp, pi, I, cos, symbols, sqrt
-
-########################################################################################################################
-# Array Configuration Matrix (2 x N_in)
-########################################################################################################################
-
-t, tm, b = symbols('t tm b')  # Do not change this (t: time, tm: modulation period, b: baseline)
-
-q = 6
-acm = (b / 2
-       * Matrix([[cos(2 * pi / tm * t), -sin(2 * pi / tm * t)],
-                 [sin(2 * pi / tm * t), cos(2 * pi / tm * t)]])
-       * Matrix([[q, q, -q, -q],
-                 [1, -1, -1, 1]]))
-
-########################################################################################################################
-# Complex Amplitude Transfer Matrix (N_out x N_in)
-########################################################################################################################
-
-catm = 1 / 2 * Matrix([[0, 0, sqrt(2), sqrt(2)],
-                       [sqrt(2), sqrt(2), 0, 0],
-                       [1, -1, -exp(I * pi / 2), exp(I * pi / 2)],
-                       [1, -1, exp(I * pi / 2), -exp(I * pi / 2)]])
-
-diff_out = [(2, 3)]
-sep_at_max_mod_eff = [0.6]
-
-# ep = exp(I * pi / 2)
-# em = exp(-I * pi / 2)
-#
-# catm = 1 / 4 * Matrix([[2, 2, 2, 2],
-#                        [1 + ep, 1 - ep, -1 + ep, -1 - ep],
-#                        [1 - em, -1 - em, 1 + em, -1 + em],
-#                        [1 + ep, 1 - ep, -1 - ep, -1 + ep],
-#                        [1 - em, -1 - em, -1 + em, 1 + em],
-#                        [1 + ep, -1 - ep, 1 - ep, -1 + ep],
-#                        [1 - em, -1 + em, -1 - em, 1 + em]])
-#
-# diff_out = [(1, 2), (3, 4), (5, 6)]
-# sep_at_max_mod_eff = [0.31, 1, 0.6]
-
-########################################################################################################################
-# Simulation, Observation Mode, Instrument and Scene
-########################################################################################################################
+from phringe.lib.array_configuration import XArrayConfiguration
+from phringe.lib.beam_combiner import DoubleBracewellBeamCombiner
 
 config = {
     'observation': {
@@ -54,10 +12,10 @@ config = {
         'optimized_wavelength': '10 um',
     },
     'instrument': {
-        'array_configuration_matrix': acm,
-        'complex_amplitude_transfer_matrix': catm,
-        'differential_outputs': diff_out,
-        'sep_at_max_mod_eff': sep_at_max_mod_eff,
+        'array_configuration_matrix': XArrayConfiguration.acm,
+        'complex_amplitude_transfer_matrix': DoubleBracewellBeamCombiner.catm,
+        'differential_outputs': DoubleBracewellBeamCombiner.diff_out,
+        'sep_at_max_mod_eff': DoubleBracewellBeamCombiner.sep_at_max_mod_eff,
         'aperture_diameter': '2 m',
         'baseline_maximum': '600 m',
         'baseline_minimum': '5 m',
@@ -110,6 +68,7 @@ config = {
                 'true_anomaly': '0 deg',
                 'input_spectrum': None
             },
+            # Add more planets here
             # {
             #     'name': 'Mars',
             #     'mass': '1 Mearth',
