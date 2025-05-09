@@ -10,11 +10,11 @@ from sympy import Matrix
 from sympy import symbols, Symbol, exp, I, pi, cos, sin, Abs, lambdify, sqrt
 from torch import Tensor
 
-from phringe.core.observing_entity import ObservingEntity, observing_property
 from phringe.core.entities.perturbations.amplitude_perturbation import AmplitudePerturbation
 from phringe.core.entities.perturbations.base_perturbation import BasePerturbation
 from phringe.core.entities.perturbations.phase_perturbation import PhasePerturbation
 from phringe.core.entities.perturbations.polarization_perturbation import PolarizationPerturbation
+from phringe.core.observing_entity import ObservingEntity, observing_property
 from phringe.io.validators import validate_quantity_units
 
 
@@ -79,6 +79,7 @@ class Instrument(ObservingEntity):
     throughput: float
     wavelength_min: Union[str, float, Quantity]
     wavelength_max: Union[str, float, Quantity]
+    wavelength_bands_bounds: list
     number_of_inputs: int = None
     number_of_outputs: int = None
     response: Tensor = None
