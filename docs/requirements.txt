@@ -1,7 +1,7 @@
 furo==2023.3.23
 sphinx==5.0.0
 sphinx-click==4.1.0
-myst_parser==0.19.0
+myst_parser==1.0.0
 nbsphinx==0.9.4
 jupyter==1.0.0
 pandoc
