@@ -240,7 +240,8 @@ class PHRINGE:
 
                 # Broadcast sky brightness distribution to the correct shape
                 if isinstance(source, Planet) and source.has_orbital_motion:
-                    sky_brightness_distribution = source._sky_brightness_distribution.swapaxes(0, 1)
+                    sky_brightness_distribution = source._sky_brightness_distribution.swapaxes(0, 1)[:, it_low:it_high,
+                                                  :, :]
                 else:
                     sky_brightness_distribution = source._sky_brightness_distribution[:, None, :, :]
 
