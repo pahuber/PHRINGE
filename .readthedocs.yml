@@ -5,8 +5,16 @@ build:
     python: "3.10"
 sphinx:
   configuration: docs/conf.py
+  builder: html
 formats: all
 python:
   install:
     - requirements: docs/requirements.txt
     - path: .
+  system_packages: true
+
+# Environment variables to ensure no notebook execution
+env:
+  READTHEDOCS: "True"
+  NBSphinx_EXECUTE: "never"
+  MYST_NB_EXECUTION_MODE: "off"
