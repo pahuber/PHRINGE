@@ -14,7 +14,8 @@ import os
 import sys
 
 sys.path.insert(0, os.path.abspath('../'))
-# sys.path.insert(0, os.path.abspath('../'))
+sys.path.insert(0, os.path.abspath('../phringe'))
+os.environ['PYTHONPATH'] = os.path.abspath('../')
 
 # -- Project information -----------------------------------------------------
 
@@ -50,7 +51,6 @@ extensions = ['sphinx_copybutton',
               'sphinx.ext.napoleon',
               'nbsphinx',
               'recommonmark',
-              'myst_nb',
               ]
 
 # -- Options for HTML output -------------------------------------------------
@@ -59,7 +59,5 @@ master_doc = 'index'
 html_theme = "furo"
 html_static_path = ['_static']
 
-import os
-import sys
-
-sys.path.insert(0, os.path.abspath('../phringe'))
+nbsphinx_execute = 'auto'
+nb_execution_mode = 'cache'
