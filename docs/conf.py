@@ -59,5 +59,5 @@ master_doc = 'index'
 html_theme = "furo"
 html_static_path = ['_static']
 
-nbsphinx_execute = 'auto'
-nb_execution_mode = 'cache'
+nbsphinx_execute = 'never'
+nb_execution_mode = 'off'
