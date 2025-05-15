@@ -77,9 +77,9 @@ class Instrument(ObservingEntity):
     sep_at_max_mod_eff: list
     spectral_resolving_power: int
     throughput: float
+    wavelength_bands_boundaries: list
     wavelength_min: Union[str, float, Quantity]
     wavelength_max: Union[str, float, Quantity]
-    wavelength_bands_bounds: list
     number_of_inputs: int = None
     number_of_outputs: int = None
     response: Tensor = None
@@ -129,6 +129,23 @@ class Instrument(ObservingEntity):
         :return: The maximum baseline in units of length
         """
         return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,))
+
+    @field_validator('wavelength_bands_boundaries')
+    def _validate_wavelength_bands_boundaries(cls, value: Any, info: ValidationInfo) -> list:
+        """Validate the wavelength bands boundaries input.
+
+        :param value: Value given as input
+        :param info: ValidationInfo object
+        :return: The wavelength bands boundaries in units of length
+        """
+        return [
+            validate_quantity_units(
+                value=boundary,
+                field_name=info.field_name,
+                unit_equivalency=(u.m,)
+            )
+            for boundary in value
+        ]
 
     @field_validator('wavelength_min')
     def _validate_wavelength_min(cls, value: Any, info: ValidationInfo) -> float:

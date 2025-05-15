@@ -33,14 +33,9 @@ class PhasePerturbation(BasePerturbation):
         if not self._has_manually_set_time_series and self.color is not None and self.rms is not None:
 
             color_coeff = self._get_color_coeff()
-
-            wl_bounds = [7e-6, 10e-6, 13e-6]
+            wl_bounds = self._phringe._instrument.wavelength_bands_boundaries
             num_bands = len(wl_bounds) + 1
             wavelengths = self._phringe._instrument.wavelength_bin_centers
-
-            index_low = 0
-            # num_wl_in_band = len(self._phringe._instrument.wavelength_bin_centers) // num_bands
-            # index_up = num_wl_in_band
 
             for j in range(num_bands):
 
@@ -73,15 +68,8 @@ class PhasePerturbation(BasePerturbation):
                     index_low = (torch.abs(wavelengths - wl_bounds[j - 1])).argmin()
                     index_up = (torch.abs(wavelengths - wl_bounds[j])).argmin()
 
-                time_series[:, index_low:index_up, :] = 2 * np.pi * time_series_per_band[:, index_low:index_up,
-                                                                    :] / wavelengths[
-                                                                         None,
-                                                                         index_low:index_up,
-                                                                         None]
-
-                # for il, l in enumerate(wavelengths[index_low:index_up]):
-                #     time_series[:, il] = 2 * np.pi * time_series[:, il] / l
-
-                a = 0
+                time_series[:, index_low:index_up, :] = (2 * np.pi
+                                                         * time_series_per_band[:, index_low:index_up, :]
+                                                         / wavelengths[None, index_low:index_up, None])
 
         return time_series
