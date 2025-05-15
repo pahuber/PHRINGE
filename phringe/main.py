@@ -3,6 +3,7 @@ from typing import Union
 
 import numpy as np
 import torch
+from matplotlib import pyplot as plt
 from numpy import ndarray
 from skimage.measure import block_reduce
 from torch import Tensor
@@ -474,7 +475,7 @@ class PHRINGE:
 
         return diff_ir
 
-    def get_instrument_response_empirical(self) -> Tensor:
+    def get_instrument_response_empirical(self, fov: float = None) -> Tensor:
         """Get the empirical instrument response. This corresponds to an n_out x n_wavelengths x n_time_steps x n_grid x n_grid
         dimensional tensor that represents the response for the simulated observation, i.e. including perturbations (if
         simulated). A high grid size (> 100) is recommended for a good result.
@@ -488,7 +489,7 @@ class PHRINGE:
         times = self.simulation_time_steps[None, :, None, None]
         wavelengths = self._instrument.wavelength_bin_centers[:, None, None, None]
         x_coordinates, y_coordinates = get_meshgrid(
-            torch.max(self._instrument._field_of_view),
+            torch.max(fov if fov is not None else self._instrument._field_of_view),
             self._grid_size,
             self._device
         )
@@ -620,6 +621,42 @@ class PHRINGE:
         ) for j in range(self._instrument.number_of_outputs)])
 
         return response
+
+    @property
+    def get_null_depth(self) -> Tensor:
+        """Return the null depth.
+
+
+        Returns
+        -------
+        torch.Tensor
+            Null depth.
+        """
+        if self._scene.star is None:
+            raise ValueError('Null depth can only be calculated for a scene with a star.')
+
+        star_sky_brightness = self._scene.star._sky_brightness_distribution
+        star_sky_coordiantes = self._scene.star._sky_coordinates
+
+        x_max = star_sky_coordiantes[0].max()
+
+        ir_emp = self.get_instrument_response_empirical(fov=2 * abs(x_max))
+        diff_ir_emp = torch.zeros((self._instrument.number_of_outputs,) + ir_emp.shape[1:], device=self._device)
+
+        for i in range(len(self._instrument.differential_outputs)):
+            diff_ir_emp[i] = ir_emp[self._instrument.differential_outputs[i][0]] - ir_emp[
+                self._instrument.differential_outputs[i][1]]
+            plt.imshow(diff_ir_emp[i][0, 0].cpu().numpy(), cmap='Greys')
+            plt.colorbar()
+            plt.show()
+
+        imax = torch.sum(star_sky_brightness, dim=(1, 2))
+
+        imin = torch.sum(diff_ir_emp @ star_sky_brightness[None, :, None, :, :], dim=(3, 4))
+
+        null = abs(imin / imax[None, :, None])
+
+        return null
 
     def get_nulling_baseline(self) -> float:
         """Return the nulling baseline. If it has not been set manually, it is calculated using the observation and instrument parameters.
