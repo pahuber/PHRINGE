@@ -28,18 +28,19 @@
 
 [black]: https://github.com/psf/black
 
-<div style="display: flex; align-items: center;">
-  <img src="docs/_static/phringe_logo.png" alt="Projekt-Logo" width="200" style="margin-right: 20px;"/>
-  <p><strong>PHRINGE</strong> is a <strong>PH</strong>otoelectron counts generato<strong>R</strong> for null<strong>ING</strong> int<strong>E</strong>rferometers and offers
-  fast Monte Carlo-based generation of synthetic data for space-based nulling interferometers observing exoplanetary
-  systems.</p>
-</div>
+<img src="docs/_static/phringe_logo.png" alt="Projekt-Logo" width="300"/>
+
+<br>
+
+**PHRINGE** is a **PH**otoelectron counts generato**R** for null**ING** int**E**rferometers and offers
+fast Monte Carlo-based generation of synthetic data for space-based nulling interferometers observing exoplanetary
+systems.
 
 ## Documentation
 
 For installation instructions and examples please check out
-the <span style="font-size: 24px;"><a href="https://phringe.readthedocs.io/en/latest/">Readthedocs
-Documentation</a></span>.
+the <a href="https://phringe.readthedocs.io/en/latest/" target="_blank">Readthedocs
+Documentation</a>.
 
 ## Contributing
 
