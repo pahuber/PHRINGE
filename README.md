@@ -28,23 +28,17 @@
 
 [black]: https://github.com/psf/black
 
-`PHRINGE` is a **PH**otoelectron counts generato**R** for null**ING** int**E**rferometers capable of generating
-synthetic data for space-based nulling interferometers. It can simulate the observation of an exoplanetary system and
-generate realistic data in terms of photoelectron counts as a function of wavelength and time, considering both
-astrophysical and instrumental noise sources.
+<img src="docs/_static/phringe_logo.png" alt="Projekt-Logo" width="200"/>
+
+**PHRINGE** is a **PH**otoelectron counts generato**R** for null**ING** int**E**rferometers and offers
+fast Monte Carlo-based generation of synthetic data for space-based nulling interferometers observing exoplanetary
+systems.
 
 ## Documentation
 
-The documentation including installation and usage instructions, examples and a general user documentation can be found
-on [phringe.readthedocs.io](https://phringe.readthedocs.io/en/latest/).
-
-## Features
-
-- Symbolic input of complex amplitude transfer matrix and array positions, ensuring maximum flexibility in architecture modeling
-- Symbolic calculation of instrument intensity response
-- Noise models for astrophysical noise sources including stellar, local zodi and exozodi leakage
-- Noise models for instrumental perturbations including amplitude, phase (OPD) and polarization rotation perturbations
-- Export of synthetic data as a FITS file
+For installation instructions and examples please check out
+the <span style="font-size: 24px;"><a href="https://phringe.readthedocs.io/en/latest/">Readthedocs
+Documentation</a></span>.
 
 ## Contributing
 
@@ -63,7 +57,7 @@ please [file an issue] along with a detailed description.
 
 ## Credits
 
-This project was generated from [@cjolowicz]'s [Hypermodern Python Cookiecutter] template.
+This project structure was generated from [@cjolowicz]'s [Hypermodern Python Cookiecutter] template.
 
 [@cjolowicz]: https://github.com/cjolowicz
 
