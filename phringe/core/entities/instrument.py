@@ -4,6 +4,7 @@ import numpy as np
 import torch
 from astropy import units as u
 from astropy.units import Quantity
+from matplotlib import pyplot as plt
 from pydantic import field_validator, BaseModel
 from pydantic_core.core_schema import ValidationInfo
 from sympy import Matrix
@@ -267,7 +268,8 @@ class Instrument(ObservingEntity):
 
     def _get_wavelength_bins(self) -> Tuple[np.ndarray, np.ndarray]:
         """Return the wavelength bin centers and widths. The wavelength bin widths are calculated starting from the
-        wavelength lower range. As a consequence, the uppermost wavelength bin might be smaller than anticipated.
+        wavelength lower range. As a consequence, the uppermost wavelength bin could be smaller than anticipated, in
+        which case it is added to the second last bin width, so the last bin might be a bit larger than anticipated.
 
         :return: A tuple containing the wavelength bin centers and widths
         """
@@ -282,12 +284,18 @@ class Instrument(ObservingEntity):
                 wavelength_bin_centers.append(center_wavelength)
                 wavelength_bin_widths.append(bin_width)
                 current_minimum_wavelength = center_wavelength + bin_width / 2
+
+            # If there is not enough space for the last bin, add it to the second last bin width
             else:
                 last_bin_width = self.wavelength_max - current_minimum_wavelength
-                last_center_wavelength = self.wavelength_max - last_bin_width / 2
-                wavelength_bin_centers.append(last_center_wavelength)
-                wavelength_bin_widths.append(last_bin_width)
+                wavelength_bin_widths[-1] += last_bin_width
+                wavelength_bin_centers[-1] = self.wavelength_max - last_bin_width / 2
                 break
+
+        print(wavelength_bin_widths)
+
+        plt.step(range(len(wavelength_bin_widths)), wavelength_bin_widths, where='mid')
+        plt.show()
 
         return (
             torch.asarray(wavelength_bin_centers, dtype=torch.float32, device=self._phringe._device),
