@@ -9,6 +9,7 @@ from pydantic_core.core_schema import ValidationInfo
 from torch import Tensor
 
 from phringe.core.entities.perturbations.base_perturbation import BasePerturbation
+from phringe.core.observing_entity import observing_property
 from phringe.io.validators import validate_quantity_units
 
 
@@ -20,7 +21,17 @@ class PhasePerturbation(BasePerturbation):
         return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.meter,))
 
     # OVerwrite property of base class because an additional attribute, wavelengths, is required here
-    @property
+    @observing_property(
+        observed_attributes=(
+                lambda s: s._phringe.simulation_time_steps,
+                lambda s: s._phringe._observation.modulation_period,
+                lambda s: s._phringe._instrument.number_of_inputs,
+                lambda s: s._phringe._instrument.wavelength_bin_centers,
+                lambda s: s._phringe._instrument.wavelength_bands_boundaries,
+                lambda s: s.rms,
+                lambda s: s.color_coeff,
+        )
+    )
     def _time_series(self) -> Union[Tensor, None]:
         time_series = torch.zeros(
             (

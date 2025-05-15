@@ -8,13 +8,14 @@ from numpy.random import normal
 from scipy.fft import irfft, fftshift
 from torch import Tensor
 
-from phringe.core.base_entity import BaseEntity
+from phringe.core.observing_entity import ObservingEntity
 
 
-class BasePerturbation(ABC, BaseEntity):
+class BasePerturbation(ABC, ObservingEntity):
     rms: Union[str, float, Quantity] = None
     color_coeff: float = None
     _has_manually_set_time_series: bool = False
+    _phringe: Any = None
 
     @property
     @abstractmethod
