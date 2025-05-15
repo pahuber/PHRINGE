@@ -27,9 +27,9 @@ class PolarizationPerturbation(BasePerturbation):
             (self._phringe._instrument.number_of_inputs, len(self._phringe.simulation_time_steps)), dtype=torch.float32,
             device=self._phringe._device)
 
-        if not self._has_manually_set_time_series and self.color is not None and self.rms is not None:
+        if not self._has_manually_set_time_series and self.color_coeff is not None and self.rms is not None:
 
-            color_coeff = self._get_color_coeff()
+            color_coeff = self.color_coeff
 
             for k in range(self._phringe._instrument.number_of_inputs):
                 time_series[k] = self._calculate_time_series_from_psd(
