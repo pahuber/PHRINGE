@@ -4,7 +4,6 @@ import numpy as np
 import torch
 from astropy import units as u
 from astropy.units import Quantity
-from matplotlib import pyplot as plt
 from pydantic import field_validator, BaseModel
 from pydantic_core.core_schema import ValidationInfo
 from sympy import Matrix
@@ -291,11 +290,6 @@ class Instrument(ObservingEntity):
                 wavelength_bin_widths[-1] += last_bin_width
                 wavelength_bin_centers[-1] = self.wavelength_max - last_bin_width / 2
                 break
-
-        print(wavelength_bin_widths)
-
-        plt.step(range(len(wavelength_bin_widths)), wavelength_bin_widths, where='mid')
-        plt.show()
 
         return (
             torch.asarray(wavelength_bin_centers, dtype=torch.float32, device=self._phringe._device),
