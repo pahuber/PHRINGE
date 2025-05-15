@@ -5,8 +5,6 @@ import numpy as np
 import torch
 from astropy.units import Quantity
 from numpy.random import normal
-from pydantic import field_validator
-from pydantic_core.core_schema import ValidationInfo
 from scipy.fft import irfft, fftshift
 from torch import Tensor
 
@@ -15,37 +13,13 @@ from phringe.core.base_entity import BaseEntity
 
 class BasePerturbation(ABC, BaseEntity):
     rms: Union[str, float, Quantity] = None
-    color: str = None
+    color_coeff: float = None
     _has_manually_set_time_series: bool = False
-
-    @field_validator('color')
-    def _validate_color(cls, value: Any, info: ValidationInfo) -> float:
-        """Validate the color input.
-
-        :param value: Value given as input
-        :param info: ValidationInfo object
-        :return: The color
-        """
-        if value not in ['white', 'pink', 'brown']:
-            raise ValueError(f'{value} is not a valid input for {info.field_name}. Must be one of white, pink, brown.')
-        return value
 
     @property
     @abstractmethod
     def _time_series(self) -> Union[Tensor, None]:
         pass
-
-    def _get_color_coeff(self) -> int:
-        match self.color:
-            case 'white':
-                coeff = 0
-            case 'pink':
-                coeff = 1
-            case 'brown':
-                coeff = 2
-            case _:
-                coeff = None
-        return coeff
 
     def _calculate_time_series_from_psd(
             self,
