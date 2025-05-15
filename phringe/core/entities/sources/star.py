@@ -13,7 +13,6 @@ from phringe.core.entities.sources.base_source import BaseSource
 from phringe.core.observing_entity import observing_property
 from phringe.io.validators import validate_quantity_units
 from phringe.util.grid import get_meshgrid
-from phringe.util.helpers import Coordinates
 from phringe.util.spectrum import create_blackbody_spectrum
 
 
@@ -165,7 +164,7 @@ class Star(BaseSource):
         return sky_brightness_distribution
 
     @observing_property(observed_attributes=(lambda s: s._angular_radius, lambda s: s._phringe._grid_size))
-    def _sky_coordinates(self) -> Coordinates:
+    def _sky_coordinates(self) -> Tensor:
         sky_coordinates = get_meshgrid(2 * (1.05 * self._angular_radius), self._phringe._grid_size,
                                        device=self._phringe._device)
         return torch.stack((sky_coordinates[0], sky_coordinates[1]))
