@@ -67,7 +67,7 @@ config = {
                 'raan': '0 deg',
                 'argument_of_periapsis': '135 deg',
                 'true_anomaly': '0 deg',
-                'input_spectrum': None
+                'input_spectrum': None  # Will generate a blackbody spectrum, see tutorial for custom spectra
             },
             # Add more planets here
             # {
