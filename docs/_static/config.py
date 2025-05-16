@@ -28,15 +28,15 @@ config = {
         'perturbations': {
             'amplitude': {
                 'rms': '0.1 %',
-                'color': 'pink',
+                'color_coeff': 1,
             },
             'phase': {
                 'rms': '1.5 nm',
-                'color': 'pink',
+                'color_coeff': 1,
             },
             'polarization': {
                 'rms': '0.001 rad',
-                'color': 'pink',
+                'color_coeff': 1,
             },
         }
     },
