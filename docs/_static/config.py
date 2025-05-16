@@ -22,6 +22,7 @@ config = {
         'spectral_resolving_power': 30,
         'wavelength_min': '4 um',
         'wavelength_max': '18.5 um',
+        'wavelength_bands_boundaries': ['8 um'],
         'throughput': 0.05,
         'quantum_efficiency': 0.7,
         'perturbations': {
