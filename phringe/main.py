@@ -622,7 +622,6 @@ class PHRINGE:
 
         return response
 
-    @property
     def get_null_depth(self) -> Tensor:
         """Return the null depth.
 
