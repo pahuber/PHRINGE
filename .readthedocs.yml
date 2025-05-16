@@ -15,6 +15,5 @@ python:
 
 # Environment variables to ensure no notebook execution
 env:
-  READTHEDOCS: "True"
   NBSphinx_EXECUTE: "never"
   MYST_NB_EXECUTION_MODE: "off"
