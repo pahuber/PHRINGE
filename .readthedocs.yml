@@ -14,6 +14,6 @@ python:
 #  system_packages: true
 
 # Environment variables to ensure no notebook execution
-env:
-  NBSphinx_EXECUTE: "never"
-  MYST_NB_EXECUTION_MODE: "off"
+#env:
+#  NBSphinx_EXECUTE: "never"
+#  MYST_NB_EXECUTION_MODE: "off"
