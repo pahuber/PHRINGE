@@ -5,7 +5,7 @@ config = {
     'observation': {
         'solar_ecliptic_latitude': '0 deg',
         'total_integration_time': '1 d',
-        'detector_integration_time': '600 s',
+        'detector_integration_time': '0.01 d',
         'modulation_period': '1 d',
         'optimized_differential_output': 0,
         'optimized_star_separation': 'habitable-zone',
@@ -19,7 +19,7 @@ config = {
         'aperture_diameter': '2 m',
         'baseline_maximum': '600 m',
         'baseline_minimum': '5 m',
-        'spectral_resolving_power': 30,
+        'spectral_resolving_power': 20,
         'wavelength_min': '4 um',
         'wavelength_max': '18.5 um',
         'wavelength_bands_boundaries': ['8 um'],
