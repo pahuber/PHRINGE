@@ -1,13 +1,16 @@
 # PHRINGE
 
 [![PyPI](https://img.shields.io/pypi/v/phringe.svg)][pypi_]
-[![Status](https://img.shields.io/pypi/status/phringe.svg)][status]
+
+[//]: # ([![Status]&#40;https://img.shields.io/pypi/status/phringe.svg&#41;][status])
 [![Python Version](https://img.shields.io/pypi/pyversions/phringe)][python version]
 [![License](https://img.shields.io/pypi/l/phringe)][license]
 
 [![Read the documentation at https://phringe.readthedocs.io/](https://img.shields.io/readthedocs/phringe/latest.svg?label=Read%20the%20Docs)][read the docs]
-[![Tests](https://github.com/pahuber/phringe/workflows/Tests/badge.svg)][tests]
-[![Codecov](https://codecov.io/gh/pahuber/phringe/branch/main/graph/badge.svg)][codecov]
+
+[//]: # ([![Tests]&#40;https://github.com/pahuber/phringe/workflows/Tests/badge.svg&#41;][tests])
+
+[//]: # ([![Codecov]&#40;https://codecov.io/gh/pahuber/phringe/branch/main/graph/badge.svg&#41;][codecov])
 
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)][pre-commit]
 [![Black](https://img.shields.io/badge/code%20style-black-000000.svg)][black]

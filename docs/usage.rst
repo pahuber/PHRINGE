@@ -2,51 +2,38 @@
 
 Usage
 =====
-At the beginning of every simulation done with `PHRINGE` is the ``PHRINGE`` class. Upon its initialization, the user has to set all other required objects, before then calculating the detector counts. The following code snippet gives a quick overview of how to use `PHRINGE`:
+At the beginning of every simulation done with `PHRINGE` is the :doc:`PHRINGE <source/phringe>` class. Upon its initialization, the user
+has to specify the observation, instrument and astrophysical scene parameters. This can be done in two ways:
+
+#. | **Using Config Files (Recommended):**
+   | Use a `config file <tutorials/first_example.rst>`_ together with a :doc:`Configuration <source/configuration>` object.
+#. | **Manually Creating Objects (Advanced):**
+   | Manually create the :doc:`Observation <source/observation>`, :doc:`Instrument <source/instrument>` and :doc:`Scene <source/scene>` objects.
+   | This might be required for more advanced use cases such as looping through a parameter space.
+
+Once these objects are set, the detector counts can be calculated. The following code snippet gives a quick overview of how to use `PHRINGE`:
 
 .. code-block:: python
 
     # Create a PHRINGE object
     phringe = PHRINGE()
 
-    # Set other objects
-    phringe.set(...)
-    phringe.set(...)
-    phringe.set(...)
-
-    # Calculate counts
-    counts = phringe.get_counts()
-
-
-The ``PHRINGE`` object is responsible for the heavy computations and provides an interface for the user to retrieve the generated data (see :doc:`PHRINGE documentation <source/phringe>`). To calculate the detector counts, it requires information about the `observation`, the `instrument`, and the astrophysical `scene`.
-There are two ways to provide this information.
-
-Option 1: Using a Config File
-----------------------------
-
-The simplest way to use `PHRINGE` is by using a config file and a ``Configuration`` object (see :doc:`Configuration documentation <source/configuration>`):
-
-.. code-block:: python
-
+    # Option 1 (Recommended): Get objects from a config file
     config = Configuration(path="path/to/config.py")
     phringe.set(config)
 
-Option 2: Manually Creating Objects
------------------------------------
+    # Option 2: Create objects manually (Advanced)
+    obs = Observation(...) # Arguments omitted here for brevity
+    phringe.set(obs) # This will overwrite the the observation defined in the config file
 
-Alternatively, one can manually set the objects (see :doc:`Observation documentation <source/observation>`, :doc:`Instrument documentation <source/instrument>` or :doc:`Scene documentation <source/scene>`):
+    inst = Instrument(...) # Arguments omitted here for brevity
+    phringe.set(inst) # This will overwrite the instrument defined in the config file
 
-.. code-block:: python
+    scene = Scene(...) # Arguments omitted here for brevity
+    phringe.set(scene) # This will overwrite the scene defined in the config file
 
-    obs = Observation(...)
-    inst = Instrument(...)
-    scene = Scene(...)
-
-    phringe.set(obs)
-    phringe.set(inst)
-    phringe.set(scene)
-
-This may be required for more advanced use cases.
+    # Calculate counts
+    counts = phringe.get_counts()
 
 .. note::
     It is recommended to run `PHRINGE` on a GPU, as the simulation gets computationally expensive quickly and may take a substantial amount of time on CPUs.
