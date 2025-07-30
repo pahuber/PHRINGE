@@ -306,7 +306,7 @@ class PHRINGE:
         torch.manual_seed(seed)
         np.random.seed(seed)
 
-    def export_nifits(self, data: Tensor, path: Path = Path('.'), filename: str = None, name_suffix: str = ''):
+    def export_nifits(self, path: Path = Path('.'), filename: str = None, name_suffix: str = ''):
         NIFITSWriter().write(self, output_dir=path)
 
     def get_counts(self) -> Tensor:
