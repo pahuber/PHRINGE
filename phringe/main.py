@@ -16,7 +16,6 @@ from phringe.core.entities.sources.exozodi import Exozodi
 from phringe.core.entities.sources.local_zodi import LocalZodi
 from phringe.core.entities.sources.planet import Planet
 from phringe.core.entities.sources.star import Star
-from phringe.io.fits_writer import FITSWriter
 from phringe.io.nifits_writer import NIFITSWriter
 from phringe.util.grid import get_meshgrid
 from phringe.util.memory import get_available_memory
@@ -308,7 +307,7 @@ class PHRINGE:
         np.random.seed(seed)
 
     def export_nifits(self, data: Tensor, path: Path = Path('.'), filename: str = None, name_suffix: str = ''):
-        FITSWriter().write(data, path, name_suffix)
+        NIFITSWriter().write(data, observation=self._observation, instrument=self._instrument, scene=self._scene)
 
     def get_counts(self) -> Tensor:
         """Calculate and return the raw photoelectron counts as a tensor of shape (N_outputs x N_wavelengths x N_time_steps).

@@ -3,12 +3,13 @@ from importlib.metadata import version
 
 import numpy as np
 from astropy.io import fits
-
 from nifits.io.oifits import NI_CATM
 from nifits.io.oifits import NI_FOV_DEFAULT_HEADER, NI_FOV
 from nifits.io.oifits import NI_MOD
 from nifits.io.oifits import OI_TARGET
 from nifits.io.oifits import nifits
+from torch import Tensor
+
 from phringe.core.entities.instrument import Instrument
 from phringe.core.entities.observation import Observation
 from phringe.core.entities.scene import Scene
@@ -20,13 +21,19 @@ class NIFITSWriter:
 
     def __init__(self):
         """Initialize the NIFITSWriter."""
+        # TODO: Finish implementation of NIFITSWriter
 
-    def write(self, observation: Observation, instrument: Instrument, scene: Scene):
+    def write(self, data: Tensor, observation: Observation, instrument: Instrument, scene: Scene):
         """Write the data to a FITS file.
 
         :param data: The data to be written to FITS
-        :param output_dir: The output directory of the FITS file
-        :param fits_suffix: The suffix of the FITS file
+        :type data: Tensor
+        :param observation: The observation parameters
+        :type observation: Observation
+        :param instrument: The instrument parameters
+        :type instrument: Instrument
+        :param scene: The scene parameters
+        :type scene: Scene
         """
         ni_catm = NI_CATM(data_array=np.array(instrument.complex_amplitude_transfer_matrix.evalf()))
 
@@ -54,3 +61,5 @@ class NIFITSWriter:
             oi_target=oi_target,
             ni_mod=ni_mod,
         )
+
+        nifits_file.to_nifits('a.nifits', overwrite=True)
