@@ -5,7 +5,7 @@ class NIFITSWriter:
     """Class representation of the NIFITS writer.
     """
 
-    def write(self, data, output_dir: Path, fits_suffix: str = '', dit_per_frame=20):
+    def write(self, phringe, output_dir: Path, fits_suffix: str = '', dit_per_frame=20):
         """Write data to NIFITS format.
         To be determined:
         0. time parameters
@@ -31,8 +31,8 @@ class NIFITSWriter:
         import sympy as sp
 
         # 0. Time parameters
-        all_time_steps = data.get_time_steps(as_numpy=True)
-        n_t_frames = len(data.get_time_steps(as_numpy=True)) \
+        all_time_steps = phringe.get_time_steps().cpu().numpy()
+        n_t_frames = len(phringe.get_time_steps()) \
                      // dit_per_frame
         time_frames = np.mean(all_time_steps.reshape(n_t_frames, dit_per_frame), axis=1)
         seconds = time_frames - time_frames[0]
@@ -40,8 +40,8 @@ class NIFITSWriter:
         exptimes_for_nifits = np.gradient(seconds) * overhead_for_nifits
 
         # 1. Wavelengths
-        wl_bin_centers = data.get_wavelength_bin_centers(as_numpy=True)
-        wl_bin_widths = data.get_wavelength_bin_widths(as_numpy=True)
+        wl_bin_centers = phringe.get_wavelength_bin_centers().cpu().numpy()
+        wl_bin_widths = phringe.get_wavelength_bin_widths().cpu().numpy()
         n_wl_ch = len(wl_bin_centers)
         #
         oi_wl_col = Column(data=wl_bin_centers, name="EFF_WAVE", dtype=float)
@@ -50,7 +50,7 @@ class NIFITSWriter:
         myiowl = io.OI_WAVELENGTH(data_table=Table([oi_wl_col, oi_wlw_col]), )
 
         # 2. CATM
-        one_catm_numpy = np.array(data._director._complex_amplitude_transfer_matrix.evalf(),
+        one_catm_numpy = np.array(phringe._instrument.complex_amplitude_transfer_matrix.evalf(),
                                   dtype=np.complex_)
         my_ni_catm = np.array([one_catm_numpy for awl in wl_bin_centers])
         mycatm = io.NI_CATM(data_array=my_ni_catm)
@@ -60,21 +60,21 @@ class NIFITSWriter:
         # inspired from scifysim.director.prepare_injector and scify_space_test
         copy(io.NI_FOV_DEFAULT_HEADER)
         my_FOV_header = copy(io.NI_FOV_DEFAULT_HEADER)
-        my_FOV_header["FOV_TELDIAM"] = (data._director._aperture_diameter.item())
+        my_FOV_header["FOV_TELDIAM"] = (phringe._instrument.aperture_diameter.item())
         my_FOV_header["FOV_TELDIAM_UNIT"] = "m"
         my_ni_fov = io.NI_FOV.simple_from_header(header=my_FOV_header,
                                                  lamb=wl_bin_centers,
                                                  n=n_t_frames)
 
         # 4. MOD
-        # inspired from scify_space_test 
+        # inspired from scify_space_test
         mod_phas = []
         for atime in time_frames:
             # Placeholder for phase shift due to wavefront effects in space
             g_wavefront = np.zeros((n_wl_ch, n_tel), dtype=complex)
             # Placeholder for factor representing amplitude loss inside the instrument
             g_internal = np.ones((n_wl_ch, n_tel), dtype=complex)
-            throughput = np.ones(n_wl_ch) * data._director._throughput
+            throughput = np.ones(n_wl_ch) * phringe._instrument.throughput
             my_total_phasor = throughput[:, None] * np.exp(1j * g_wavefront) * g_internal
             # original line: total_phasor = throughput[:, None]
             #                              * np.exp(1j*g_wavefront) * g_internal
@@ -84,11 +84,11 @@ class NIFITSWriter:
         # 5. IOUT
         niout_frames = np.zeros((n_t_frames, n_wl_ch, n_tel))
         # get_counts returns dimensions [n app, n wls, n t steps]
-        iout_counts = data.get_counts(as_numpy=False)
-        # nifits expects [n tsteps, n wls, n app]  
+        iout_counts = phringe.get_counts()
+        # nifits expects [n tsteps, n wls, n app]
         reshaped_iout = iout_counts.unfold(dimension=2, size=dit_per_frame, step=dit_per_frame)
         mean_iout = torch.mean(reshaped_iout, dim=-1)
-        niout_frames = (mean_iout.permute(2, 1, 0)).numpy()
+        niout_frames = (mean_iout.permute(2, 1, 0)).cpu().numpy()
         Iout_table = Table(data=(niout_frames,),
                            names=("value",),
                            dtype=(float,), )
@@ -98,7 +98,7 @@ class NIFITSWriter:
 
         # 6. KIOUT
         # phringe.get_data has shape (n differential outputs, n wavelength bins, n timesteps)
-        mydata = data.get_data(as_numpy=True)
+        mydata = phringe.get_counts().cpu().numpy()
         kiout_frames = np.mean(mydata[0, :, :].reshape(n_wl_ch, n_t_frames, dit_per_frame), axis=-1)
         KIout_table = Table(data=(kiout_frames,), names=("value",), dtype=(float,))
         KIout_header = io.fits.Header()
@@ -115,9 +115,9 @@ class NIFITSWriter:
 
         # 8. APPXY
         t, tm, b = sp.symbols('t tm b')
-        acm_w_b_tm = (data._director._array_configuration_matrix.subs(
-            [(b, data._director.nulling_baseline),
-             (tm, data._director._modulation_period)]))
+        acm_w_b_tm = (phringe._instrument.array_configuration_matrix.subs(
+            [(b, phringe._instrument._nulling_baseline),
+             (tm, phringe._observation.modulation_period)]))
         acm_w_b_tm_num = sp.lambdify([t], acm_w_b_tm, modules="numpy")
         arraylocpertimestep = np.array([acm_w_b_tm_num(t) for t in all_time_steps])
         reshaped_array = arraylocpertimestep.reshape(n_t_frames, dit_per_frame, *arraylocpertimestep.shape[1:])
@@ -125,7 +125,7 @@ class NIFITSWriter:
 
         # 9. KMAT
         # Currently hard-coded for one differential output. To be revised if there are multiple pairs.
-        diffouts = data._director._differential_outputs
+        diffouts = phringe._instrument.differential_outputs
         kmat = [0] * my_ni_catm.shape[-2]
         for i, val in enumerate([1, -1]):
             kmat[diffouts[0][i]] = val
@@ -133,7 +133,7 @@ class NIFITSWriter:
 
         # 10. ARRCOL
         arrcol = np.ones((n_t_frames, n_tel)) * (
-                np.pi * np.array(data._director._aperture_diameter) ** 2
+                np.pi * np.array(phringe._instrument.aperture_diameter) ** 2
                 / 4)
 
         # 11. Take everything and save to nifits
