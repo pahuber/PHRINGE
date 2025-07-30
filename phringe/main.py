@@ -748,3 +748,8 @@ class PHRINGE:
             self._scene = Scene(**entity.config_dict['scene'], _phringe=self)
         else:
             raise ValueError(f'Invalid entity type: {type(entity)}')
+
+    def write_nifits(self):
+        """Write the data to a NIFITS file."""
+        nifits_writer = NIFITSWriter()
+        nifits_writer.write(self._observation, self._instrument, self._scene)
