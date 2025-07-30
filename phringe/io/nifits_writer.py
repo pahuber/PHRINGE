@@ -5,6 +5,8 @@ class NIFITSWriter:
     """Class representation of the NIFITS writer.
     """
 
+    # TODO: Basic implementation of NIFITS
+
     def write(self, phringe, output_dir: Path, fits_suffix: str = '', dit_per_frame=20):
         """Write data to NIFITS format.
         To be determined:

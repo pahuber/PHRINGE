@@ -307,7 +307,7 @@ class PHRINGE:
         np.random.seed(seed)
 
     def export_nifits(self, data: Tensor, path: Path = Path('.'), filename: str = None, name_suffix: str = ''):
-        NIFITSWriter().write(self)
+        NIFITSWriter().write(self, output_dir=path)
 
     def get_counts(self) -> Tensor:
         """Calculate and return the raw photoelectron counts as a tensor of shape (N_outputs x N_wavelengths x N_time_steps).
