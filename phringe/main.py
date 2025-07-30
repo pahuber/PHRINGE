@@ -3,7 +3,6 @@ from typing import Union
 
 import numpy as np
 import torch
-from matplotlib import pyplot as plt
 from numpy import ndarray
 from skimage.measure import block_reduce
 from torch import Tensor
@@ -17,7 +16,7 @@ from phringe.core.entities.sources.exozodi import Exozodi
 from phringe.core.entities.sources.local_zodi import LocalZodi
 from phringe.core.entities.sources.planet import Planet
 from phringe.core.entities.sources.star import Star
-from phringe.io.fits_writer import FITSWriter
+from phringe.io.nifits_writer import NIFITSWriter
 from phringe.util.grid import get_meshgrid
 from phringe.util.memory import get_available_memory
 
@@ -308,7 +307,7 @@ class PHRINGE:
         np.random.seed(seed)
 
     def export_nifits(self, data: Tensor, path: Path = Path('.'), filename: str = None, name_suffix: str = ''):
-        FITSWriter().write(data, path, name_suffix)
+        NIFITSWriter().write(self, output_dir=path)
 
     def get_counts(self) -> Tensor:
         """Calculate and return the raw photoelectron counts as a tensor of shape (N_outputs x N_wavelengths x N_time_steps).
@@ -486,6 +485,8 @@ class PHRINGE:
         torch.Tensor
             Empirical instrument response.
         """
+        if fov is not None:
+            fov = torch.tensor(fov, device=self._device)
         times = self.simulation_time_steps[None, :, None, None]
         wavelengths = self._instrument.wavelength_bin_centers[:, None, None, None]
         x_coordinates, y_coordinates = get_meshgrid(
@@ -645,9 +646,6 @@ class PHRINGE:
         for i in range(len(self._instrument.differential_outputs)):
             diff_ir_emp[i] = ir_emp[self._instrument.differential_outputs[i][0]] - ir_emp[
                 self._instrument.differential_outputs[i][1]]
-            plt.imshow(diff_ir_emp[i][0, 0].cpu().numpy(), cmap='Greys')
-            plt.colorbar()
-            plt.show()
 
         imax = torch.sum(star_sky_brightness, dim=(1, 2))
 
@@ -750,3 +748,8 @@ class PHRINGE:
             self._scene = Scene(**entity.config_dict['scene'], _phringe=self)
         else:
             raise ValueError(f'Invalid entity type: {type(entity)}')
+
+    def write_nifits(self):
+        """Write the data to a NIFITS file."""
+        nifits_writer = NIFITSWriter()
+        nifits_writer.write(self._observation, self._instrument, self._scene)
