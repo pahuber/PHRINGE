@@ -306,7 +306,7 @@ class PHRINGE:
         torch.manual_seed(seed)
         np.random.seed(seed)
 
-    def export_nifits(self, data: Tensor, path: Path = Path('.'), filename: str = None, name_suffix: str = ''):
+    def export_nifits(self, path: Path = Path('.'), filename: str = None, name_suffix: str = ''):
         NIFITSWriter().write(self, output_dir=path)
 
     def get_counts(self) -> Tensor:
@@ -748,8 +748,3 @@ class PHRINGE:
             self._scene = Scene(**entity.config_dict['scene'], _phringe=self)
         else:
             raise ValueError(f'Invalid entity type: {type(entity)}')
-
-    def write_nifits(self):
-        """Write the data to a NIFITS file."""
-        nifits_writer = NIFITSWriter()
-        nifits_writer.write(self._observation, self._instrument, self._scene)

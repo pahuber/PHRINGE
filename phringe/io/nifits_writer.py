@@ -19,7 +19,7 @@ class NIFITSWriter:
         6. kiout
         7. kcov
         8. appxy
-        9. kmat 
+        9. kmat
         10. arr_col
         """
 
