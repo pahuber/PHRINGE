@@ -19,6 +19,37 @@ from phringe.util.spectrum import InputSpectrum
 from phringe.util.spectrum import create_blackbody_spectrum
 
 
+def _convert_orbital_elements_to_sky_position(a, e, i, Omega, omega, nu):
+    # Convert angles from degrees to radians
+    # i = np.radians(i)
+    # Omega = np.radians(Omega)
+    # omega = np.radians(omega)
+    # nu = np.radians(nu)
+    # https://downloads.rene-schwarz.com/download/M001-Keplerian_Orbit_Elements_to_Cartesian_State_Vectors.pdf
+
+    M = np.arctan2(-np.sqrt(1 - e ** 2) * np.sin(nu), -e - np.cos(nu)) + np.pi - e * (
+            np.sqrt(1 - e ** 2) * np.sin(nu)) / (1 + e * np.cos(nu))
+
+    E = M
+    for _ in range(10):  # Newton's method iteration
+        E = E - (E - e * np.sin(E) - M) / (1 - e * np.cos(E))
+
+    # nu2 = 2 * np.arctan2(np.sqrt(1 + e) * np.sin(E / 2), np.sqrt(1 - e) * np.cos(E / 2))
+
+    r = a * (1 - e * np.cos(E))
+
+    # Position in the orbital plane
+    x_orb = r * np.cos(nu)
+    y_orb = r * np.sin(nu)
+
+    x = x_orb * (np.cos(omega) * np.cos(Omega) - np.sin(omega) * np.sin(Omega) * np.cos(i)) - y_orb * (
+            np.sin(omega) * np.cos(Omega) + np.cos(omega) * np.sin(Omega) * np.cos(i))
+    y = x_orb * (np.cos(omega) * np.sin(Omega) + np.sin(omega) * np.cos(Omega) * np.cos(i)) + y_orb * (
+            np.cos(omega) * np.cos(Omega) * np.cos(i) - np.sin(omega) * np.sin(Omega))
+
+    return x, y
+
+
 class Planet(BaseSource):
     """Class representation of a planet.
 
@@ -335,36 +366,6 @@ class Planet(BaseSource):
 
         return torch.stack((sky_coordinates_at_time_step[0], sky_coordinates_at_time_step[1]))
 
-    def _convert_orbital_elements_to_sky_position(self, a, e, i, Omega, omega, nu):
-        # Convert angles from degrees to radians
-        # i = np.radians(i)
-        # Omega = np.radians(Omega)
-        # omega = np.radians(omega)
-        # nu = np.radians(nu)
-        # https://downloads.rene-schwarz.com/download/M001-Keplerian_Orbit_Elements_to_Cartesian_State_Vectors.pdf
-
-        M = np.arctan2(-np.sqrt(1 - e ** 2) * np.sin(nu), -e - np.cos(nu)) + np.pi - e * (
-                np.sqrt(1 - e ** 2) * np.sin(nu)) / (1 + e * np.cos(nu))
-
-        E = M
-        for _ in range(10):  # Newton's method iteration
-            E = E - (E - e * np.sin(E) - M) / (1 - e * np.cos(E))
-
-        # nu2 = 2 * np.arctan2(np.sqrt(1 + e) * np.sin(E / 2), np.sqrt(1 - e) * np.cos(E / 2))
-
-        r = a * (1 - e * np.cos(E))
-
-        # Position in the orbital plane
-        x_orb = r * np.cos(nu)
-        y_orb = r * np.sin(nu)
-
-        x = x_orb * (np.cos(omega) * np.cos(Omega) - np.sin(omega) * np.sin(Omega) * np.cos(i)) - y_orb * (
-                np.sin(omega) * np.cos(Omega) + np.cos(omega) * np.sin(Omega) * np.cos(i))
-        y = x_orb * (np.cos(omega) * np.sin(Omega) + np.sin(omega) * np.cos(Omega) * np.cos(i)) + y_orb * (
-                np.cos(omega) * np.cos(Omega) * np.cos(i) - np.sin(omega) * np.sin(Omega))
-
-        return x, y
-
     def _get_x_y_angular_separation_from_star(
             self,
             time_step: float
@@ -410,5 +411,5 @@ class Planet(BaseSource):
             omega = self.argument_of_periapsis  # Argument of periapsis in degrees
             M = self.true_anomaly  # Mean anomaly in degrees
 
-            x, y = self._convert_orbital_elements_to_sky_position(a, e, i, Omega, omega, M)
+            x, y = _convert_orbital_elements_to_sky_position(a, e, i, Omega, omega, M)
         return x, y

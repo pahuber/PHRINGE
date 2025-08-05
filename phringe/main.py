@@ -3,8 +3,12 @@ from typing import Union
 
 import numpy as np
 import torch
+from astropy.constants.codata2018 import G
 from numpy import ndarray
+from poliastro.bodies import Body
+from poliastro.twobody import Orbit
 from skimage.measure import block_reduce
+from sympy import lambdify, symbols
 from torch import Tensor
 from tqdm import tqdm
 
@@ -38,11 +42,11 @@ class PHRINGE:
     time_step_size : float
         Time step size used for the calculations. By default, this is the detector integration time. If it is smaller,
         the generated data will be rebinned to the detector integration times at the end of the calculations.
+    extra_memory : int
+        Extra memory factor to use for the calculations. This might be required to handle large data sets.
 
     Attributes
     ----------
-    _detailed : bool
-        Detailed.
     _detector_time_steps : torch.Tensor
         Detector time steps.
     _device : torch.device
@@ -57,20 +61,12 @@ class PHRINGE:
         Observation.
     _scene : Scene
         Scene.
-    _simulation_time_step_size : float
-        Simulation time step size.
     _simulation_time_steps : torch.Tensor
         Simulation time steps.
     _time_step_size : float
         Time step size.
-    _normalize : bool
-        Normalize.
-    detector_time_steps : torch.Tensor
-        Detector time steps.
     seed : int
         Seed.
-    simulation_time_steps : torch.Tensor
-        Simulation time steps.
     """
 
     def __init__(
@@ -82,7 +78,6 @@ class PHRINGE:
             time_step_size: float = None,
             extra_memory: int = 1
     ):
-        self._detailed = False  # TODO: implement correctly
         self._detector_time_steps = None
         self._device = self._get_device(gpu_index) if device is None else device
         self._extra_memory = extra_memory
@@ -142,29 +137,63 @@ class PHRINGE:
             wavelength_bin_centers: np.ndarray,
             wavelength_bin_widths: np.ndarray,
             flux: np.ndarray,
-            x_position: float,
-            y_position: float
+            x_position: float = None,
+            y_position: float = None,
+            has_orbital_motion: bool = False,
+            semi_major_axis: float = None,
+            eccentricity: float = None,
+            inclination: float = None,
+            raan: float = None,
+            argument_of_periapsis: float = None,
+            true_anomaly: float = None,
+            host_star_distance=None,
+            host_star_mass: float = None,
+            planet_mass: float = None
     ) -> np.ndarray:
         """Return the planet template (model) differential counts for a certain flux and position as a numpy array of
         shape (n_diff_out x n_wavelengths x n_time_steps). This is a helper function that is used within LIFEsimMC.
 
         """
-        times = times[None, :, None, None]
         wavelength_bin_centers = wavelength_bin_centers[:, None, None, None]
         wavelength_bin_widths = wavelength_bin_widths[None, :, None, None, None]
         if np.array(flux).ndim == 0:
             flux = np.array(flux)[None, None, None, None, None]
         else:
             flux = flux[None, :, None, None, None]
-        x_position = np.array([x_position])[None, None, None, None]
-        y_position = np.array([y_position])[None, None, None, None]
+        x_positions = np.array([x_position])[None, None, None, None] if x_position is not None else None
+        y_positions = np.array([y_position])[None, None, None, None] if y_position is not None else None
         amplitude = self._instrument._get_amplitude(self._device).cpu().numpy()
+
+        if has_orbital_motion:
+            import astropy.units as u
+            star = Body(parent=None, k=G * (host_star_mass + planet_mass) * u.kg, name='Star')
+            orbit = Orbit.from_classical(
+                star,
+                a=semi_major_axis * u.m,
+                ecc=u.Quantity(eccentricity),
+                inc=inclination * u.rad,
+                raan=raan * u.rad,
+                argp=argument_of_periapsis * u.rad,
+                nu=true_anomaly * u.rad
+            )
+
+            x_positions = np.zeros(len(times))[None, :, None, None]
+            y_positions = np.zeros(len(times))[None, :, None, None]
+
+            for it, time in enumerate(times):
+                orbit_propagated = orbit.propagate(time * u.s)
+                x, y = (orbit_propagated.r[0].to(u.m).value, orbit_propagated.r[1].to(u.m).value)
+                x_positions[:, it] = x / host_star_distance
+                y_positions[:, it] = y / host_star_distance
+                # print('bla', x, y)
+
+        times = times[None, :, None, None]
 
         diff_ir = np.concatenate([self._instrument._diff_ir_numpy[i](
             times,
             wavelength_bin_centers,
-            x_position,
-            y_position,
+            x_positions,
+            y_positions,
             self._observation.modulation_period,
             self._instrument._nulling_baseline,
             *[amplitude for _ in range(self._instrument.number_of_inputs)],
@@ -178,21 +207,11 @@ class PHRINGE:
 
         return diff_counts[:, :, :, 0, 0]
 
-    def _get_unbinned_counts(self, diff_only: bool = False):
-        """Calculate the differential counts for all time steps (, i.e. simulation time steps). Hence
-        the output is not yet binned to detector time steps.
+    def _get_time_slices(self, ):
+        """Estimate the data size and slice the time steps to fit the calculations into memory. This is necessary to
+        avoid memory issues when calculating the counts for large data sets.
 
         """
-        if self.seed is not None: self._set_seed(self.seed)
-        # Prepare output tensor
-        counts = torch.zeros(
-            (self._instrument.number_of_outputs,
-             len(self._instrument.wavelength_bin_centers),
-             len(self.simulation_time_steps)),
-            device=self._device
-        )
-
-        # Estimate the data size and slice the time steps to fit the calculations into memory
         data_size = (self._grid_size ** 2
                      * len(self.simulation_time_steps)
                      * len(self._instrument.wavelength_bin_centers)
@@ -214,6 +233,26 @@ class PHRINGE:
         # Add the last index if it is not already included due to rounding issues
         if time_step_indices[-1] != len(self.simulation_time_steps):
             time_step_indices = torch.cat((time_step_indices, torch.tensor([len(self.simulation_time_steps)])))
+
+        return time_step_indices
+
+    def _get_unbinned_counts(self, diff_only: bool = False):
+        """Calculate the differential counts for all time steps (, i.e. simulation time steps). Hence
+        the output is not yet binned to detector time steps.
+
+        """
+        if self.seed is not None: self._set_seed(self.seed)
+
+        # Prepare output tensor
+        counts = torch.zeros(
+            (self._instrument.number_of_outputs,
+             len(self._instrument.wavelength_bin_centers),
+             len(self.simulation_time_steps)),
+            device=self._device
+        )
+
+        # Estimate the data size and slice the time steps to fit the calculations into memory
+        time_step_indices = self._get_time_slices()
 
         # Calculate counts
         for index, it in tqdm(enumerate(time_step_indices), total=len(time_step_indices) - 1):
@@ -308,6 +347,21 @@ class PHRINGE:
 
     def export_nifits(self, path: Path = Path('.'), filename: str = None, name_suffix: str = ''):
         NIFITSWriter().write(self, output_dir=path)
+
+    def get_collector_positions(self):
+        """Return the collector positions of the instrument as a tensor of shape (N_inputs x 2).
+
+        Returns
+        -------
+        torch.Tensor
+            Collector positions.
+        """
+        acm = self._instrument.array_configuration_matrix
+
+        t, tm, b, q = symbols('t tm b q')
+        acm_func = lambdify((t, tm, b, q), acm, modules='numpy')
+        return acm_func(self.simulation_time_steps.cpu().numpy(), self._observation.modulation_period,
+                        self.get_nulling_baseline(), 6)
 
     def get_counts(self) -> Tensor:
         """Calculate and return the raw photoelectron counts as a tensor of shape (N_outputs x N_wavelengths x N_time_steps).
@@ -664,6 +718,10 @@ class PHRINGE:
         float
             Nulling baseline.
 
+        Returns
+        -------
+        torch.Tensor
+            Indices of the time slices.
         """
         return self._instrument._nulling_baseline
 
