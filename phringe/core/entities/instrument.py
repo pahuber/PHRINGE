@@ -1,3 +1,4 @@
+import warnings
 from typing import Tuple, Any, Union
 
 import numpy as np
@@ -208,11 +209,17 @@ class Instrument(ObservingEntity):
                 / optimized_star_separation
         )
 
+        # Set nulling baseline to optimum value or to min/max value if it is outside the allowed range
         if self.baseline_minimum <= nulling_baseline and nulling_baseline <= self.baseline_maximum:
             return nulling_baseline
-        raise ValueError(
-            f"Nulling baseline of {nulling_baseline} is not within allowed ranges of baselines {self.baseline_minimum}-{self.baseline_maximum}"
-        )
+        elif nulling_baseline < self.baseline_minimum:
+            warnings.warn(
+                f"Nulling baseline of {nulling_baseline} is below the minimum allowed baseline of {self.baseline_minimum}. Setting to minimum baseline.")
+            return self.baseline_minimum
+        elif nulling_baseline > self.baseline_maximum:
+            warnings.warn(
+                f"Nulling baseline of {nulling_baseline} is above the maximum allowed baseline of {self.baseline_maximum}. Setting to maximum baseline.")
+            return self.baseline_maximum
 
     @observing_property(
         observed_attributes=(
