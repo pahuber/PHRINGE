@@ -272,71 +272,6 @@ class Instrument(ObservingEntity):
     def _get_field_of_view(self) -> Tensor:
         return self.wavelength_bin_centers / self.aperture_diameter
 
-    def _get_wavelength_bins(self) -> Tuple[np.ndarray, np.ndarray]:
-        """Return the wavelength bin centers and widths. The wavelength bin widths are calculated starting from the
-        wavelength lower range. As a consequence, the uppermost wavelength bin could be smaller than anticipated, in
-        which case it is added to the second last bin width, so the last bin might be a bit larger than anticipated.
-
-        :return: A tuple containing the wavelength bin centers and widths
-        """
-        current_minimum_wavelength = self.wavelength_min
-        wavelength_bin_centers = []
-        wavelength_bin_widths = []
-
-        while current_minimum_wavelength <= self.wavelength_max:
-            center_wavelength = current_minimum_wavelength / (1 - 1 / (2 * self.spectral_resolving_power))
-            bin_width = 2 * (center_wavelength - current_minimum_wavelength)
-            if (center_wavelength + bin_width / 2 <= self.wavelength_max):
-                wavelength_bin_centers.append(center_wavelength)
-                wavelength_bin_widths.append(bin_width)
-                current_minimum_wavelength = center_wavelength + bin_width / 2
-
-            # If there is not enough space for the last bin, add it to the second last bin width
-            else:
-                last_bin_width = self.wavelength_max - current_minimum_wavelength
-                wavelength_bin_widths[-1] += last_bin_width
-                wavelength_bin_centers[-1] = self.wavelength_max - last_bin_width / 2
-                break
-
-        return (
-            torch.asarray(wavelength_bin_centers, dtype=torch.float32, device=self._phringe._device),
-            torch.asarray(wavelength_bin_widths, dtype=torch.float32, device=self._phringe._device)
-        )
-
-    def add_perturbation(self, perturbation: BasePerturbation):
-        """Add a perturbation to the instrument.
-
-        Parameters
-        ----------
-        perturbation : BasePerturbation
-            The perturbation to add.
-        """
-        perturbation._phringe = self._phringe
-        if isinstance(perturbation, AmplitudePerturbation):
-            self.perturbations.amplitude = perturbation
-        elif isinstance(perturbation, PhasePerturbation):
-            self.perturbations.phase = perturbation
-        elif isinstance(perturbation, PolarizationPerturbation):
-            self.perturbations.polarization = perturbation
-
-    def remove_perturbation(self, perturbation: BasePerturbation):
-        """Remove a perturbation from the instrument.
-
-        Parameters
-        ----------
-        perturbation : BasePerturbation
-            The perturbation to remove.
-        """
-        if isinstance(perturbation, AmplitudePerturbation):
-            self.perturbations.amplitude = AmplitudePerturbation()
-            self.perturbations.amplitude._phringe = self._phringe
-        elif isinstance(perturbation, PhasePerturbation):
-            self.perturbations.phase = PhasePerturbation()
-            self.perturbations.phase._phringe = self._phringe
-        elif isinstance(perturbation, PolarizationPerturbation):
-            self.perturbations.polarization = PolarizationPerturbation()
-            self.perturbations.polarization._phringe = self._phringe
-
     def _get_lambdafied_response(self):
         # Define symbols for symbolic expressions
         catm = self.complex_amplitude_transfer_matrix
@@ -427,3 +362,67 @@ class Instrument(ObservingEntity):
             )
 
         return r
+
+    def _get_wavelength_bins(self) -> Tuple[np.ndarray, np.ndarray]:
+        """Return the wavelength bin centers and widths. The wavelength bin widths are calculated starting from the
+        wavelength lower range. As a consequence, the uppermost wavelength bin could be smaller than anticipated, in
+        which case it is added to the second last bin width, so the last bin might be a bit larger than anticipated.
+
+        :return: A tuple containing the wavelength bin centers and widths
+        """
+        current_minimum_wavelength = self.wavelength_min
+        wavelength_bin_centers = []
+        wavelength_bin_widths = []
+
+        while current_minimum_wavelength <= self.wavelength_max:
+            center_wavelength = current_minimum_wavelength / (1 - 1 / (2 * self.spectral_resolving_power))
+            bin_width = 2 * (center_wavelength - current_minimum_wavelength)
+            if (center_wavelength + bin_width / 2 <= self.wavelength_max):
+                wavelength_bin_centers.append(center_wavelength)
+                wavelength_bin_widths.append(bin_width)
+                current_minimum_wavelength = center_wavelength + bin_width / 2
+
+            # If there is not enough space for the last bin, leave it away
+            else:
+                wavelength_bin_centers = wavelength_bin_centers[:-1]
+                wavelength_bin_widths = wavelength_bin_widths[:-1]
+                break
+
+        return (
+            torch.asarray(wavelength_bin_centers, dtype=torch.float32, device=self._phringe._device),
+            torch.asarray(wavelength_bin_widths, dtype=torch.float32, device=self._phringe._device)
+        )
+
+    def add_perturbation(self, perturbation: BasePerturbation):
+        """Add a perturbation to the instrument.
+
+        Parameters
+        ----------
+        perturbation : BasePerturbation
+            The perturbation to add.
+        """
+        perturbation._phringe = self._phringe
+        if isinstance(perturbation, AmplitudePerturbation):
+            self.perturbations.amplitude = perturbation
+        elif isinstance(perturbation, PhasePerturbation):
+            self.perturbations.phase = perturbation
+        elif isinstance(perturbation, PolarizationPerturbation):
+            self.perturbations.polarization = perturbation
+
+    def remove_perturbation(self, perturbation: BasePerturbation):
+        """Remove a perturbation from the instrument.
+
+        Parameters
+        ----------
+        perturbation : BasePerturbation
+            The perturbation to remove.
+        """
+        if isinstance(perturbation, AmplitudePerturbation):
+            self.perturbations.amplitude = AmplitudePerturbation()
+            self.perturbations.amplitude._phringe = self._phringe
+        elif isinstance(perturbation, PhasePerturbation):
+            self.perturbations.phase = PhasePerturbation()
+            self.perturbations.phase._phringe = self._phringe
+        elif isinstance(perturbation, PolarizationPerturbation):
+            self.perturbations.polarization = PolarizationPerturbation()
+            self.perturbations.polarization._phringe = self._phringe
