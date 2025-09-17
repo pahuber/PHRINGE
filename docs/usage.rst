@@ -11,6 +11,10 @@ has to specify the observation, instrument and astrophysical scene parameters. T
    | Manually create the :doc:`Observation <source/observation>`, :doc:`Instrument <source/instrument>` and :doc:`Scene <source/scene>` objects.
    | This might be required for more advanced use cases such as looping through a parameter space.
 
+.. image:: _static/usage.png
+    :alt: Architecture
+    :width: 100%
+
 Once these objects are set, the detector counts can be calculated. The following code snippet gives a quick overview of how to use `PHRINGE`:
 
 .. code-block:: python
