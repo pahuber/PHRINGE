@@ -70,13 +70,13 @@ class PHRINGE:
     """
 
     def __init__(
-            self,
-            seed: int = None,
-            gpu_index: int = None,
-            device: torch.device = None,
-            grid_size=40,
-            time_step_size: float = None,
-            extra_memory: int = 1
+        self,
+        seed: int = None,
+        gpu_index: int = None,
+        device: torch.device = None,
+        grid_size=40,
+        time_step_size: float = None,
+        extra_memory: int = 1
     ):
         self._detector_time_steps = None
         self._device = self._get_device(gpu_index) if device is None else device
@@ -131,24 +131,25 @@ class PHRINGE:
             device = torch.device('cpu')
         return device
 
-    def _get_template_diff_counts(
-            self,
-            times: np.ndarray,
-            wavelength_bin_centers: np.ndarray,
-            wavelength_bin_widths: np.ndarray,
-            flux: np.ndarray,
-            x_position: float = None,
-            y_position: float = None,
-            has_orbital_motion: bool = False,
-            semi_major_axis: float = None,
-            eccentricity: float = None,
-            inclination: float = None,
-            raan: float = None,
-            argument_of_periapsis: float = None,
-            true_anomaly: float = None,
-            host_star_distance=None,
-            host_star_mass: float = None,
-            planet_mass: float = None
+    def _get_model_diff_counts(
+        self,
+        times: np.ndarray,
+        wavelength_bin_centers: np.ndarray,
+        wavelength_bin_widths: np.ndarray,
+        flux: np.ndarray,
+        x_position: float = None,
+        y_position: float = None,
+        has_orbital_motion: bool = False,
+        semi_major_axis: float = None,
+        eccentricity: float = None,
+        inclination: float = None,
+        raan: float = None,
+        argument_of_periapsis: float = None,
+        true_anomaly: float = None,
+        host_star_distance=None,
+        host_star_mass: float = None,
+        planet_mass: float = None,
+        has_photon_noise: bool = False,
     ) -> np.ndarray:
         """Return the planet template (model) differential counts for a certain flux and position as a numpy array of
         shape (n_diff_out x n_wavelengths x n_time_steps). This is a helper function that is used within LIFEsimMC.
@@ -189,19 +190,42 @@ class PHRINGE:
 
         times = times[None, :, None, None]
 
-        diff_ir = np.concatenate([self._instrument._diff_ir_numpy[i](
-            times,
-            wavelength_bin_centers,
-            x_positions,
-            y_positions,
-            self._observation.modulation_period,
-            self._instrument._nulling_baseline,
-            *[amplitude for _ in range(self._instrument.number_of_inputs)],
-            *[0 for _ in range(self._instrument.number_of_inputs)],
-            *[0 for _ in range(self._instrument.number_of_inputs)],
-            *[0 for _ in range(self._instrument.number_of_inputs)],
-            *[0 for _ in range(self._instrument.number_of_inputs)]
-        ) for i in range(len(self._instrument.differential_outputs))])
+        if not has_photon_noise:
+            diff_ir = np.concatenate([self._instrument._diff_ir_numpy[i](
+                times,
+                wavelength_bin_centers,
+                x_positions,
+                y_positions,
+                self._observation.modulation_period,
+                self._instrument._nulling_baseline,
+                *[amplitude for _ in range(self._instrument.number_of_inputs)],
+                *[0 for _ in range(self._instrument.number_of_inputs)],
+                *[0 for _ in range(self._instrument.number_of_inputs)],
+                *[0 for _ in range(self._instrument.number_of_inputs)],
+                *[0 for _ in range(self._instrument.number_of_inputs)]
+            ) for i in range(len(self._instrument.differential_outputs))])
+        else:
+            ir = np.concatenate([self._instrument._ir_numpy[i](
+                times,
+                wavelength_bin_centers,
+                x_positions,
+                y_positions,
+                self._observation.modulation_period,
+                self._instrument._nulling_baseline,
+                *[amplitude for _ in range(self._instrument.number_of_inputs)],
+                *[0 for _ in range(self._instrument.number_of_inputs)],
+                *[0 for _ in range(self._instrument.number_of_inputs)],
+                *[0 for _ in range(self._instrument.number_of_inputs)],
+                *[0 for _ in range(self._instrument.number_of_inputs)]
+            ) for i in range(self._instrument.number_of_outputs)])
+
+            ir = np.random.poisson(ir)
+
+            diff_ir = np.zeros((len(self._instrument.differential_outputs),
+                                ir.shape[1], ir.shape[2], ir.shape[3], ir.shape[4]))
+            for i in range(len(self._instrument.differential_outputs)):
+                diff_ir[i] = ir[self._instrument.differential_outputs[i][0]] - ir[
+                    self._instrument.differential_outputs[i][1]]
 
         diff_counts = diff_ir * flux * self._observation.detector_integration_time * wavelength_bin_widths
 
@@ -255,7 +279,7 @@ class PHRINGE:
         time_step_indices = self._get_time_slices()
 
         # Calculate counts
-        for index, it in tqdm(enumerate(time_step_indices), total=len(time_step_indices) - 1):
+        for index, it in tqdm(enumerate(time_step_indices), total=len(time_step_indices) - 1, disable=True):
 
             # Calculate the indices of the time slices
             if index <= len(time_step_indices) - 2:
@@ -436,11 +460,11 @@ class PHRINGE:
         return self._instrument._field_of_view
 
     def get_diff_instrument_response_theoretical(
-            self,
-            times: Union[float, ndarray, Tensor],
-            wavelengths: Union[float, ndarray, Tensor],
-            field_of_view: Union[float, ndarray, Tensor],
-            nulling_baseline: float,
+        self,
+        times: Union[float, ndarray, Tensor],
+        wavelengths: Union[float, ndarray, Tensor],
+        field_of_view: Union[float, ndarray, Tensor],
+        nulling_baseline: float,
     ):
         """Return the theoretical instrument response of an ideal (unperturbed) instrument for given time step(s),
         wavelength(s), field of view and nulling baseline. This corresponds to an n_out x n_wavelengths x n_time_steps x n_grid x n_grid
@@ -476,7 +500,7 @@ class PHRINGE:
             times = times[None, :, None, None]
 
         if (isinstance(wavelengths, ndarray) or isinstance(wavelengths, float) or
-                isinstance(wavelengths, int) or isinstance(wavelengths, list)):
+            isinstance(wavelengths, int) or isinstance(wavelengths, list)):
             wavelengths = torch.tensor(wavelengths, device=self._device)
         ndim_wavelengths = wavelengths.ndim
 
@@ -585,11 +609,11 @@ class PHRINGE:
         return response
 
     def get_instrument_response_theoretical(
-            self,
-            times: Union[float, ndarray, Tensor],
-            wavelengths: Union[float, ndarray, Tensor],
-            field_of_view: Union[float, ndarray, Tensor],
-            nulling_baseline: float,
+        self,
+        times: Union[float, ndarray, Tensor],
+        wavelengths: Union[float, ndarray, Tensor],
+        field_of_view: Union[float, ndarray, Tensor],
+        nulling_baseline: float,
     ):
         """Return the theoretical instrument response of an ideal (unperturbed) instrument for given time step(s),
         wavelength(s), field of view and nulling baseline. This corresponds to an n_out x n_wavelengths x n_time_steps x n_grid x n_grid
@@ -625,7 +649,7 @@ class PHRINGE:
             times = times[None, :, None, None]
 
         if (isinstance(wavelengths, ndarray) or isinstance(wavelengths, float) or
-                isinstance(wavelengths, int) or isinstance(wavelengths, list)):
+            isinstance(wavelengths, int) or isinstance(wavelengths, list)):
             wavelengths = torch.tensor(wavelengths, device=self._device)
         ndim_wavelengths = wavelengths.ndim
 

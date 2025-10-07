@@ -185,13 +185,13 @@ class Instrument(ObservingEntity):
 
     @observing_property(
         observed_attributes=(
-                lambda s: s._phringe._scene.star._habitable_zone_central_angular_radius if s._phringe._scene.star else None,
-                lambda s: s._phringe._observation.optimized_star_separation,
-                lambda s: s._phringe._observation.optimized_differential_output,
-                lambda s: s._phringe._observation.optimized_wavelength,
-                lambda s: s.baseline_minimum,
-                lambda s: s.baseline_maximum,
-                lambda s: s.sep_at_max_mod_eff
+            lambda s: s._phringe._scene.star._habitable_zone_central_angular_radius if s._phringe._scene.star else None,
+            lambda s: s._phringe._observation.optimized_star_separation,
+            lambda s: s._phringe._observation.optimized_differential_output,
+            lambda s: s._phringe._observation.optimized_wavelength,
+            lambda s: s.baseline_minimum,
+            lambda s: s.baseline_maximum,
+            lambda s: s.sep_at_max_mod_eff
         )
     )
     def _nulling_baseline(self) -> float:
@@ -204,9 +204,9 @@ class Instrument(ObservingEntity):
         # Get the optimal baseline and check if it is within the allowed range
 
         nulling_baseline = (
-                self.sep_at_max_mod_eff[self._phringe._observation.optimized_differential_output]
-                * self._phringe._observation.optimized_wavelength
-                / optimized_star_separation
+            self.sep_at_max_mod_eff[self._phringe._observation.optimized_differential_output]
+            * self._phringe._observation.optimized_wavelength
+            / optimized_star_separation
         )
 
         # Set nulling baseline to optimum value or to min/max value if it is outside the allowed range
@@ -223,9 +223,9 @@ class Instrument(ObservingEntity):
 
     @observing_property(
         observed_attributes=(
-                lambda s: s.wavelength_max,
-                lambda s: s.wavelength_min,
-                lambda s: s.spectral_resolving_power
+            lambda s: s.wavelength_max,
+            lambda s: s.wavelength_min,
+            lambda s: s.spectral_resolving_power
         )
     )
     def _wavelength_bins(self) -> Tuple[np.ndarray, np.ndarray]:
@@ -337,6 +337,7 @@ class Instrument(ObservingEntity):
 
         self._diff_ir_torch = {}
         self._diff_ir_numpy = {}
+        self._ir_numpy = {}
 
         for i in range(len(self.differential_outputs)):
             # Lambdify differential output for torch
@@ -354,7 +355,14 @@ class Instrument(ObservingEntity):
             )
 
         for j in range(self.number_of_outputs):
-            # Lambdify intensity response for torch
+            # Lambdify intensity response for numpy used in model count generation with photon noise
+            self._ir_numpy[j] = lambdify(
+                [t, l, alpha, beta, tm, b, *a.values(), *da.values(), *dphi.values(), *th.values(), *dth.values(), ],
+                r[j],
+                'numpy'
+            )
+
+            # Lambdify intensity response for torch used in major calculations
             r[j] = lambdify(
                 [t, l, alpha, beta, tm, b, *a.values(), *da.values(), *dphi.values(), *th.values(), *dth.values(), ],
                 r[j],
