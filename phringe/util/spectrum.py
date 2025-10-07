@@ -39,10 +39,11 @@ class InputSpectrum:
             fluxes = self.fluxes * 1e6 * u.W / u.sr / u.m ** 3
             wavelengths = self.wavelengths * 1e-6 * u.m
             fluxes = convert_spectrum_from_joule_to_photons(fluxes, wavelengths).value
+            wavelengths = wavelengths.value
 
         binned_spectral_flux_density = spectres.spectres(
             wavelength_bin_centers.cpu().numpy(),
-            wavelengths.value,
+            wavelengths,
             fluxes,
             fill=0,
             verbose=False
