@@ -70,13 +70,13 @@ class PHRINGE:
     """
 
     def __init__(
-        self,
-        seed: int = None,
-        gpu_index: int = None,
-        device: torch.device = None,
-        grid_size=40,
-        time_step_size: float = None,
-        extra_memory: int = 1
+            self,
+            seed: int = None,
+            gpu_index: int = None,
+            device: torch.device = None,
+            grid_size=40,
+            time_step_size: float = None,
+            extra_memory: int = 1
     ):
         self._detector_time_steps = None
         self._device = self._get_device(gpu_index) if device is None else device
@@ -132,24 +132,24 @@ class PHRINGE:
         return device
 
     def _get_model_diff_counts(
-        self,
-        times: np.ndarray,
-        wavelength_bin_centers: np.ndarray,
-        wavelength_bin_widths: np.ndarray,
-        flux: np.ndarray,
-        x_position: float = None,
-        y_position: float = None,
-        has_orbital_motion: bool = False,
-        semi_major_axis: float = None,
-        eccentricity: float = None,
-        inclination: float = None,
-        raan: float = None,
-        argument_of_periapsis: float = None,
-        true_anomaly: float = None,
-        host_star_distance=None,
-        host_star_mass: float = None,
-        planet_mass: float = None,
-        has_photon_noise: bool = False,
+            self,
+            times: np.ndarray,
+            wavelength_bin_centers: np.ndarray,
+            wavelength_bin_widths: np.ndarray,
+            flux: np.ndarray,
+            x_position: float = None,
+            y_position: float = None,
+            has_orbital_motion: bool = False,
+            semi_major_axis: float = None,
+            eccentricity: float = None,
+            inclination: float = None,
+            raan: float = None,
+            argument_of_periapsis: float = None,
+            true_anomaly: float = None,
+            host_star_distance=None,
+            host_star_mass: float = None,
+            planet_mass: float = None,
+            has_photon_noise: bool = False,
     ) -> np.ndarray:
         """Return the planet template (model) differential counts for a certain flux and position as a numpy array of
         shape (n_diff_out x n_wavelengths x n_time_steps). This is a helper function that is used within LIFEsimMC.
@@ -304,7 +304,7 @@ class PHRINGE:
                 # Broadcast sky brightness distribution to the correct shape
                 if isinstance(source, Planet) and source.has_orbital_motion:
                     sky_brightness_distribution = source._sky_brightness_distribution.swapaxes(0, 1)[:, it_low:it_high,
-                                                  :, :]
+                    :, :]
                 else:
                     sky_brightness_distribution = source._sky_brightness_distribution[:, None, :, :]
 
@@ -338,7 +338,7 @@ class PHRINGE:
                                 *[self._instrument._get_amplitude(self._device) for _ in
                                   range(self._instrument.number_of_inputs)],
                                 *[self._instrument.perturbations.amplitude._time_series[k][None, it_low:it_high, None,
-                                  None] for k in
+                                None] for k in
                                   range(self._instrument.number_of_inputs)],
                                 *[self._instrument.perturbations.phase._time_series[k][:, it_low:it_high, None, None]
                                   for k in
@@ -346,7 +346,7 @@ class PHRINGE:
                                 *[torch.tensor(0, device=self._device) for _ in
                                   range(self._instrument.number_of_inputs)],
                                 *[self._instrument.perturbations.polarization._time_series[k][None, it_low:it_high,
-                                  None, None] for k in
+                                None, None] for k in
                                   range(self._instrument.number_of_inputs)]
                             )
                             * sky_brightness_distribution
@@ -387,66 +387,54 @@ class PHRINGE:
         return acm_func(self.simulation_time_steps.cpu().numpy(), self._observation.modulation_period,
                         self.get_nulling_baseline(), 6)
 
-    def get_counts(self) -> Tensor:
-        """Calculate and return the raw photoelectron counts as a tensor of shape (N_outputs x N_wavelengths x N_time_steps).
+    def get_counts(self, kernels=False) -> Tensor:
+        """Calculate and return the time-binned raw photoelectron counts for all outputs (N_outputs x N_wavelengths x N_time_steps)
+        or for kernels (N_kernels x N_wavelengths x N_time_steps).
 
+        Parameters
+        ----------
+        kernels : bool
+            Whether to use kernels for the calculations. Default is True.
 
         Returns
         -------
         torch.Tensor
             Raw photoelectron counts.
         """
-        # Move all tensors to the device
-        # self._instrument.aperture_diameter = self._instrument.aperture_diameter.to(self._device)
+        counts_unbinned, binning_factor = self._get_unbinned_counts(diff_only=True)
 
-        counts, binning_factor = self._get_unbinned_counts(diff_only=True)
+        if kernels:
+            counts_kernels_unbinned = torch.zeros(
+                (len(self._instrument.differential_outputs),
+                 len(self._instrument.wavelength_bin_centers),
+                 len(self.simulation_time_steps)),
+                device=self._device
+            )
 
-        counts = torch.asarray(
+            # Calculate the kernel outputs/differential counts
+            for i in range(len(self._instrument.differential_outputs)):
+                counts_kernels_unbinned[i] = (counts_unbinned[self._instrument.differential_outputs[i][0]] -
+                                              counts_unbinned[self._instrument.differential_outputs[i][1]])
+
+            return torch.asarray(
+                block_reduce(
+                    counts_kernels_unbinned.cpu().numpy(),
+                    (1, 1, binning_factor),
+                    np.sum
+                ),
+                dtype=torch.float32,
+                device=self._device
+            )
+
+        return torch.asarray(
             block_reduce(
-                counts.cpu().numpy(),
+                counts_unbinned.cpu().numpy(),
                 (1, 1, binning_factor),
                 np.sum
             ),
             dtype=torch.float32,
             device=self._device
         )
-
-        return counts
-
-    def get_diff_counts(self) -> Tensor:
-        """Calculate and return the differential photoelectron counts as a tensor of shape (N_differential_outputs x N_wavelengths x N_time_steps).
-
-
-        Returns
-        -------
-        torch.Tensor
-            Differential photoelectron counts.
-        """
-        diff_counts = torch.zeros(
-            (len(self._instrument.differential_outputs),
-             len(self._instrument.wavelength_bin_centers),
-             len(self.simulation_time_steps)),
-            device=self._device
-        )
-
-        counts, binning_factor = self._get_unbinned_counts(diff_only=True)
-
-        # Calculate differential outputs
-        for i in range(len(self._instrument.differential_outputs)):
-            diff_counts[i] = counts[self._instrument.differential_outputs[i][0]] - counts[
-                self._instrument.differential_outputs[i][1]]
-
-        diff_counts = torch.asarray(
-            block_reduce(
-                diff_counts.cpu().numpy(),
-                (1, 1, binning_factor),
-                np.sum
-            ),
-            dtype=torch.float32,
-            device=self._device
-        )
-
-        return diff_counts
 
     def get_field_of_view(self) -> Tensor:
         """Return the field of view.
@@ -460,11 +448,11 @@ class PHRINGE:
         return self._instrument._field_of_view
 
     def get_diff_instrument_response_theoretical(
-        self,
-        times: Union[float, ndarray, Tensor],
-        wavelengths: Union[float, ndarray, Tensor],
-        field_of_view: Union[float, ndarray, Tensor],
-        nulling_baseline: float,
+            self,
+            times: Union[float, ndarray, Tensor],
+            wavelengths: Union[float, ndarray, Tensor],
+            field_of_view: Union[float, ndarray, Tensor],
+            nulling_baseline: float,
     ):
         """Return the theoretical instrument response of an ideal (unperturbed) instrument for given time step(s),
         wavelength(s), field of view and nulling baseline. This corresponds to an n_out x n_wavelengths x n_time_steps x n_grid x n_grid
@@ -500,7 +488,7 @@ class PHRINGE:
             times = times[None, :, None, None]
 
         if (isinstance(wavelengths, ndarray) or isinstance(wavelengths, float) or
-            isinstance(wavelengths, int) or isinstance(wavelengths, list)):
+                isinstance(wavelengths, int) or isinstance(wavelengths, list)):
             wavelengths = torch.tensor(wavelengths, device=self._device)
         ndim_wavelengths = wavelengths.ndim
 
@@ -609,11 +597,11 @@ class PHRINGE:
         return response
 
     def get_instrument_response_theoretical(
-        self,
-        times: Union[float, ndarray, Tensor],
-        wavelengths: Union[float, ndarray, Tensor],
-        field_of_view: Union[float, ndarray, Tensor],
-        nulling_baseline: float,
+            self,
+            times: Union[float, ndarray, Tensor],
+            wavelengths: Union[float, ndarray, Tensor],
+            field_of_view: Union[float, ndarray, Tensor],
+            nulling_baseline: float,
     ):
         """Return the theoretical instrument response of an ideal (unperturbed) instrument for given time step(s),
         wavelength(s), field of view and nulling baseline. This corresponds to an n_out x n_wavelengths x n_time_steps x n_grid x n_grid
@@ -649,7 +637,7 @@ class PHRINGE:
             times = times[None, :, None, None]
 
         if (isinstance(wavelengths, ndarray) or isinstance(wavelengths, float) or
-            isinstance(wavelengths, int) or isinstance(wavelengths, list)):
+                isinstance(wavelengths, int) or isinstance(wavelengths, list)):
             wavelengths = torch.tensor(wavelengths, device=self._device)
         ndim_wavelengths = wavelengths.ndim
 
