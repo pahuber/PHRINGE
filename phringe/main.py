@@ -1,10 +1,9 @@
 from pathlib import Path
-from typing import Union
+from typing import Union, overload
 
 import numpy as np
 import torch
 from astropy.constants.codata2018 import G
-from numpy import ndarray
 from poliastro.bodies import Body
 from poliastro.twobody import Orbit
 from skimage.measure import block_reduce
@@ -23,6 +22,7 @@ from phringe.core.entities.sources.star import Star
 from phringe.io.nifits_writer import NIFITSWriter
 from phringe.util.grid import get_meshgrid
 from phringe.util.memory import get_available_memory
+from phringe.util.torch import _set_seed, _get_device
 
 
 class PHRINGE:
@@ -79,7 +79,7 @@ class PHRINGE:
             extra_memory: int = 1
     ):
         self._detector_time_steps = None
-        self._device = self._get_device(gpu_index) if device is None else device
+        self._device = _get_device(gpu_index) if device is None else device
         self._extra_memory = extra_memory
         self._grid_size = grid_size
         self._instrument = None
@@ -89,7 +89,7 @@ class PHRINGE:
         self._time_step_size = time_step_size
         self.seed = seed
 
-        self._set_seed(self.seed if self.seed is not None else np.random.randint(0, 2 ** 31 - 1))
+        _set_seed(self.seed if self.seed is not None else np.random.randint(0, 2 ** 31 - 1))
 
     @property
     def detector_time_steps(self):
@@ -115,121 +115,6 @@ class PHRINGE:
             int(self._observation.total_integration_time / self._simulation_time_step_size),
             device=self._device
         ) if self._observation is not None else None
-
-    @staticmethod
-    def _get_device(gpu: int) -> torch.device:
-        """Get the device.
-
-        :param gpu: The GPU
-        :return: The device
-        """
-        if gpu and torch.cuda.is_available() and torch.cuda.device_count():
-            if torch.max(torch.asarray(gpu)) > torch.cuda.device_count():
-                raise ValueError(f'GPU number {torch.max(torch.asarray(gpu))} is not available on this machine.')
-            device = torch.device(f'cuda:{gpu}')
-        else:
-            device = torch.device('cpu')
-        return device
-
-    def _get_model_diff_counts(
-            self,
-            times: np.ndarray,
-            wavelength_bin_centers: np.ndarray,
-            wavelength_bin_widths: np.ndarray,
-            flux: np.ndarray,
-            x_position: float = None,
-            y_position: float = None,
-            has_orbital_motion: bool = False,
-            semi_major_axis: float = None,
-            eccentricity: float = None,
-            inclination: float = None,
-            raan: float = None,
-            argument_of_periapsis: float = None,
-            true_anomaly: float = None,
-            host_star_distance=None,
-            host_star_mass: float = None,
-            planet_mass: float = None,
-            has_photon_noise: bool = False,
-    ) -> np.ndarray:
-        """Return the planet template (model) differential counts for a certain flux and position as a numpy array of
-        shape (n_diff_out x n_wavelengths x n_time_steps). This is a helper function that is used within LIFEsimMC.
-
-        """
-        wavelength_bin_centers = wavelength_bin_centers[:, None, None, None]
-        wavelength_bin_widths = wavelength_bin_widths[None, :, None, None, None]
-        if np.array(flux).ndim == 0:
-            flux = np.array(flux)[None, None, None, None, None]
-        else:
-            flux = flux[None, :, None, None, None]
-        x_positions = np.array([x_position])[None, None, None, None] if x_position is not None else None
-        y_positions = np.array([y_position])[None, None, None, None] if y_position is not None else None
-        amplitude = self._instrument._get_amplitude(self._device).cpu().numpy()
-
-        if has_orbital_motion:
-            import astropy.units as u
-            star = Body(parent=None, k=G * (host_star_mass + planet_mass) * u.kg, name='Star')
-            orbit = Orbit.from_classical(
-                star,
-                a=semi_major_axis * u.m,
-                ecc=u.Quantity(eccentricity),
-                inc=inclination * u.rad,
-                raan=raan * u.rad,
-                argp=argument_of_periapsis * u.rad,
-                nu=true_anomaly * u.rad
-            )
-
-            x_positions = np.zeros(len(times))[None, :, None, None]
-            y_positions = np.zeros(len(times))[None, :, None, None]
-
-            for it, time in enumerate(times):
-                orbit_propagated = orbit.propagate(time * u.s)
-                x, y = (orbit_propagated.r[0].to(u.m).value, orbit_propagated.r[1].to(u.m).value)
-                x_positions[:, it] = x / host_star_distance
-                y_positions[:, it] = y / host_star_distance
-                # print('bla', x, y)
-
-        times = times[None, :, None, None]
-
-        if not has_photon_noise:
-            diff_ir = np.concatenate([self._instrument._diff_ir_numpy[i](
-                times,
-                wavelength_bin_centers,
-                x_positions,
-                y_positions,
-                self._observation.modulation_period,
-                self._instrument._nulling_baseline,
-                *[amplitude for _ in range(self._instrument.number_of_inputs)],
-                *[0 for _ in range(self._instrument.number_of_inputs)],
-                *[0 for _ in range(self._instrument.number_of_inputs)],
-                *[0 for _ in range(self._instrument.number_of_inputs)],
-                *[0 for _ in range(self._instrument.number_of_inputs)]
-            ) for i in range(len(self._instrument.differential_outputs))])
-        else:
-            ir = np.concatenate([self._instrument._ir_numpy[i](
-                times,
-                wavelength_bin_centers,
-                x_positions,
-                y_positions,
-                self._observation.modulation_period,
-                self._instrument._nulling_baseline,
-                *[amplitude for _ in range(self._instrument.number_of_inputs)],
-                *[0 for _ in range(self._instrument.number_of_inputs)],
-                *[0 for _ in range(self._instrument.number_of_inputs)],
-                *[0 for _ in range(self._instrument.number_of_inputs)],
-                *[0 for _ in range(self._instrument.number_of_inputs)]
-            ) for i in range(self._instrument.number_of_outputs)])
-
-            ir = np.random.poisson(ir)
-
-            diff_ir = np.zeros((len(self._instrument.differential_outputs),
-                                ir.shape[1], ir.shape[2], ir.shape[3], ir.shape[4]))
-            for i in range(len(self._instrument.differential_outputs)):
-                diff_ir[i] = ir[self._instrument.differential_outputs[i][0]] - ir[
-                    self._instrument.differential_outputs[i][1]]
-
-        diff_counts = diff_ir * flux * self._observation.detector_integration_time * wavelength_bin_widths
-
-        return diff_counts[:, :, :, 0, 0]
 
     def _get_time_slices(self, ):
         """Estimate the data size and slice the time steps to fit the calculations into memory. This is necessary to
@@ -265,7 +150,7 @@ class PHRINGE:
         the output is not yet binned to detector time steps.
 
         """
-        if self.seed is not None: self._set_seed(self.seed)
+        if self.seed is not None: _set_seed(self.seed)
 
         # Prepare output tensor
         counts = torch.zeros(
@@ -364,11 +249,6 @@ class PHRINGE:
 
         return counts, binning_factor
 
-    @staticmethod
-    def _set_seed(seed: int):
-        torch.manual_seed(seed)
-        np.random.seed(seed)
-
     def export_nifits(self, path: Path = Path('.'), filename: str = None, name_suffix: str = ''):
         NIFITSWriter().write(self, output_dir=path)
 
@@ -387,7 +267,7 @@ class PHRINGE:
         return acm_func(self.simulation_time_steps.cpu().numpy(), self._observation.modulation_period,
                         self.get_nulling_baseline(), 6)
 
-    def get_counts(self, kernels=False) -> Tensor:
+    def get_counts(self, kernels: bool = False) -> Tensor:
         """Calculate and return the time-binned raw photoelectron counts for all outputs (N_outputs x N_wavelengths x N_time_steps)
         or for kernels (N_kernels x N_wavelengths x N_time_steps).
 
@@ -447,104 +327,19 @@ class PHRINGE:
         """
         return self._instrument._field_of_view
 
-    def get_diff_instrument_response_theoretical(
-            self,
-            times: Union[float, ndarray, Tensor],
-            wavelengths: Union[float, ndarray, Tensor],
-            field_of_view: Union[float, ndarray, Tensor],
-            nulling_baseline: float,
-    ):
-        """Return the theoretical instrument response of an ideal (unperturbed) instrument for given time step(s),
-        wavelength(s), field of view and nulling baseline. This corresponds to an n_out x n_wavelengths x n_time_steps x n_grid x n_grid
-        dimensional tensor that represents the response for the simulated observation, i.e. including perturbations (if
-        simulated). A high grid size (> 100) is recommended for a good result.
-
+    def get_instrument_response(self, fov: float = None, kernels=False, perturbations=True) -> Tensor:
+        """Get the empirical instrument response. This corresponds to an array of shape (n_out x n_wavelengths x
+        n_time_steps x n_grid x n_grid) if kernels=False and (n_diff_out x n_wavelengths x n_time_steps x n_grid x
+        n_grid) if kernels=True.
 
         Parameters
         ----------
-        times : float or numpy.ndarray or torch.Tensor
-            Time step(s) in seconds.
-        wavelengths : float or numpy.ndarray or torch.Tensor
-            Wavelength(s) in meters.
-        field_of_view : float or numpy.ndarray or torch.Tensor
-            Field of view in radians.
-        nulling_baseline : float
-            Nulling baseline in meters.
-
-
-        Returns
-        -------
-        torch.Tensor
-            Theoretical instrument response.
-        """
-        # Handle broadcasting and type conversions
-        if isinstance(times, ndarray) or isinstance(times, float) or isinstance(times, int) or isinstance(times, list):
-            times = torch.tensor(times, device=self._device)
-        ndmin_times = times.ndim
-
-        if ndmin_times == 0:
-            times = times[None, None, None, None]
-        else:
-            times = times[None, :, None, None]
-
-        if (isinstance(wavelengths, ndarray) or isinstance(wavelengths, float) or
-                isinstance(wavelengths, int) or isinstance(wavelengths, list)):
-            wavelengths = torch.tensor(wavelengths, device=self._device)
-        ndim_wavelengths = wavelengths.ndim
-
-        if ndim_wavelengths == 0:
-            wavelengths = wavelengths[None, None, None, None]
-        else:
-            wavelengths = wavelengths[:, None, None, None]
-
-        x_coordinates, y_coordinates = get_meshgrid(field_of_view, self._grid_size, self._device)
-        x_coordinates = x_coordinates.to(self._device)
-        y_coordinates = y_coordinates.to(self._device)
-        x_coordinates = x_coordinates[None, None, :, :]
-        y_coordinates = y_coordinates[None, None, :, :]
-
-        # Calculate perturbation time series unless they have been manually set by the user. If no seed is set, the time
-        # series are different every time this method is called
-        amplitude_pert_time_series = torch.zeros(
-            (self._instrument.number_of_inputs, len(times)),
-            dtype=torch.float32,
-            device=self._device
-        )
-        phase_pert_time_series = torch.zeros(
-            (self._instrument.number_of_inputs, len(wavelengths), len(times)),
-            dtype=torch.float32,
-            device=self._device
-        )
-        polarization_pert_time_series = torch.zeros(
-            (self._instrument.number_of_inputs, len(times)),
-            dtype=torch.float32,
-            device=self._device
-        )
-
-        diff_ir = torch.stack([self._instrument._diff_ir_torch[i](
-            times,
-            wavelengths,
-            x_coordinates,
-            y_coordinates,
-            self._observation.modulation_period,
-            nulling_baseline,
-            *[self._instrument._get_amplitude(self._device) for _ in range(self._instrument.number_of_inputs)],
-            *[amplitude_pert_time_series[k][None, :, None, None] for k in
-              range(self._instrument.number_of_inputs)],
-            *[phase_pert_time_series[k][:, :, None, None] for k in
-              range(self._instrument.number_of_inputs)],
-            *[torch.tensor(0) for _ in range(self._instrument.number_of_inputs)],
-            *[polarization_pert_time_series[k][None, :, None, None] for k in
-              range(self._instrument.number_of_inputs)]
-        ) for i in range(len(self._instrument.differential_outputs))])
-
-        return diff_ir
-
-    def get_instrument_response_empirical(self, fov: float = None) -> Tensor:
-        """Get the empirical instrument response. This corresponds to an n_out x n_wavelengths x n_time_steps x n_grid x n_grid
-        dimensional tensor that represents the response for the simulated observation, i.e. including perturbations (if
-        simulated). A high grid size (> 100) is recommended for a good result.
-
+        fov : float
+            Field of view for which to calculate the instrument response. If None, the instrument's field of view is used.
+        kernels : bool
+            Whether to use kernels for the calculations. Default is False.
+        perturbations : bool
+            Whether to include perturbations in the calculations. Default is True.
 
         Returns
         -------
@@ -563,21 +358,27 @@ class PHRINGE:
         x_coordinates = x_coordinates[None, None, :, :]
         y_coordinates = y_coordinates[None, None, :, :]
 
-        amplitude_pert_time_series = self._instrument.perturbations.amplitude._time_series if self._instrument.perturbations.amplitude is not None else torch.zeros(
+        amplitude_pert_time_series = self._instrument.perturbations.amplitude._time_series if (
+                self._instrument.perturbations.amplitude is not None and perturbations) else torch.zeros(
             (self._instrument.number_of_inputs, len(self.simulation_time_steps)),
-            dtype=torch.float32
+            dtype=torch.float32,
+            device=self._device
         )
-        phase_pert_time_series = self._instrument.perturbations.phase._time_series if self._instrument.perturbations.phase is not None else torch.zeros(
+        phase_pert_time_series = self._instrument.perturbations.phase._time_series if (
+                self._instrument.perturbations.phase is not None and perturbations) else torch.zeros(
             (self._instrument.number_of_inputs, len(self._instrument.wavelength_bin_centers),
              len(self.simulation_time_steps)),
-            dtype=torch.float32
+            dtype=torch.float32,
+            device=self._device
         )
-        polarization_pert_time_series = self._instrument.perturbations.polarization._time_series if self._instrument.perturbations.polarization is not None else torch.zeros(
+        polarization_pert_time_series = self._instrument.perturbations.polarization._time_series if (
+                self._instrument.perturbations.polarization is not None and perturbations) else torch.zeros(
             (self._instrument.number_of_inputs, len(self.simulation_time_steps)),
-            dtype=torch.float32
+            dtype=torch.float32,
+            device=self._device
         )
 
-        response = torch.stack([self._instrument.response[j](
+        ir = torch.stack([self._instrument.response[j](
             times,
             wavelengths,
             x_coordinates,
@@ -594,103 +395,196 @@ class PHRINGE:
               range(self._instrument.number_of_inputs)]
         ) for j in range(self._instrument.number_of_outputs)])
 
-        return response
+        if kernels:
+            diff_ir = torch.zeros((len(self._instrument.differential_outputs),
+                                   ir.shape[1], ir.shape[2], ir.shape[3], ir.shape[4]), device=self._device)
 
-    def get_instrument_response_theoretical(
+            for i in range(len(self._instrument.differential_outputs)):
+                diff_ir[i] = ir[self._instrument.differential_outputs[i][0]] - ir[
+                    self._instrument.differential_outputs[i][1]]
+
+            return diff_ir
+
+        return ir
+
+    @overload
+    def get_model_counts(
             self,
-            times: Union[float, ndarray, Tensor],
-            wavelengths: Union[float, ndarray, Tensor],
-            field_of_view: Union[float, ndarray, Tensor],
-            nulling_baseline: float,
-    ):
-        """Return the theoretical instrument response of an ideal (unperturbed) instrument for given time step(s),
-        wavelength(s), field of view and nulling baseline. This corresponds to an n_out x n_wavelengths x n_time_steps x n_grid x n_grid
-        dimensional tensor that represents the response for the simulated observation, i.e. including perturbations (if
-        simulated). A high grid size (> 100) is recommended for a good result.
+            spectral_energy_distribution: np.ndarray,
+            x_position: float,
+            y_position: float,
+            kernels: bool = False,
+            has_photon_noise: bool = False,
+    ) -> np.ndarray:
+        ...
 
+    @overload
+    def get_model_counts(
+            self,
+            spectral_energy_distribution: np.ndarray,
+            semi_major_axis: float,
+            eccentricity: float,
+            inclination: float,
+            raan: float,
+            argument_of_periapsis: float,
+            true_anomaly: float,
+            host_star_distance: float,
+            host_star_mass: float,
+            planet_mass: float,
+            kernels: bool = False,
+            has_photon_noise: bool = False,
+    ) -> np.ndarray:
+        ...
+
+    def get_model_counts(
+            self,
+            spectral_energy_distribution: np.ndarray,
+            kernels: bool = False,
+            has_photon_noise: bool = False,
+            **kwargs,
+    ) -> np.ndarray:
+        """Return the planet template (model) counts for a given spectral energy distribution and  either 1) sky
+        coordinates or 2) orbital elements.The output array has shape (n_diff_out x n_wavelengths x n_time_steps) if
+        kernels=True and (n_out x n_wavelengths x n_time_steps) if kernels=False.
 
         Parameters
         ----------
-        times : float or numpy.ndarray or torch.Tensor
-            Time step(s) in seconds.
-        wavelengths : float or numpy.ndarray or torch.Tensor
-            Wavelength(s) in meters.
-        field_of_view : float or numpy.ndarray or torch.Tensor
-            Field of view in radians.
-        nulling_baseline : float
-            Nulling baseline in meters.
-
+        spectral_energy_distribution : numpy.ndarray
+            Spectral energy distribution in photons/(m^2 s m).
+        kernels : bool
+            Whether to use kernels for the calculations. Default is False.
+        has_photon_noise : bool
+            Whether to include photon noise in the calculations. Default is False.
+        **kwargs
+            Either x_position and y_position (both float, in radians) or semi_major_axis (float, in meters), eccentricity
+            (float), inclination (float, in radians), raan (float, in radians), argument_of_periapsis (float, in radians),
+            true_anomaly (float, in radians), host_star_distance (float, in meters), host_star_mass (float, in kg) and planet_mass
+            (float, in kg).
 
         Returns
         -------
-        torch.Tensor
-            Theoretical instrument response.
+        numpy.ndarray
+            Model counts.
         """
-        # Handle broadcasting and type conversions
-        if isinstance(times, ndarray) or isinstance(times, float) or isinstance(times, int) or isinstance(times, list):
-            times = torch.tensor(times, device=self._device)
-        ndmin_times = times.ndim
+        times = self.get_time_steps().cpu().numpy()
+        wavelength_bin_centers = self.get_wavelength_bin_centers()[:, None, None, None].cpu().numpy()
+        wavelength_bin_widths = self.get_wavelength_bin_widths()[None, :, None, None, None].cpu().numpy()
+        amplitude = self._instrument._get_amplitude(self._device).cpu().numpy()
 
-        if ndmin_times == 0:
-            times = times[None, None, None, None]
+        if np.array(spectral_energy_distribution).ndim == 0:
+            spectral_energy_distribution = np.array(spectral_energy_distribution)[None, None, None, None, None]
         else:
+            spectral_energy_distribution = spectral_energy_distribution[None, :, None, None, None]
+
+        # Check which overload is used
+        if 'x_position' in kwargs and 'y_position' in kwargs:
+            x_position = kwargs['x_position']
+            y_position = kwargs['y_position']
+            x_positions = np.array([x_position])[None, None, None, None] if x_position is not None else None
+            y_positions = np.array([y_position])[None, None, None, None] if y_position is not None else None
             times = times[None, :, None, None]
 
-        if (isinstance(wavelengths, ndarray) or isinstance(wavelengths, float) or
-                isinstance(wavelengths, int) or isinstance(wavelengths, list)):
-            wavelengths = torch.tensor(wavelengths, device=self._device)
-        ndim_wavelengths = wavelengths.ndim
-
-        if ndim_wavelengths == 0:
-            wavelengths = wavelengths[None, None, None, None]
         else:
-            wavelengths = wavelengths[:, None, None, None]
+            import astropy.units as u
 
-        x_coordinates, y_coordinates = get_meshgrid(field_of_view, self._grid_size, self._device)
-        x_coordinates = x_coordinates.to(self._device)
-        y_coordinates = y_coordinates.to(self._device)
-        x_coordinates = x_coordinates[None, None, :, :]
-        y_coordinates = y_coordinates[None, None, :, :]
+            semi_major_axis = kwargs['semi_major_axis']
+            eccentricity = kwargs['eccentricity']
+            inclination = kwargs['inclination']
+            raan = kwargs['raan']
+            argument_of_periapsis = kwargs['argument_of_periapsis']
+            true_anomaly = kwargs['true_anomaly']
+            host_star_distance = kwargs['host_star_distance']
+            host_star_mass = kwargs['host_star_mass']
+            planet_mass = kwargs['planet_mass']
 
-        # Calculate perturbation time series unless they have been manually set by the user. If no seed is set, the time
-        # series are different every time this method is called
-        amplitude_pert_time_series = torch.zeros(
-            (self._instrument.number_of_inputs, len(times)),
-            dtype=torch.float32,
-            device=self._device
-        )
-        phase_pert_time_series = torch.zeros(
-            (self._instrument.number_of_inputs, len(wavelengths), len(times)),
-            dtype=torch.float32,
-            device=self._device
-        )
-        polarization_pert_time_series = torch.zeros(
-            (self._instrument.number_of_inputs, len(times)),
-            dtype=torch.float32,
-            device=self._device
-        )
+            star = Body(parent=None, k=G * (host_star_mass + planet_mass) * u.kg, name='Star')
+            orbit = Orbit.from_classical(
+                star,
+                a=semi_major_axis * u.m,
+                ecc=u.Quantity(eccentricity),
+                inc=inclination * u.rad,
+                raan=raan * u.rad,
+                argp=argument_of_periapsis * u.rad,
+                nu=true_anomaly * u.rad
+            )
 
-        response = torch.stack([self._instrument.response[j](
-            times,
-            wavelengths,
-            x_coordinates,
-            y_coordinates,
-            self._observation.modulation_period,
-            nulling_baseline,
-            *[self._instrument._get_amplitude(self._device) for _ in range(self._instrument.number_of_inputs)],
-            *[amplitude_pert_time_series[k][None, :, None, None] for k in
-              range(self._instrument.number_of_inputs)],
-            *[phase_pert_time_series[k][:, :, None, None] for k in
-              range(self._instrument.number_of_inputs)],
-            *[torch.tensor(0) for _ in range(self._instrument.number_of_inputs)],
-            *[polarization_pert_time_series[k][None, :, None, None] for k in
-              range(self._instrument.number_of_inputs)]
-        ) for j in range(self._instrument.number_of_outputs)])
+            x_positions = np.zeros(len(times))[None, :, None, None]
+            y_positions = np.zeros(len(times))[None, :, None, None]
 
-        return response
+            for it, time in enumerate(times):
+                orbit_propagated = orbit.propagate(time * u.s)
+                x, y = (orbit_propagated.r[0].to(u.m).value, orbit_propagated.r[1].to(u.m).value)
+                x_positions[:, it] = x / host_star_distance
+                y_positions[:, it] = y / host_star_distance
+
+            times = times[None, None, :, None, None]
+
+        # Return the corresponding counts depending on kernel usage and photon noise inclusion
+        if kernels:
+            if not has_photon_noise:
+                diff_ir = np.concatenate([self._instrument._diff_ir_numpy[i](
+                    times,
+                    wavelength_bin_centers,
+                    x_positions,
+                    y_positions,
+                    self._observation.modulation_period,
+                    self._instrument._nulling_baseline,
+                    *[amplitude for _ in range(self._instrument.number_of_inputs)],
+                    *[0 for _ in range(self._instrument.number_of_inputs)],
+                    *[0 for _ in range(self._instrument.number_of_inputs)],
+                    *[0 for _ in range(self._instrument.number_of_inputs)],
+                    *[0 for _ in range(self._instrument.number_of_inputs)]
+                ) for i in range(len(self._instrument.differential_outputs))])
+            else:
+                ir = np.concatenate([self._instrument._ir_numpy[i](
+                    times,
+                    wavelength_bin_centers,
+                    x_positions,
+                    y_positions,
+                    self._observation.modulation_period,
+                    self._instrument._nulling_baseline,
+                    *[amplitude for _ in range(self._instrument.number_of_inputs)],
+                    *[0 for _ in range(self._instrument.number_of_inputs)],
+                    *[0 for _ in range(self._instrument.number_of_inputs)],
+                    *[0 for _ in range(self._instrument.number_of_inputs)],
+                    *[0 for _ in range(self._instrument.number_of_inputs)]
+                ) for i in range(self._instrument.number_of_outputs)])
+
+                ir = np.random.poisson(ir)
+
+                diff_ir = np.zeros((len(self._instrument.differential_outputs),
+                                    ir.shape[1], ir.shape[2], ir.shape[3], ir.shape[4]))
+
+                for i in range(len(self._instrument.differential_outputs)):
+                    diff_ir[i] = ir[self._instrument.differential_outputs[i][0]] - ir[
+                        self._instrument.differential_outputs[i][1]]
+
+            diff_counts = diff_ir * spectral_energy_distribution * self._observation.detector_integration_time * wavelength_bin_widths
+
+            return diff_counts[:, :, :, 0, 0]
+        else:
+            ir = np.concatenate([self._instrument._ir_numpy[i](
+                times,
+                wavelength_bin_centers,
+                x_positions,
+                y_positions,
+                self._observation.modulation_period,
+                self._instrument._nulling_baseline,
+                *[amplitude for _ in range(self._instrument.number_of_inputs)],
+                *[0 for _ in range(self._instrument.number_of_inputs)],
+                *[0 for _ in range(self._instrument.number_of_inputs)],
+                *[0 for _ in range(self._instrument.number_of_inputs)],
+                *[0 for _ in range(self._instrument.number_of_inputs)]
+            ) for i in range(self._instrument.number_of_outputs)])
+
+            if has_photon_noise:
+                ir = np.random.poisson(ir)
+
+            counts = ir * spectral_energy_distribution * self._observation.detector_integration_time * wavelength_bin_widths
+            return counts[:, :, :, 0, 0]
 
     def get_null_depth(self) -> Tensor:
-        """Return the null depth.
+        """Return the null depth as an array of shape (n_diff_out x n_wavelengths x n_time_steps).
 
 
         Returns
@@ -705,20 +599,10 @@ class PHRINGE:
         star_sky_coordiantes = self._scene.star._sky_coordinates
 
         x_max = star_sky_coordiantes[0].max()
-
-        ir_emp = self.get_instrument_response_empirical(fov=2 * abs(x_max))
-        diff_ir_emp = torch.zeros((self._instrument.number_of_outputs,) + ir_emp.shape[1:], device=self._device)
-
-        for i in range(len(self._instrument.differential_outputs)):
-            diff_ir_emp[i] = ir_emp[self._instrument.differential_outputs[i][0]] - ir_emp[
-                self._instrument.differential_outputs[i][1]]
-
+        diff_ir_emp = self.get_instrument_response(fov=2 * abs(x_max), kernels=True, perturbations=True)
         imax = torch.sum(star_sky_brightness, dim=(1, 2))
-
         imin = torch.sum(diff_ir_emp @ star_sky_brightness[None, :, None, :, :], dim=(3, 4))
-
         null = abs(imin / imax[None, :, None])
-
         return null
 
     def get_nulling_baseline(self) -> float:
@@ -818,8 +702,3 @@ class PHRINGE:
             self._scene = Scene(**entity.config_dict['scene'], _phringe=self)
         else:
             raise ValueError(f'Invalid entity type: {type(entity)}')
-
-    def write_nifits(self):
-        """Write the data to a NIFITS file."""
-        nifits_writer = NIFITSWriter()
-        nifits_writer.write(self._observation, self._instrument, self._scene)
