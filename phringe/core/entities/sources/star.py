@@ -4,13 +4,13 @@ import numpy as np
 import torch
 from astropy import units as u
 from astropy.units import Quantity
+from phringe.core.observing_entity import observing_property
 from pydantic import field_validator
 from pydantic_core.core_schema import ValidationInfo
 from scipy.constants import sigma
 from torch import Tensor
 
 from phringe.core.entities.sources.base_source import BaseSource
-from phringe.core.observing_entity import observing_property
 from phringe.io.validators import validate_quantity_units
 from phringe.util.grid import get_meshgrid
 from phringe.util.spectrum import create_blackbody_spectrum
@@ -103,11 +103,11 @@ class Star(BaseSource):
         """
         return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.deg,))
 
-    @observing_property(observed_attributes=(lambda s: s.radius, lambda s: s.distance))
+    @property
     def _angular_radius(self) -> float:
         return self.radius / self.distance
 
-    @observing_property(observed_attributes=(lambda s: s._habitable_zone_central_radius, lambda s: s.distance))
+    @property
     def _habitable_zone_central_angular_radius(self) -> float:
         """Return the central habitable zone radius in angular units.
 
@@ -115,7 +115,7 @@ class Star(BaseSource):
         """
         return self._habitable_zone_central_radius / self.distance
 
-    @observing_property(observed_attributes=(lambda s: s.temperature, lambda s: s.luminosity))
+    @property
     def _habitable_zone_central_radius(self) -> float:
         """Return the central habitable zone radius of the star. Calculated as defined in Kopparapu et al. 2013.
 
@@ -138,18 +138,11 @@ class Star(BaseSource):
         radius_outer = np.sqrt(self.luminosity / 3.86e26 / incident_stellar_flux_outer)
         return ((radius_outer + radius_inner) / 2 * u.au).si.value
 
-    @observing_property(observed_attributes=(lambda s: s.radius, lambda s: s.temperature,))
+    @property
     def luminosity(self):
         return 4 * np.pi * self.radius ** 2 * sigma * self.temperature ** 4
 
-    @observing_property(
-        observed_attributes=(
-                lambda s: s._phringe._instrument.wavelength_bin_centers,
-                lambda s: s._sky_coordinates,
-                lambda s: s._spectral_energy_distribution,
-                lambda s: s._phringe._grid_size
-        )
-    )
+    @property
     def _sky_brightness_distribution(self) -> np.ndarray:
         number_of_wavelength_steps = len(self._phringe._instrument.wavelength_bin_centers)
         sky_brightness_distribution = torch.zeros(
@@ -163,23 +156,17 @@ class Star(BaseSource):
 
         return sky_brightness_distribution
 
-    @observing_property(observed_attributes=(lambda s: s._angular_radius, lambda s: s._phringe._grid_size))
+    @property
     def _sky_coordinates(self) -> Tensor:
         sky_coordinates = get_meshgrid(2 * (1.05 * self._angular_radius), self._phringe._grid_size,
                                        device=self._phringe._device)
         return torch.stack((sky_coordinates[0], sky_coordinates[1]))
 
-    @observing_property(observed_attributes=(lambda s: s.radius, lambda s: s.distance))
+    @property
     def _solid_angle(self):
         return np.pi * (self.radius / self.distance) ** 2
 
-    @observing_property(
-        observed_attributes=(
-                lambda s: s._phringe._instrument.wavelength_bin_centers,
-                lambda s: s.radius,
-                lambda s: s.temperature
-        )
-    )
+    @property
     def _spectral_energy_distribution(self) -> Tensor:
         return create_blackbody_spectrum(
             self.temperature,

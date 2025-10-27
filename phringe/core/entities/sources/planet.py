@@ -12,7 +12,6 @@ from pydantic_core.core_schema import ValidationInfo
 from torch import Tensor
 
 from phringe.core.entities.sources.base_source import BaseSource
-from phringe.core.observing_entity import observing_property
 from phringe.io.validators import validate_quantity_units
 from phringe.util.grid import get_index_of_closest_value, get_meshgrid
 from phringe.util.spectrum import InputSpectrum
@@ -203,14 +202,7 @@ class Planet(BaseSource):
         """
         return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.kg,))
 
-    @observing_property(
-        observed_attributes=(
-                lambda s: s._phringe._instrument.wavelength_bin_centers,
-                lambda s: s._phringe._grid_size,
-                # lambda s: s.radius,
-                lambda s: s._solid_angle
-        )
-    )
+    @property
     def _sky_brightness_distribution(self) -> np.ndarray:
         """Calculate and return the sky brightness distribution.
 
@@ -259,16 +251,7 @@ class Planet(BaseSource):
             sky_brightness_distribution[:, index_x, index_y] = self._spectral_energy_distribution
         return sky_brightness_distribution
 
-    @observing_property(
-        observed_attributes=(
-                lambda s: s._phringe._instrument.wavelength_bin_centers,
-                lambda s: s._phringe._grid_size,
-                lambda s: s.has_orbital_motion,
-                lambda s: s._phringe.simulation_time_steps,
-                lambda s: s.host_star_distance if s.host_star_distance is not None else s._phringe._scene.star.distance,
-                lambda s: s.host_star_mass if s.host_star_mass is not None else s._phringe._scene.star.mass,
-        )
-    )
+    @property
     def _sky_coordinates(self) -> Union[Tensor, None]:
         self._angular_separation_from_star_x = torch.zeros(len(self._phringe.simulation_time_steps),
                                                            device=self._phringe._device)
@@ -291,25 +274,12 @@ class Planet(BaseSource):
         else:
             return self._get_coordinates(self._phringe.simulation_time_steps[0], 0)
 
-    @observing_property(
-        observed_attributes=(
-                lambda s: s.host_star_distance if s.host_star_distance is not None else s._phringe._scene.star.distance,
-                lambda s: s.radius,
-        )
-    )
+    @property
     def _solid_angle(self):
         host_star_distance = self.host_star_distance if self.host_star_distance is not None else self._phringe._scene.star.distance
         return torch.pi * (self.radius / host_star_distance) ** 2
 
-    @observing_property(
-        observed_attributes=(
-                lambda s: s._phringe._instrument.wavelength_bin_centers,
-                lambda s: s._phringe._grid_size,
-                lambda s: s.temperature,
-                lambda s: s.input_spectrum,
-                lambda s: s._solid_angle,
-        )
-    )
+    @property
     def _spectral_energy_distribution(self) -> Union[Tensor, None]:
         if self.input_spectrum is not None:
             return self.input_spectrum.get_spectral_energy_distribution(

@@ -11,11 +11,11 @@ from sympy import Matrix
 from sympy import symbols, Symbol, exp, I, pi, cos, sin, Abs, lambdify, sqrt
 from torch import Tensor
 
-from phringe.core.observing_entity import ObservingEntity, observing_property
+from phringe.core.base_entity import BaseEntity
 from phringe.io.validators import validate_quantity_units
 
 
-class Instrument(ObservingEntity):
+class Instrument(BaseEntity):
     """Class representing the instrument.
 
     Parameters
@@ -86,9 +86,12 @@ class Instrument(ObservingEntity):
     def __setattr__(self, key, value):
         super().__setattr__(key, value)
         if key == "_phringe":
-            self.amplitude_perturbation._phringe = self._phringe
-            self.phase_perturbation._phringe = self._phringe
-            self.polarization_perturbation._phringe = self._phringe
+            if self.amplitude_perturbation is not None:
+                self.amplitude_perturbation._phringe = self._phringe
+            if self.phase_perturbation is not None:
+                self.phase_perturbation._phringe = self._phringe
+            if self.polarization_perturbation is not None:
+                self.polarization_perturbation._phringe = self._phringe
 
     @field_validator('aperture_diameter')
     def _validate_aperture_diameter(cls, value: Any, info: ValidationInfo) -> Tensor:
@@ -162,30 +165,13 @@ class Instrument(ObservingEntity):
 
     @property
     def _field_of_view(self):
-        return self._get_cached_value(
-            attribute_name='_field_of_view',
-            compute_func=self._get_field_of_view,
-            required_attributes=(
-                self.wavelength_bin_centers,
-                self.aperture_diameter
-            )
-        )
+        return self._get_field_of_view()
 
     @property
     def _number_of_simulation_time_steps(self):
         return len(self._simulation_time_steps)
 
-    @observing_property(
-        observed_attributes=(
-                lambda s: s._phringe._scene.star._habitable_zone_central_angular_radius if s._phringe._scene.star else None,
-                lambda s: s._phringe._observation.optimized_star_separation,
-                lambda s: s._phringe._observation.optimized_differential_output,
-                lambda s: s._phringe._observation.optimized_wavelength,
-                lambda s: s.baseline_minimum,
-                lambda s: s.baseline_maximum,
-                lambda s: s.sep_at_max_mod_eff
-        )
-    )
+    @property
     def _nulling_baseline(self) -> float:
         # Get the optimized separation in angular units, if it is not yet in angular units
         if self._phringe._observation.optimized_star_separation == "habitable-zone":
@@ -213,13 +199,7 @@ class Instrument(ObservingEntity):
                 f"Nulling baseline of {nulling_baseline} is above the maximum allowed baseline of {self.baseline_maximum}. Setting to maximum baseline.")
             return self.baseline_maximum
 
-    @observing_property(
-        observed_attributes=(
-                lambda s: s.wavelength_max,
-                lambda s: s.wavelength_min,
-                lambda s: s.spectral_resolving_power
-        )
-    )
+    @property
     def _wavelength_bins(self) -> Tuple[np.ndarray, np.ndarray]:
         """Return the wavelength bin centers and widths.
 

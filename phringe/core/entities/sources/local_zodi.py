@@ -8,7 +8,6 @@ from pydantic import field_validator
 from pydantic_core.core_schema import ValidationInfo
 
 from phringe.core.entities.sources.base_source import BaseSource
-from phringe.core.observing_entity import observing_property
 from phringe.io.validators import validate_quantity_units
 from phringe.util.grid import get_meshgrid
 from phringe.util.spectrum import create_blackbody_spectrum
@@ -63,25 +62,13 @@ class LocalZodi(BaseSource):
         relative_ecliptic_longitude = ecliptic_longitude - solar_ecliptic_latitude
         return ecliptic_latitude, relative_ecliptic_longitude
 
-    @observing_property(
-        observed_attributes=(
-                lambda s: s._phringe._instrument._field_of_view,
-                lambda s: s._spectral_energy_distribution,
-                lambda s: s._phringe._grid_size
-        )
-    )
+    @property
     def _sky_brightness_distribution(self):
         grid = torch.ones((self._phringe._grid_size, self._phringe._grid_size), dtype=torch.float32,
                           device=self._phringe._device)
         return torch.einsum('i, jk ->ijk', self._spectral_energy_distribution, grid)
 
-    @observing_property(
-        observed_attributes=(
-                lambda s: s._phringe._instrument._field_of_view,
-                lambda s: s._phringe._instrument.wavelength_bin_centers,
-                lambda s: s._phringe._grid_size
-        )
-    )
+    @property
     def _sky_coordinates(self):
         number_of_wavelength_steps = len(self._phringe._instrument.wavelength_bin_centers)
 
@@ -97,23 +84,11 @@ class LocalZodi(BaseSource):
                 (sky_coordinates_at_fov[0], sky_coordinates_at_fov[1]))
         return sky_coordinates
 
-    @observing_property(
-        observed_attributes=(
-                lambda s: s._phringe._instrument._field_of_view,
-        )
-    )
+    @property
     def _solid_angle(self):
         return self._phringe._instrument._field_of_view ** 2
 
-    @observing_property(
-        observed_attributes=(
-                lambda s: s._phringe._instrument.wavelength_bin_centers,
-                lambda s: s._solid_angle,
-                lambda s: s.host_star_right_ascension if s.host_star_right_ascension is not None else s._phringe._scene.star.right_ascension,
-                lambda s: s.host_star_declination if s.host_star_declination is not None else s._phringe._scene.star.declination,
-                lambda s: s._solar_ecliptic_latitude if s._solar_ecliptic_latitude is not None else s._phringe._observation.solar_ecliptic_latitude
-        )
-    )
+    @property
     def _spectral_energy_distribution(self) -> torch.Tensor:
         variable_tau = 4e-8
         variable_a = 0.22

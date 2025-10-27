@@ -8,7 +8,6 @@ from pydantic import field_validator
 from pydantic_core.core_schema import ValidationInfo
 
 from phringe.core.entities.sources.base_source import BaseSource
-from phringe.core.observing_entity import observing_property
 from phringe.io.validators import validate_quantity_units
 from phringe.util.grid import get_radial_map, get_meshgrid
 from phringe.util.spectrum import create_blackbody_spectrum
@@ -50,14 +49,7 @@ class Exozodi(BaseSource):
         """
         return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,))
 
-    @observing_property(
-        observed_attributes=(
-                lambda s: s._phringe._instrument._field_of_view,
-                lambda s: s._phringe._instrument.wavelength_bin_centers,
-                lambda s: s.host_star_distance if s.host_star_distance is not None else s._phringe._scene.star.distance,
-                lambda s: s._phringe._grid_size
-        )
-    )
+    @property
     def _field_of_view_in_au_radial_map(self):
         host_star_distance = self.host_star_distance if self.host_star_distance is not None else self._phringe._scene.star.distance
         field_of_view_in_au = self._phringe._instrument._field_of_view * host_star_distance * 6.68459e-12
@@ -72,22 +64,14 @@ class Exozodi(BaseSource):
 
         return field_of_view_in_au_radial_map
 
-    @observing_property(
-        observed_attributes=(
-                lambda s: s._spectral_energy_distribution,
-                lambda s: s._field_of_view_in_au_radial_map,
-                lambda s: s.host_star_luminosity if s.host_star_luminosity is not None else s._phringe._scene.star.luminosity,
-                lambda s: s._phringe._grid_size
-        )
-    )
+    @property
     def _sky_brightness_distribution(self):
         host_star_luminosity = self.host_star_luminosity if self.host_star_luminosity is not None else self._phringe._scene.star.luminosity
         reference_radius_in_au = torch.sqrt(torch.tensor(host_star_luminosity / 3.86e26, device=self._phringe._device))
         surface_maps = self.level * 7.12e-8 * (self._field_of_view_in_au_radial_map / reference_radius_in_au) ** (-0.34)
         return surface_maps * self._spectral_energy_distribution
 
-    @observing_property(
-        observed_attributes=(lambda s: s._phringe._instrument._field_of_view, lambda s: s._phringe._grid_size))
+    @property
     def _sky_coordinates(self):
         sky_coordinates = torch.zeros(
             (2, len(self._phringe._instrument._field_of_view), self._phringe._grid_size, self._phringe._grid_size),
@@ -106,19 +90,11 @@ class Exozodi(BaseSource):
 
         return sky_coordinates
 
-    @observing_property(observed_attributes=(lambda s: s._phringe._instrument._field_of_view,))
+    @property
     def _solid_angle(self) -> np.ndarray:
         return self._phringe._instrument._field_of_view ** 2
 
-    @observing_property(
-        observed_attributes=(
-                lambda s: s._phringe._instrument._field_of_view,
-                lambda s: s._phringe._instrument.wavelength_bin_centers,
-                lambda s: s._field_of_view_in_au_radial_map,
-                lambda s: s.host_star_luminosity if s.host_star_luminosity is not None else s._phringe._scene.star.luminosity,
-                lambda s: s._phringe._grid_size
-        )
-    )
+    @property
     def _spectral_energy_distribution(self):
         host_star_luminosity = self.host_star_luminosity if self.host_star_luminosity is not None else self._phringe._scene.star.luminosity
         temperature_map = self._get_temperature_profile(

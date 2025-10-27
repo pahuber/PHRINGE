@@ -1,11 +1,12 @@
 from abc import abstractmethod, ABC
 from typing import Any, Union
 
-from phringe.core.observing_entity import ObservingEntity, observing_property
 from torch import Tensor
 
+from phringe.core.base_entity import BaseEntity
 
-class BaseSource(ABC, ObservingEntity):
+
+class BaseSource(ABC, BaseEntity):
     """Class representation of a photon source1.
 
     :param mean_spectral_flux_density: An array containing the mean spectral flux density of the photon source1 for each
@@ -26,7 +27,7 @@ class BaseSource(ABC, ObservingEntity):
     _instrument: Any = None
     _observation: Any = None
 
-    @observing_property()
+    @property
     @abstractmethod
     def _spectral_energy_distribution(self) -> Union[Tensor, None]:
         """Return the mean spectral flux density of the source1 object for each wavelength.
@@ -38,7 +39,7 @@ class BaseSource(ABC, ObservingEntity):
         """
         pass
 
-    @observing_property()
+    @property
     @abstractmethod
     def _sky_brightness_distribution(self) -> Union[Tensor, None]:
         """Calculate and return the sky brightness distribution of the source1 object for each (time and) wavelength as
@@ -51,7 +52,7 @@ class BaseSource(ABC, ObservingEntity):
         """
         pass
 
-    @observing_property()
+    @property
     @abstractmethod
     def _sky_coordinates(self) -> Union[Tensor, None]:
         """Calculate and return the sky coordinates of the source1 for a given time. For moving all_sources, such as planets,
@@ -68,7 +69,7 @@ class BaseSource(ABC, ObservingEntity):
         """
         pass
 
-    @observing_property()
+    @property
     @abstractmethod
     def _solid_angle(self) -> Union[float, Tensor]:
         """Calculate and return the solid angle of the source1 object.

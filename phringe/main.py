@@ -202,6 +202,20 @@ class PHRINGE:
                 else:
                     normalization = self._grid_size ** 2
 
+                # Get perturbation time series
+                n_in = self._instrument.number_of_inputs
+                n_t = len(self.simulation_time_steps)
+                n_wl = len(self._instrument.wavelength_bin_centers)
+                amplitude_pert_time_series = self._instrument.amplitude_perturbation.time_series \
+                    if self._instrument.amplitude_perturbation is not None \
+                    else torch.zeros((n_in, n_t), dtype=torch.float32, device=self._device)
+                phase_pert_time_series = self._instrument.phase_perturbation.time_series \
+                    if self._instrument.phase_perturbation is not None \
+                    else torch.zeros((n_in, n_wl, n_t), dtype=torch.float32, device=self._device)
+                polarization_pert_time_series = self._instrument.polarization_perturbation.time_series \
+                    if self._instrument.polarization_perturbation is not None \
+                    else torch.zeros((n_in, n_t), dtype=torch.float32, device=self._device)
+
                 # Calculate counts of shape (N_outputs x N_wavelengths x N_time_steps) for all time step slices
                 # Within torch.sum, the shape is (N_wavelengths x N_time_steps x N_pix x N_pix)
                 for i in range(self._instrument.number_of_outputs):
@@ -222,16 +236,16 @@ class PHRINGE:
                                 torch.tensor(self._instrument._nulling_baseline, device=self._device),
                                 *[self._instrument._get_amplitude(self._device) for _ in
                                   range(self._instrument.number_of_inputs)],
-                                *[self._instrument.amplitude_perturbation.time_series[k][
+                                *[amplitude_pert_time_series[k][
                                       None, it_low:it_high, None,
                                       None] for k in
                                   range(self._instrument.number_of_inputs)],
-                                *[self._instrument.phase_perturbation.time_series[k][:, it_low:it_high, None, None]
+                                *[phase_pert_time_series[k][:, it_low:it_high, None, None]
                                   for k in
                                   range(self._instrument.number_of_inputs)],
                                 *[torch.tensor(0, device=self._device) for _ in
                                   range(self._instrument.number_of_inputs)],
-                                *[self._instrument.polarization_perturbation.time_series[k][None, it_low:it_high,
+                                *[polarization_pert_time_series[k][None, it_low:it_high,
                                 None, None] for k in
                                   range(self._instrument.number_of_inputs)]
                             )
