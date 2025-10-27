@@ -1,3 +1,4 @@
+from phringe.core.entities.perturbations.power_law_psd_perturbation import PowerLawPSDPerturbation
 from phringe.lib.array_configuration import XArrayConfiguration
 from phringe.lib.beam_combiner import DoubleBracewellBeamCombiner
 
@@ -22,23 +23,12 @@ config = {
         'spectral_resolving_power': 20,
         'wavelength_min': '4 um',
         'wavelength_max': '18.5 um',
-        'wavelength_bands_boundaries': ['8 um'],
+        'wavelength_bands_boundaries': [],
         'throughput': 0.05,
         'quantum_efficiency': 0.7,
-        'perturbations': {
-            'amplitude': {
-                'rms': '0.1 %',
-                'color_coeff': 1,
-            },
-            'phase': {
-                'rms': '1.5 nm',
-                'color_coeff': 1,
-            },
-            'polarization': {
-                'rms': '0.001 rad',
-                'color_coeff': 1,
-            },
-        }
+        'amplitude_perturbation': PowerLawPSDPerturbation(coefficient=1, rms='0.1%'),
+        'phase_perturbation': PowerLawPSDPerturbation(coefficient=1, rms='1.5 nm', chromatic=True),
+        'polarization_perturbation': PowerLawPSDPerturbation(coefficient=1, rms='0.001 rad'),
     },
     'scene': {
         'star': {
