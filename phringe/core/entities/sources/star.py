@@ -4,7 +4,6 @@ import numpy as np
 import torch
 from astropy import units as u
 from astropy.units import Quantity
-from phringe.core.observing_entity import observing_property
 from pydantic import field_validator
 from pydantic_core.core_schema import ValidationInfo
 from scipy.constants import sigma
