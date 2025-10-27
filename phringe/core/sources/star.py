@@ -9,7 +9,7 @@ from pydantic_core.core_schema import ValidationInfo
 from scipy.constants import sigma
 from torch import Tensor
 
-from phringe.core.entities.sources.base_source import BaseSource
+from phringe.core.sources.base_source import BaseSource
 from phringe.io.validators import validate_quantity_units
 from phringe.util.grid import get_meshgrid
 from phringe.util.spectrum import create_blackbody_spectrum

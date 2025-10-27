@@ -11,7 +11,7 @@ from pydantic import field_validator
 from pydantic_core.core_schema import ValidationInfo
 from torch import Tensor
 
-from phringe.core.entities.sources.base_source import BaseSource
+from phringe.core.sources.base_source import BaseSource
 from phringe.io.validators import validate_quantity_units
 from phringe.util.grid import get_index_of_closest_value, get_meshgrid
 from phringe.util.spectrum import InputSpectrum

@@ -10,7 +10,7 @@ from pydantic_core.core_schema import ValidationInfo
 from scipy.fft import irfft, fftshift
 from torch import Tensor
 
-from phringe.core.entities.perturbations.base_perturbation import BasePerturbation
+from phringe.core.perturbations.base_perturbation import BasePerturbation
 from phringe.io.validators import validate_quantity_units
 
 

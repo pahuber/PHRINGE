@@ -2,10 +2,11 @@ from typing import Any, Union
 
 from astropy import units as u
 from astropy.units import Quantity
-from phringe.core.base_entity import BaseEntity
-from phringe.io.validators import validate_quantity_units
 from pydantic import field_validator
 from pydantic_core.core_schema import ValidationInfo
+
+from phringe.core.base_entity import BaseEntity
+from phringe.io.validators import validate_quantity_units
 
 
 class Observation(BaseEntity):

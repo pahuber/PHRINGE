@@ -1,9 +1,9 @@
 from phringe.core.base_entity import BaseEntity
-from phringe.core.entities.sources.base_source import BaseSource
-from phringe.core.entities.sources.exozodi import Exozodi
-from phringe.core.entities.sources.local_zodi import LocalZodi
-from phringe.core.entities.sources.planet import Planet
-from phringe.core.entities.sources.star import Star
+from phringe.core.sources.base_source import BaseSource
+from phringe.core.sources.exozodi import Exozodi
+from phringe.core.sources.local_zodi import LocalZodi
+from phringe.core.sources.planet import Planet
+from phringe.core.sources.star import Star
 
 
 class Scene(BaseEntity):

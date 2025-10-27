@@ -11,14 +11,14 @@ from sympy import lambdify, symbols
 from torch import Tensor
 from tqdm import tqdm
 
-from phringe.core.entities.configuration import Configuration
-from phringe.core.entities.instrument import Instrument
-from phringe.core.entities.observation import Observation
-from phringe.core.entities.scene import Scene
-from phringe.core.entities.sources.exozodi import Exozodi
-from phringe.core.entities.sources.local_zodi import LocalZodi
-from phringe.core.entities.sources.planet import Planet
-from phringe.core.entities.sources.star import Star
+from phringe.core.configuration import Configuration
+from phringe.core.instrument import Instrument
+from phringe.core.observation import Observation
+from phringe.core.scene import Scene
+from phringe.core.sources import Planet
+from phringe.core.sources import Star
+from phringe.core.sources.exozodi import Exozodi
+from phringe.core.sources.local_zodi import LocalZodi
 from phringe.io.nifits_writer import NIFITSWriter
 from phringe.util.grid import get_meshgrid
 from phringe.util.memory import get_available_memory
