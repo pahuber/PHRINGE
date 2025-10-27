@@ -11,20 +11,20 @@ from torch import Tensor
 class InputSpectrum:
 
     def __init__(
-        self,
-        path_to_spectrum: Path = None,
-        fluxes: np.ndarray = None,
-        wavelengths: np.ndarray = None,
+            self,
+            path_to_spectrum: Path = None,
+            fluxes: np.ndarray = None,
+            wavelengths: np.ndarray = None,
     ):
         self.path_to_spectrum = path_to_spectrum
         self.fluxes = fluxes
         self.wavelengths = wavelengths
 
     def get_spectral_energy_distribution(
-        self,
-        wavelength_bin_centers: Tensor,
-        solid_angle: Tensor,
-        device: torch.device
+            self,
+            wavelength_bin_centers: Tensor,
+            solid_angle: Tensor,
+            device: torch.device
     ) -> Tensor:
         """Return the spectrum from a file."""
         # fluxes, wavelengths = TXTReader.read(path_to_spectrum)
@@ -52,8 +52,8 @@ class InputSpectrum:
 
 
 def create_blackbody_spectrum(
-    temperature: float,
-    wavelength_steps: Tensor
+        temperature: float,
+        wavelength_steps: Tensor
 ) -> Tensor:
     """Return a blackbody spectrum for an astrophysical object.
 
@@ -62,12 +62,12 @@ def create_blackbody_spectrum(
     :return: Array containing the flux per bin in units of ph m-3 s-1 sr-1
     """
     return 2 * h * c ** 2 / wavelength_steps ** 5 / (
-        torch.exp(torch.asarray(h * c / (k * wavelength_steps * temperature))) - 1) / c * wavelength_steps / h
+            torch.exp(torch.asarray(h * c / (k * wavelength_steps * temperature))) - 1) / c * wavelength_steps / h
 
 
 def convert_spectrum_from_joule_to_photons(
-    spectrum: Tensor,
-    wavelength_steps: Tensor,
+        spectrum: Tensor,
+        wavelength_steps: Tensor,
 ) -> Tensor:
     """Convert the binned black body spectrum from units W / (sr m3) to units ph / (m3 s sr)
 
@@ -87,3 +87,13 @@ def convert_spectrum_from_joule_to_photons(
 
         spectral_flux_density[index] = current_spectral_flux_density
     return spectral_flux_density
+
+
+def get_blackbody(
+        temperature: float,
+        wavelength_bin_centers: Tensor,
+        planet_radius: float,
+        host_star_distance: float,
+):
+    solid_angle = np.pi * (planet_radius / host_star_distance) ** 2
+    return create_blackbody_spectrum(temperature, wavelength_bin_centers) * solid_angle

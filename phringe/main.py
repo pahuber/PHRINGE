@@ -150,7 +150,7 @@ class PHRINGE:
         the output is not yet binned to detector time steps.
 
         """
-        if self.seed is not None: _set_seed(self.seed)
+        # if self.seed is not None: _set_seed(self.seed)
 
         # Prepare output tensor
         counts = torch.zeros(
@@ -222,15 +222,16 @@ class PHRINGE:
                                 torch.tensor(self._instrument._nulling_baseline, device=self._device),
                                 *[self._instrument._get_amplitude(self._device) for _ in
                                   range(self._instrument.number_of_inputs)],
-                                *[self._instrument.perturbations.amplitude._time_series[k][None, it_low:it_high, None,
-                                None] for k in
+                                *[self._instrument.amplitude_perturbation.time_series[k][
+                                      None, it_low:it_high, None,
+                                      None] for k in
                                   range(self._instrument.number_of_inputs)],
-                                *[self._instrument.perturbations.phase._time_series[k][:, it_low:it_high, None, None]
+                                *[self._instrument.phase_perturbation.time_series[k][:, it_low:it_high, None, None]
                                   for k in
                                   range(self._instrument.number_of_inputs)],
                                 *[torch.tensor(0, device=self._device) for _ in
                                   range(self._instrument.number_of_inputs)],
-                                *[self._instrument.perturbations.polarization._time_series[k][None, it_low:it_high,
+                                *[self._instrument.polarization_perturbation.time_series[k][None, it_low:it_high,
                                 None, None] for k in
                                   range(self._instrument.number_of_inputs)]
                             )
@@ -358,21 +359,21 @@ class PHRINGE:
         x_coordinates = x_coordinates[None, None, :, :]
         y_coordinates = y_coordinates[None, None, :, :]
 
-        amplitude_pert_time_series = self._instrument.perturbations.amplitude._time_series if (
-                self._instrument.perturbations.amplitude is not None and perturbations) else torch.zeros(
+        amplitude_pert_time_series = self._instrument.amplitude_perturbation.time_series if (
+                self._instrument.amplitude_perturbation is not None and perturbations) else torch.zeros(
             (self._instrument.number_of_inputs, len(self.simulation_time_steps)),
             dtype=torch.float32,
             device=self._device
         )
-        phase_pert_time_series = self._instrument.perturbations.phase._time_series if (
-                self._instrument.perturbations.phase is not None and perturbations) else torch.zeros(
+        phase_pert_time_series = self._instrument.phase_perturbation.time_series if (
+                self._instrument.phase_perturbation is not None and perturbations) else torch.zeros(
             (self._instrument.number_of_inputs, len(self._instrument.wavelength_bin_centers),
              len(self.simulation_time_steps)),
             dtype=torch.float32,
             device=self._device
         )
-        polarization_pert_time_series = self._instrument.perturbations.polarization._time_series if (
-                self._instrument.perturbations.polarization is not None and perturbations) else torch.zeros(
+        polarization_pert_time_series = self._instrument.polarization_perturbation.time_series if (
+                self._instrument.polarization_perturbation is not None and perturbations) else torch.zeros(
             (self._instrument.number_of_inputs, len(self.simulation_time_steps)),
             dtype=torch.float32,
             device=self._device

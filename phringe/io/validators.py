@@ -13,8 +13,11 @@ def validate_quantity_units(value: Any, field_name: str, unit_equivalency: Tuple
     :param unit_equivalency: The equivalent unit the value should have
     :return: THe value as an astropy Quantity
     """
-    if isinstance(value, astropy.units.Quantity) and value.unit.is_equivalent(unit_equivalency):
-        return value.si.value
+    if isinstance(value, astropy.units.Quantity):
+        for unit in unit_equivalency:
+            if value.unit.is_equivalent(unit):
+                return value.si.value
+        raise ValueError(f'{value} is not a valid input for {field_name}')
     elif isinstance(value, (int, float)):
         return value
     elif isinstance(value, str):

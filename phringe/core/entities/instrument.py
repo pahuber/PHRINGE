@@ -5,24 +5,14 @@ import numpy as np
 import torch
 from astropy import units as u
 from astropy.units import Quantity
-from pydantic import field_validator, BaseModel
+from pydantic import field_validator
 from pydantic_core.core_schema import ValidationInfo
 from sympy import Matrix
 from sympy import symbols, Symbol, exp, I, pi, cos, sin, Abs, lambdify, sqrt
 from torch import Tensor
 
-from phringe.core.entities.perturbations.amplitude_perturbation import AmplitudePerturbation
-from phringe.core.entities.perturbations.base_perturbation import BasePerturbation
-from phringe.core.entities.perturbations.phase_perturbation import PhasePerturbation
-from phringe.core.entities.perturbations.polarization_perturbation import PolarizationPerturbation
 from phringe.core.observing_entity import ObservingEntity, observing_property
 from phringe.io.validators import validate_quantity_units
-
-
-class Perturbations(BaseModel):
-    amplitude: AmplitudePerturbation = AmplitudePerturbation()
-    phase: PhasePerturbation = PhasePerturbation()
-    polarization: PolarizationPerturbation = PolarizationPerturbation()
 
 
 class Instrument(ObservingEntity):
@@ -73,7 +63,6 @@ class Instrument(ObservingEntity):
     baseline_minimum: Union[str, float, Quantity]
     complex_amplitude_transfer_matrix: Matrix
     differential_outputs: list
-    perturbations: Perturbations = Perturbations()
     quantum_efficiency: float
     sep_at_max_mod_eff: list
     spectral_resolving_power: int
@@ -81,6 +70,9 @@ class Instrument(ObservingEntity):
     wavelength_bands_boundaries: list
     wavelength_min: Union[str, float, Quantity]
     wavelength_max: Union[str, float, Quantity]
+    amplitude_perturbation: Any = None
+    phase_perturbation: Any = None
+    polarization_perturbation: Any = None
     number_of_inputs: int = None
     number_of_outputs: int = None
     response: Tensor = None
@@ -94,9 +86,9 @@ class Instrument(ObservingEntity):
     def __setattr__(self, key, value):
         super().__setattr__(key, value)
         if key == "_phringe":
-            self.perturbations.amplitude._phringe = self._phringe
-            self.perturbations.phase._phringe = self._phringe
-            self.perturbations.polarization._phringe = self._phringe
+            self.amplitude_perturbation._phringe = self._phringe
+            self.phase_perturbation._phringe = self._phringe
+            self.polarization_perturbation._phringe = self._phringe
 
     @field_validator('aperture_diameter')
     def _validate_aperture_diameter(cls, value: Any, info: ValidationInfo) -> Tensor:
@@ -185,13 +177,13 @@ class Instrument(ObservingEntity):
 
     @observing_property(
         observed_attributes=(
-            lambda s: s._phringe._scene.star._habitable_zone_central_angular_radius if s._phringe._scene.star else None,
-            lambda s: s._phringe._observation.optimized_star_separation,
-            lambda s: s._phringe._observation.optimized_differential_output,
-            lambda s: s._phringe._observation.optimized_wavelength,
-            lambda s: s.baseline_minimum,
-            lambda s: s.baseline_maximum,
-            lambda s: s.sep_at_max_mod_eff
+                lambda s: s._phringe._scene.star._habitable_zone_central_angular_radius if s._phringe._scene.star else None,
+                lambda s: s._phringe._observation.optimized_star_separation,
+                lambda s: s._phringe._observation.optimized_differential_output,
+                lambda s: s._phringe._observation.optimized_wavelength,
+                lambda s: s.baseline_minimum,
+                lambda s: s.baseline_maximum,
+                lambda s: s.sep_at_max_mod_eff
         )
     )
     def _nulling_baseline(self) -> float:
@@ -204,9 +196,9 @@ class Instrument(ObservingEntity):
         # Get the optimal baseline and check if it is within the allowed range
 
         nulling_baseline = (
-            self.sep_at_max_mod_eff[self._phringe._observation.optimized_differential_output]
-            * self._phringe._observation.optimized_wavelength
-            / optimized_star_separation
+                self.sep_at_max_mod_eff[self._phringe._observation.optimized_differential_output]
+                * self._phringe._observation.optimized_wavelength
+                / optimized_star_separation
         )
 
         # Set nulling baseline to optimum value or to min/max value if it is outside the allowed range
@@ -223,9 +215,9 @@ class Instrument(ObservingEntity):
 
     @observing_property(
         observed_attributes=(
-            lambda s: s.wavelength_max,
-            lambda s: s.wavelength_min,
-            lambda s: s.spectral_resolving_power
+                lambda s: s.wavelength_max,
+                lambda s: s.wavelength_min,
+                lambda s: s.spectral_resolving_power
         )
     )
     def _wavelength_bins(self) -> Tuple[np.ndarray, np.ndarray]:
@@ -400,37 +392,3 @@ class Instrument(ObservingEntity):
             torch.asarray(wavelength_bin_centers, dtype=torch.float32, device=self._phringe._device),
             torch.asarray(wavelength_bin_widths, dtype=torch.float32, device=self._phringe._device)
         )
-
-    def add_perturbation(self, perturbation: BasePerturbation):
-        """Add a perturbation to the instrument.
-
-        Parameters
-        ----------
-        perturbation : BasePerturbation
-            The perturbation to add.
-        """
-        perturbation._phringe = self._phringe
-        if isinstance(perturbation, AmplitudePerturbation):
-            self.perturbations.amplitude = perturbation
-        elif isinstance(perturbation, PhasePerturbation):
-            self.perturbations.phase = perturbation
-        elif isinstance(perturbation, PolarizationPerturbation):
-            self.perturbations.polarization = perturbation
-
-    def remove_perturbation(self, perturbation: BasePerturbation):
-        """Remove a perturbation from the instrument.
-
-        Parameters
-        ----------
-        perturbation : BasePerturbation
-            The perturbation to remove.
-        """
-        if isinstance(perturbation, AmplitudePerturbation):
-            self.perturbations.amplitude = AmplitudePerturbation()
-            self.perturbations.amplitude._phringe = self._phringe
-        elif isinstance(perturbation, PhasePerturbation):
-            self.perturbations.phase = PhasePerturbation()
-            self.perturbations.phase._phringe = self._phringe
-        elif isinstance(perturbation, PolarizationPerturbation):
-            self.perturbations.polarization = PolarizationPerturbation()
-            self.perturbations.polarization._phringe = self._phringe
