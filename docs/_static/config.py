@@ -4,23 +4,23 @@ from phringe.lib.beam_combiner import DoubleBracewellBeamCombiner
 
 config = {
     'observation': {
-        'solar_ecliptic_latitude': '0 deg',
-        'total_integration_time': '1 d',
-        'detector_integration_time': '0.01 d',
-        'modulation_period': '1 d',
-        'optimized_differential_output': 0,
-        'optimized_star_separation': 'habitable-zone',
-        'optimized_wavelength': '10 um',
+        'solar_ecliptic_latitude': '0 deg',  # Used to determine the local zodi brightness
+        'total_integration_time': '4 d',  # Total integration time of the observation
+        'detector_integration_time': '0.02 d',  # Results in 200 time steps; use between 100 and 1000
+        'modulation_period': '4 d',  # Period of the interferometer modulation, e.g. rotation
+        'optimized_differential_output': 0,  # Index of the kernel to optimize the baseline for
+        'optimized_star_separation': 'habitable-zone',  # Sep. to optimize the baseline for; also e.g. '0.1 arcsec'
+        'optimized_wavelength': '10 um',  # Wavelength to optimize the baseline for
     },
     'instrument': {
-        'array_configuration_matrix': XArrayConfiguration.acm,
-        'complex_amplitude_transfer_matrix': DoubleBracewellBeamCombiner.catm,
-        'differential_outputs': DoubleBracewellBeamCombiner.diff_out,
-        'sep_at_max_mod_eff': DoubleBracewellBeamCombiner.sep_at_max_mod_eff,
-        'aperture_diameter': '2 m',
+        'array_configuration_matrix': XArrayConfiguration.acm,  # Array configuration; collector position and motion
+        'complex_amplitude_transfer_matrix': DoubleBracewellBeamCombiner.catm,  # Beam combiner transfer matrix
+        'differential_outputs': DoubleBracewellBeamCombiner.diff_out,  # Differential outputs (kernels) description
+        'sep_at_max_mod_eff': DoubleBracewellBeamCombiner.sep_at_max_mod_eff,  # Modulation efficiency maximum
+        'aperture_diameter': '3.5 m',
         'baseline_maximum': '600 m',
         'baseline_minimum': '5 m',
-        'spectral_resolving_power': 20,
+        'spectral_resolving_power': 30,
         'wavelength_min': '4 um',
         'wavelength_max': '18.5 um',
         'wavelength_bands_boundaries': [],
@@ -41,9 +41,14 @@ config = {
             'declination': '45 deg',
         },
         'exozodi': {
-            'level': 3
+            'level': 3,
+            # 'host_star_distance': '10 pc', # Only required if no star is present in the scene
+            # 'host_star_luminosity': '1 Lsun', # Only required if no star is present in the scene
         },
-        'local_zodi': {},
+        'local_zodi': {
+            # 'host_star_right_ascension': '10 hourangle', # Only required if no star is present in the scene
+            # 'host_star_declination': '45 deg',}, # Only required if no star is present in the scene
+        },
         'planets': [
             {
                 'name': 'Earth',
