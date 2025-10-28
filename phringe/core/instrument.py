@@ -12,7 +12,7 @@ from sympy import symbols, Symbol, exp, I, pi, cos, sin, Abs, lambdify, sqrt
 from torch import Tensor
 
 from phringe.core.base_entity import BaseEntity
-from phringe.io.validators import validate_quantity_units
+from phringe.io.validation import validate_quantity_units
 
 
 class Instrument(BaseEntity):

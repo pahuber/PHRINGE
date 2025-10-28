@@ -8,9 +8,9 @@ from pydantic import field_validator
 from pydantic_core.core_schema import ValidationInfo
 
 from phringe.core.sources.base_source import BaseSource
-from phringe.io.validators import validate_quantity_units
+from phringe.io.validation import validate_quantity_units
 from phringe.util.grid import get_meshgrid
-from phringe.util.spectrum import create_blackbody_spectrum
+from phringe.util.spectrum import get_blackbody_spectrum_standard_units
 
 
 class LocalZodi(BaseSource):
@@ -105,11 +105,11 @@ class LocalZodi(BaseSource):
         spectral_flux_density = (
                 variable_tau *
                 (
-                        create_blackbody_spectrum(265,
-                                                  self._phringe._instrument.wavelength_bin_centers) * self._solid_angle
+                        get_blackbody_spectrum_standard_units(265,
+                                                              self._phringe._instrument.wavelength_bin_centers) * self._solid_angle
                         + variable_a
-                        * create_blackbody_spectrum(5778,
-                                                    self._phringe._instrument.wavelength_bin_centers) * self._solid_angle
+                        * get_blackbody_spectrum_standard_units(5778,
+                                                                self._phringe._instrument.wavelength_bin_centers) * self._solid_angle
                         * ((1 * u.Rsun).to(u.au) / (1.5 * u.au)).value ** 2
                 ) *
                 ((torch.pi / torch.arccos(torch.cos(torch.tensor(relative_ecliptic_longitude)) * torch.cos(

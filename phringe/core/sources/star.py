@@ -10,9 +10,9 @@ from scipy.constants import sigma
 from torch import Tensor
 
 from phringe.core.sources.base_source import BaseSource
-from phringe.io.validators import validate_quantity_units
+from phringe.io.validation import validate_quantity_units
 from phringe.util.grid import get_meshgrid
-from phringe.util.spectrum import create_blackbody_spectrum
+from phringe.util.spectrum import get_blackbody_spectrum_standard_units
 
 
 class Star(BaseSource):
@@ -167,7 +167,7 @@ class Star(BaseSource):
 
     @property
     def _spectral_energy_distribution(self) -> Tensor:
-        return create_blackbody_spectrum(
+        return get_blackbody_spectrum_standard_units(
             self.temperature,
             self._phringe._instrument.wavelength_bin_centers
         ) * self._solid_angle

@@ -15,14 +15,14 @@ from phringe.core.configuration import Configuration
 from phringe.core.instrument import Instrument
 from phringe.core.observation import Observation
 from phringe.core.scene import Scene
-from phringe.core.sources import Planet
-from phringe.core.sources import Star
 from phringe.core.sources.exozodi import Exozodi
 from phringe.core.sources.local_zodi import LocalZodi
+from phringe.core.sources.planet import Planet
+from phringe.core.sources.star import Star
 from phringe.io.nifits_writer import NIFITSWriter
+from phringe.util.device import get_available_memory
+from phringe.util.device import get_device
 from phringe.util.grid import get_meshgrid
-from phringe.util.memory import get_available_memory
-from phringe.util.torch import _set_seed, _get_device
 
 
 class PHRINGE:
@@ -79,7 +79,7 @@ class PHRINGE:
             extra_memory: int = 1
     ):
         self._detector_time_steps = None
-        self._device = _get_device(gpu_index) if device is None else device
+        self._device = get_device(gpu_index) if device is None else device
         self._extra_memory = extra_memory
         self._grid_size = grid_size
         self._instrument = None
@@ -87,9 +87,10 @@ class PHRINGE:
         self._scene = None
         self._simulation_time_steps = None
         self._time_step_size = time_step_size
-        self.seed = seed
 
-        _set_seed(self.seed if self.seed is not None else np.random.randint(0, 2 ** 31 - 1))
+        if seed is not None:
+            torch.manual_seed(seed)
+            np.random.seed(seed)
 
     @property
     def detector_time_steps(self):

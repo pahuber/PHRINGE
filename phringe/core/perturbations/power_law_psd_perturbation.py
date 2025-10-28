@@ -11,7 +11,7 @@ from scipy.fft import irfft, fftshift
 from torch import Tensor
 
 from phringe.core.perturbations.base_perturbation import BasePerturbation
-from phringe.io.validators import validate_quantity_units
+from phringe.io.validation import validate_quantity_units
 
 
 class PowerLawPSDPerturbation(BasePerturbation):

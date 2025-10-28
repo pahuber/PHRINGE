@@ -8,9 +8,9 @@ from pydantic import field_validator
 from pydantic_core.core_schema import ValidationInfo
 
 from phringe.core.sources.base_source import BaseSource
-from phringe.io.validators import validate_quantity_units
+from phringe.io.validation import validate_quantity_units
 from phringe.util.grid import get_radial_map, get_meshgrid
-from phringe.util.spectrum import create_blackbody_spectrum
+from phringe.util.spectrum import get_blackbody_spectrum_standard_units
 
 
 class Exozodi(BaseSource):
@@ -107,7 +107,7 @@ class Exozodi(BaseSource):
         spectral_energy_distribution = torch.zeros(shape, dtype=torch.float32, device=self._phringe._device)
 
         for ifov, fov in enumerate(self._phringe._instrument._field_of_view):
-            spectral_energy_distribution[ifov] = create_blackbody_spectrum(
+            spectral_energy_distribution[ifov] = get_blackbody_spectrum_standard_units(
                 temperature_map[ifov, :, :],
                 self._phringe._instrument.wavelength_bin_centers[ifov, None, None]
             ) * self._solid_angle[ifov, None, None]

@@ -12,10 +12,10 @@ from pydantic_core.core_schema import ValidationInfo
 from torch import Tensor
 
 from phringe.core.sources.base_source import BaseSource
-from phringe.io.validators import validate_quantity_units
+from phringe.io.input_spectrum import InputSpectrum
+from phringe.io.validation import validate_quantity_units
 from phringe.util.grid import get_index_of_closest_value, get_meshgrid
-from phringe.util.spectrum import InputSpectrum
-from phringe.util.spectrum import create_blackbody_spectrum
+from phringe.util.spectrum import get_blackbody_spectrum_standard_units
 
 
 def _convert_orbital_elements_to_sky_position(a, e, i, Omega, omega, nu):
@@ -300,7 +300,7 @@ class Planet(BaseSource):
         #     return torch.asarray(binned_spectral_flux_density, dtype=torch.float32, device=self._phringe._device)
         else:
             binned_spectral_flux_density = torch.asarray(
-                create_blackbody_spectrum(
+                get_blackbody_spectrum_standard_units(
                     self.temperature,
                     self._phringe._instrument.wavelength_bin_centers
                 )
