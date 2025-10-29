@@ -2,12 +2,13 @@ from __future__ import annotations
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, Union
 
 import astropy.units as u
 import numpy as np
 import spectres
 import torch
+from astropy.units import Quantity, Unit, UnitBase
 from pydantic import BaseModel, field_validator
 from pydantic_core.core_schema import ValidationInfo
 from torch import Tensor
@@ -41,13 +42,13 @@ class InputSpectrum(BaseModel):
         If the spectrum is given for a specific target, i.e. if sed_units do not contain "per steradian", this is the
         distance between the host star and the instrument. It is used to normalize the SED to solid angle.
     """
-    sed_units: Any
-    wavelength_units: Any
+    sed_units: Union[str, UnitBase]
+    wavelength_units: Union[str, Unit]
     path_to_file: Path = None
     sed: np.ndarray = None
     wavelengths: np.ndarray = None
-    observed_planet_radius: Any = None
-    observed_host_star_distance: Any = None
+    observed_planet_radius: Union[str, float, Quantity] = None
+    observed_host_star_distance: Union[str, float, Quantity] = None
 
     class Config:
         arbitrary_types_allowed = True
@@ -80,7 +81,7 @@ class InputSpectrum(BaseModel):
         self._convert_sed_to_standard_units()
 
     @field_validator('sed_units')
-    def _validate_sed_units(self, value: Any) -> u.UnitBase:
+    def _validate_sed_units(cls, value: Any) -> u.UnitBase:
         """Validate the spectral energy distribution units input.
 
         Parameters
@@ -96,13 +97,13 @@ class InputSpectrum(BaseModel):
         if isinstance(value, str):
             value = u.Unit(value)
 
-        if not self._is_sed_unit(value):
+        if not cls._is_sed_unit(value):
             raise ValueError(f"The provided SED units '{value}' are not valid SED units.")
 
         return value
 
     @field_validator('wavelength_units')
-    def _validate_wavelength_units(self, value: Any) -> u.UnitBase:
+    def _validate_wavelength_units(cls, value: Any) -> u.UnitBase:
         """Validate the wavelength units input.
 
         Parameters
@@ -124,7 +125,7 @@ class InputSpectrum(BaseModel):
         return value
 
     @field_validator('observed_planet_radius')
-    def _validate_observed_planet_radius(self, value: Any, info: ValidationInfo) -> float:
+    def _validate_observed_planet_radius(cls, value: Any, info: ValidationInfo) -> float:
         """Validate the observed planet radius input.
 
         Parameters
@@ -142,7 +143,7 @@ class InputSpectrum(BaseModel):
         return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,))
 
     @field_validator('observed_host_star_distance')
-    def _validate_observed_host_star_distance(self, value: Any, info: ValidationInfo) -> float:
+    def _validate_observed_host_star_distance(cls, value: Any, info: ValidationInfo) -> float:
         """Validate the observed host star distance input.
 
         Parameters
