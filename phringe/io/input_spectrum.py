@@ -2,14 +2,12 @@ from __future__ import annotations
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Union, Any
+from typing import Any
 
 import astropy.units as u
 import numpy as np
 import spectres
 import torch
-from astropy import units
-from astropy.units import Quantity
 from pydantic import BaseModel, field_validator
 from pydantic_core.core_schema import ValidationInfo
 from torch import Tensor
@@ -18,13 +16,13 @@ from phringe.io.validation import validate_quantity_units
 
 
 class InputSpectrum(BaseModel):
-    sed_units: Union[str, u.UnitBase]
-    wavelength_units: Union[str, units]
+    sed_units: Any
+    wavelength_units: Any
     path_to_file: Path = None
     sed: np.ndarray = None
     wavelengths: np.ndarray = None
-    observed_planet_radius: Union[float, str, Quantity] = None
-    observed_host_star_distance: Union[float, str, Quantity] = None
+    observed_planet_radius: Any = None
+    observed_host_star_distance: Any = None
 
     class Config:
         arbitrary_types_allowed = True
