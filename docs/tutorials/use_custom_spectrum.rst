@@ -23,10 +23,12 @@ Use A Custom Spectrum
 ---------------------
 
 To use a custom spectrum, an ``InputSpectrum`` object must be created and set as the ``input_spectrum`` argument of the ``Planet`` class.
-An input spectrum can be created from a spectrum file or directly from fluxes and wavelengths.
+An input spectrum can be created from a spectrum file or directly from arrays of SED and wavelengths.
 
 .. note::
-    The wavelengths need to be input in units of microns, and the fluxes in units of W/sr/m2/um.
+    Units equivalent to the following are accepted:
+    * SED units: 'W/sr/m2/um', 'W/m2/um', 'W/sr/m2/Hz', 'W/m2/Hz', 'Jy/sr', 'Jy', 'erg/s/sr/cm2/A', 'erg/s/cm2/A', 'erg/s/sr/cm2/Hz', 'erg/s/cm2/Hz'
+    * Wavelength units: 'um', 'Hz'
 
 A spectrum file must be a TXT file of the following structure:
 
@@ -45,12 +47,16 @@ This can be loaded into an ``InputSpectrum`` object as follows:
 
 .. code-block:: python
 
-    path_to_spectrum = 'path/to/spectrum.txt'
+    path_to_file = 'path/to/file.txt'
 
     input_spectrum = InputSpectrum(
-        path_to_spectrum=path_to_spectrum, # Alternatively: None
-        fluxes=None, # Alternatively: Tensor containing the fluxes in W/sr/m2/um
-        wavelengths=None # Alternatively: Tensor containing the wavelengths in micron
+        path_to_file=path_to_file, # Alternatively: None
+        sed=None, # Alternatively: NumPy array containing the sed
+        wavelengths=None, # Alternatively: NumPy array containing the wavelengths
+        sed_units='W/sr/m2/um', # Alternatively: u.W / u.sr / u.m**2 / u.um
+        wavelength_units='um' # Alternatively: u.um
+        observed_planet_radius=None # Only required if sed_units are not given per solid angle, i.e. /sr
+        observed_host_star_distance=None # Only required if sed_units are not given per solid angle, i.e. /sr
         )
 
     planet = Planet(
