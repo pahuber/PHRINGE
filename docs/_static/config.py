@@ -1,4 +1,4 @@
-from phringe.core.perturbations import PowerLawPSDPerturbation
+from phringe.core.perturbations.power_law_psd_perturbation import PowerLawPSDPerturbation
 from phringe.lib.array_configuration import XArrayConfiguration
 from phringe.lib.beam_combiner import DoubleBracewellBeamCombiner
 
