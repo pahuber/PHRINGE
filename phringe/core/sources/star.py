@@ -20,7 +20,6 @@ class Star(BaseSource):
 
     Parameters
     ----------
-
     distance : str, float, or Quantity
         Distance between the host star and the instrument in units of length.
     mass : str, float, or Quantity
