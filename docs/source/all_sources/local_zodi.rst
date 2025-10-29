@@ -3,5 +3,5 @@
 Local Zodi
 ==========
 
-.. autoclass:: phringe.core.entities.sources.local_zodi.LocalZodi
+.. autoclass:: phringe.core.sources.local_zodi.LocalZodi
 
