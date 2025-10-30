@@ -146,7 +146,7 @@ class PHRINGE:
 
         return time_step_indices
 
-    def _get_unbinned_counts(self, diff_only: bool = False):
+    def _get_unbinned_counts(self):
         """Calculate the differential counts for all time steps (, i.e. simulation time steps). Hence
         the output is not yet binned to detector time steps.
 
@@ -220,12 +220,6 @@ class PHRINGE:
                 # Calculate counts of shape (N_outputs x N_wavelengths x N_time_steps) for all time step slices
                 # Within torch.sum, the shape is (N_wavelengths x N_time_steps x N_pix x N_pix)
                 for i in range(self._instrument.number_of_outputs):
-
-                    # Calculate the counts of all outputs only in detailed mode. Else calculate only the ones needed to
-                    # calculate the differential outputs
-                    if not diff_only and i not in np.array(self._instrument.differential_outputs).flatten():
-                        continue
-
                     current_counts = (
                         torch.sum(
                             self._instrument.response[i](
@@ -237,12 +231,9 @@ class PHRINGE:
                                 torch.tensor(self.get_nulling_baseline(), device=self._device),
                                 *[self._instrument._get_amplitude(self._device) for _ in
                                   range(self._instrument.number_of_inputs)],
-                                *[amplitude_pert_time_series[k][
-                                      None, it_low:it_high, None,
-                                      None] for k in
+                                *[amplitude_pert_time_series[k][None, it_low:it_high, None, None] for k in
                                   range(self._instrument.number_of_inputs)],
-                                *[phase_pert_time_series[k][:, it_low:it_high, None, None]
-                                  for k in
+                                *[phase_pert_time_series[k][:, it_low:it_high, None, None] for k in
                                   range(self._instrument.number_of_inputs)],
                                 *[torch.tensor(0, device=self._device) for _ in
                                   range(self._instrument.number_of_inputs)],
@@ -297,25 +288,11 @@ class PHRINGE:
         torch.Tensor
             Raw photoelectron counts.
         """
-        counts_unbinned, binning_factor = self._get_unbinned_counts(diff_only=True)
+        counts_unbinned, binning_factor = self._get_unbinned_counts()
 
         if kernels:
-            counts_kernels_unbinned = torch.zeros(
-                (len(self._instrument.differential_outputs),
-                 len(self._instrument.wavelength_bin_centers),
-                 len(self.simulation_time_steps)),
-                device=self._device
-            )
-
-            # Calculate the kernel outputs/differential counts
-            M_torch = torch.tensor(self._instrument.kernels.tolist(), dtype=torch.float32)
-
-            # counts_kernels_unbinned = M_torch[:, None, None] @ counts_unbinned
-            counts_kernels_unbinned = torch.einsum('ij, jkl -> ikl', M_torch, counts_unbinned)
-
-            # for i in range(len(self._instrument.differential_outputs)):
-            #     counts_kernels_unbinned[i] = (counts_unbinned[self._instrument.differential_outputs[i][0]] -
-            #                                   counts_unbinned[self._instrument.differential_outputs[i][1]])
+            kernels_torch = torch.tensor(self._instrument.kernels.tolist(), dtype=torch.float32, device=self._device)
+            counts_kernels_unbinned = torch.einsum('ij, jkl -> ikl', kernels_torch, counts_unbinned)
 
             return torch.asarray(
                 block_reduce(
@@ -417,13 +394,8 @@ class PHRINGE:
         ) for j in range(self._instrument.number_of_outputs)])
 
         if kernels:
-            diff_ir = torch.zeros((len(self._instrument.differential_outputs),
-                                   ir.shape[1], ir.shape[2], ir.shape[3], ir.shape[4]), device=self._device)
-
-            for i in range(len(self._instrument.differential_outputs)):
-                diff_ir[i] = ir[self._instrument.differential_outputs[i][0]] - ir[
-                    self._instrument.differential_outputs[i][1]]
-
+            kernels_torch = torch.tensor(self._instrument.kernels.tolist(), dtype=torch.float32, device=self._device)
+            diff_ir = torch.einsum('ij, jklmn -> iklmn', kernels_torch, ir)
             return diff_ir
 
         return ir
@@ -435,7 +407,6 @@ class PHRINGE:
             x_position: float,
             y_position: float,
             kernels: bool = False,
-            has_photon_noise: bool = False,
     ) -> np.ndarray:
         ...
 
@@ -453,7 +424,6 @@ class PHRINGE:
             host_star_mass: float,
             planet_mass: float,
             kernels: bool = False,
-            has_photon_noise: bool = False,
     ) -> np.ndarray:
         ...
 
@@ -461,7 +431,6 @@ class PHRINGE:
             self,
             spectral_energy_distribution: np.ndarray,
             kernels: bool = False,
-            has_photon_noise: bool = False,
             **kwargs,
     ) -> np.ndarray:
         """Return the planet template (model) counts for a given spectral energy distribution and  either 1) sky
@@ -474,8 +443,6 @@ class PHRINGE:
             Spectral energy distribution in photons/(m^2 s m).
         kernels : bool
             Whether to use kernels for the calculations. Default is False.
-        has_photon_noise : bool
-            Whether to include photon noise in the calculations. Default is False.
         **kwargs
             Either x_position and y_position (both float, in radians) or semi_major_axis (float, in meters), eccentricity
             (float), inclination (float, in radians), raan (float, in radians), argument_of_periapsis (float, in radians),
@@ -542,43 +509,19 @@ class PHRINGE:
 
         # Return the corresponding counts depending on kernel usage and photon noise inclusion
         if kernels:
-            if not has_photon_noise:
-                diff_ir = np.concatenate([self._instrument._diff_ir_numpy[i](
-                    times,
-                    wavelength_bin_centers,
-                    x_positions,
-                    y_positions,
-                    self._observation.modulation_period,
-                    self.get_nulling_baseline,
-                    *[amplitude for _ in range(self._instrument.number_of_inputs)],
-                    *[0 for _ in range(self._instrument.number_of_inputs)],
-                    *[0 for _ in range(self._instrument.number_of_inputs)],
-                    *[0 for _ in range(self._instrument.number_of_inputs)],
-                    *[0 for _ in range(self._instrument.number_of_inputs)]
-                ) for i in range(len(self._instrument.differential_outputs))])
-            else:
-                ir = np.concatenate([self._instrument._ir_numpy[i](
-                    times,
-                    wavelength_bin_centers,
-                    x_positions,
-                    y_positions,
-                    self._observation.modulation_period,
-                    self.get_nulling_baseline,
-                    *[amplitude for _ in range(self._instrument.number_of_inputs)],
-                    *[0 for _ in range(self._instrument.number_of_inputs)],
-                    *[0 for _ in range(self._instrument.number_of_inputs)],
-                    *[0 for _ in range(self._instrument.number_of_inputs)],
-                    *[0 for _ in range(self._instrument.number_of_inputs)]
-                ) for i in range(self._instrument.number_of_outputs)])
-
-                ir = np.random.poisson(ir)
-
-                diff_ir = np.zeros((len(self._instrument.differential_outputs),
-                                    ir.shape[1], ir.shape[2], ir.shape[3], ir.shape[4]))
-
-                for i in range(len(self._instrument.differential_outputs)):
-                    diff_ir[i] = ir[self._instrument.differential_outputs[i][0]] - ir[
-                        self._instrument.differential_outputs[i][1]]
+            diff_ir = np.concatenate([self._instrument._diff_ir_numpy[i](
+                times,
+                wavelength_bin_centers,
+                x_positions,
+                y_positions,
+                self._observation.modulation_period,
+                self.get_nulling_baseline(),
+                *[amplitude for _ in range(self._instrument.number_of_inputs)],
+                *[0 for _ in range(self._instrument.number_of_inputs)],
+                *[0 for _ in range(self._instrument.number_of_inputs)],
+                *[0 for _ in range(self._instrument.number_of_inputs)],
+                *[0 for _ in range(self._instrument.number_of_inputs)]
+            ) for i in range(self._instrument.kernels.shape[0])])
 
             diff_counts = diff_ir * spectral_energy_distribution * self._observation.detector_integration_time * wavelength_bin_widths
 
@@ -590,16 +533,13 @@ class PHRINGE:
                 x_positions,
                 y_positions,
                 self._observation.modulation_period,
-                self.get_nulling_baseline,
+                self.get_nulling_baseline(),
                 *[amplitude for _ in range(self._instrument.number_of_inputs)],
                 *[0 for _ in range(self._instrument.number_of_inputs)],
                 *[0 for _ in range(self._instrument.number_of_inputs)],
                 *[0 for _ in range(self._instrument.number_of_inputs)],
                 *[0 for _ in range(self._instrument.number_of_inputs)]
             ) for i in range(self._instrument.number_of_outputs)])
-
-            if has_photon_noise:
-                ir = np.random.poisson(ir)
 
             counts = ir * spectral_energy_distribution * self._observation.detector_integration_time * wavelength_bin_widths
             return counts[:, :, :, 0, 0]

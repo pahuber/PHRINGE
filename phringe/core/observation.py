@@ -19,12 +19,8 @@ class Observation(BaseEntity):
         The detector integration time in seconds.
     modulation_period : str or float or Quantity
         The modulation/rotation period of the array in seconds.
-    optimized_differential_output : int
-        Optimized differential output index. If the baseline is not set manually, it is set such that the transmission is optimum for the optimized differential output.
-    optimized_star_separation : str or float or Quantity
-        Optimized star separation in radians or the string 'habitable-zone'. If the baseline is not set manually, it is set such that the transmission is optimum for the optimized star separation.
-    optimized_wavelength : str or float or Quantity
-        Optimized wavelength in meters. If the baseline is not set manually, it is set such that the transmission is optimum for the optimized wavelength.
+    nulling_baseline : str or float or Quantity or OptimizedNullingBaseline
+        The nulling baseline in meters or an optimized nulling baseline
     solar_ecliptic_latitude : str or float or Quantity
         The solar ecliptic latitude in degrees. Used for the local zodi contribution calculation.
     total_integration_time : str or float or Quantity
@@ -33,9 +29,6 @@ class Observation(BaseEntity):
     detector_integration_time: Union[str, float, Quantity]
     modulation_period: Union[str, float, Quantity]
     nulling_baseline: Union[str, float, Quantity, OptimizedNullingBaseline]
-    # optimized_differential_output: int
-    # optimized_star_separation: Union[str, float, Quantity]
-    # optimized_wavelength: Union[str, float, Quantity]
     solar_ecliptic_latitude: Union[str, float, Quantity]
     total_integration_time: Union[str, float, Quantity]
 
@@ -71,28 +64,6 @@ class Observation(BaseEntity):
             return value
         return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,))
 
-    # @field_validator('optimized_star_separation')
-    # def _validate_optimized_star_separation(cls, value: Any, info: ValidationInfo) -> float:
-    #     """Validate the optimized star separation input.
-    #
-    #     :param value: Value given as input
-    #     :param info: ValidationInfo object
-    #     :return: The optimized star separation in its original units or as a string
-    #     """
-    #     if value == 'habitable-zone':
-    #         return value
-    #     return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.rad,))
-    #
-    # @field_validator('optimized_wavelength')
-    # def _validate_optimized_wavelength(cls, value: Any, info: ValidationInfo) -> float:
-    #     """Validate the optimized wavelength input.
-    #
-    #     :param value: Value given as input
-    #     :param info: ValidationInfo object
-    #     :return: The optimized wavelength in units of length
-    #     """
-    #     return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,))
-
     @field_validator('solar_ecliptic_latitude')
     def _validate_solar_ecliptic_latitude(cls, value: Any, info: ValidationInfo) -> float:
         """Validate the solar ecliptic latitude input.
@@ -120,4 +91,8 @@ class Observation(BaseEntity):
 
         star_habitable_zone_central_radius = self._phringe._scene.star._habitable_zone_central_angular_radius \
             if self._phringe._scene.star is not None else None
-        return self.nulling_baseline.get_value(star_habitable_zone_central_radius)
+        return self.nulling_baseline.get_value(
+            star_habitable_zone_central_radius,
+            self._phringe._instrument.nulling_baseline_minimum,
+            self._phringe._instrument.nulling_baseline_maximum
+        )

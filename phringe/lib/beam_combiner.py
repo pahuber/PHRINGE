@@ -3,7 +3,7 @@ from sympy import Matrix, pi, sqrt, exp, I
 
 class BaseBeamCombiner:
     catm = None
-    diff_out = None
+    kernels = None
     sep_at_max_mod_eff = None
 
 
@@ -12,7 +12,6 @@ class DoubleBracewell(BaseBeamCombiner):
                            [sqrt(2), sqrt(2), 0, 0],
                            [1, -1, -exp(I * pi / 2), exp(I * pi / 2)],
                            [1, -1, exp(I * pi / 2), -exp(I * pi / 2)]])
-    # diff_out = [(2, 3)]
     kernels = Matrix([[0, 0, 1, -1]])
     sep_at_max_mod_eff = [0.6]
 
@@ -28,7 +27,6 @@ class Kernel4(BaseBeamCombiner):
                            [1 - em, -1 - em, -1 + em, 1 + em],
                            [1 + ep, -1 - ep, 1 - ep, -1 + ep],
                            [1 - em, -1 + em, -1 - em, 1 + em]])
-    # diff_out = [(1, 2), (3, 4), (5, 6)]
     kernels = Matrix([[0, 1, -1, 0, 0, 0, 0],
                       [0, 0, 0, 1, -1, 0, 0],
                       [0, 0, 0, 0, 0, 1, -1]])
@@ -46,8 +44,6 @@ class Kernel5(BaseBeamCombiner):
                                  [1, e4, e8, e2, e6],
                                  [1, e6, e2, e8, e4],
                                  [1, e8, e6, e4, e2]])
-
-    diff_out = [(1, 4), (2, 3)]
     kernels = Matrix([[0, 1, 0, 0, -1],
                       [0, 0, 1, -1, 0]])
     sep_at_max_mod_eff = [2.68, 1.03]

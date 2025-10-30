@@ -29,8 +29,6 @@ class Instrument(BaseEntity):
         The minimum baseline in meters.
     complex_amplitude_transfer_matrix : Tensor
         The complex amplitude transfer matrix.
-    differential_outputs : list
-        The differential outputs.
     perturbations : Perturbations
         The perturbations.
     quantum_efficiency : float
@@ -58,13 +56,11 @@ class Instrument(BaseEntity):
     """
     aperture_diameter: Union[str, float, Quantity]
     array_configuration_matrix: Matrix
-    baseline_maximum: Union[str, float, Quantity]
-    baseline_minimum: Union[str, float, Quantity]
+    nulling_baseline_maximum: Union[str, float, Quantity]
+    nulling_baseline_minimum: Union[str, float, Quantity]
     complex_amplitude_transfer_matrix: Matrix
-    differential_outputs: list
     kernels: Matrix
     quantum_efficiency: float
-    sep_at_max_mod_eff: list
     spectral_resolving_power: int
     throughput: float
     wavelength_bands_boundaries: list
@@ -106,23 +102,23 @@ class Instrument(BaseEntity):
             dtype=torch.float32
         )
 
-    @field_validator('baseline_minimum')
-    def _validate_baseline_minimum(cls, value: Any, info: ValidationInfo) -> float:
-        """Validate the baseline minimum input.
+    @field_validator('nulling_baseline_minimum')
+    def _validate_nulling_baseline_minimum(cls, value: Any, info: ValidationInfo) -> float:
+        """Validate the nulling baseline minimum input.
 
         :param value: Value given as input
         :param info: ValidationInfo object
-        :return: The minimum baseline in units of length
+        :return: The minimum nulling baseline in units of length
         """
         return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,))
 
-    @field_validator('baseline_maximum')
-    def _validate_baseline_maximum(cls, value: Any, info: ValidationInfo) -> float:
-        """Validate the baseline maximum input.
+    @field_validator('nulling_baseline_maximum')
+    def _validate_nulling_baseline_maximum(cls, value: Any, info: ValidationInfo) -> float:
+        """Validate the nulling baseline maximum input.
 
         :param value: Value given as input
         :param info: ValidationInfo object
-        :return: The maximum baseline in units of length
+        :return: The maximum nulling baseline in units of length
         """
         return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,))
 
@@ -283,26 +279,22 @@ class Instrument(BaseEntity):
         self._diff_ir_numpy = {}
         self._ir_numpy = {}
 
-        # self._diff_ir_torch = lambdify(
-        #     [t, l, alpha, beta, tm, b, *a.values(), *da.values(), *dphi.values(), *th.values(), *dth.values(), ],
-        #     self.kernels @ r,
-        #     [torch_func_dict]
-        # )
+        # Lambdify differential output for torch
+        r_vec = Matrix([r[j] for j in range(self.number_of_outputs)])  # shape (n_out, 1)
+        expr = self.kernels @ r_vec
 
-        for i in range(len(self.differential_outputs)):
-            # Lambdify differential output for torch
-            self._diff_ir_torch[i] = lambdify(
-                [t, l, alpha, beta, tm, b, *a.values(), *da.values(), *dphi.values(), *th.values(), *dth.values(), ],
-                r[self.differential_outputs[i][0]] - r[self.differential_outputs[i][1]],
-                [torch_func_dict]
-            )
+        self._diff_ir_torch = [lambdify(
+            [t, l, alpha, beta, tm, b, *a.values(), *da.values(), *dphi.values(), *th.values(), *dth.values(), ],
+            expr[i, 0],
+            [torch_func_dict]
+        ) for i in range(expr.rows)]
 
-            # Lambdify differential output for numpy
-            self._diff_ir_numpy[i] = lambdify(
-                [t, l, alpha, beta, tm, b, *a.values(), *da.values(), *dphi.values(), *th.values(), *dth.values(), ],
-                r[self.differential_outputs[i][0]] - r[self.differential_outputs[i][1]],
-                'numpy'
-            )
+        # Lambdify differential output for numpy
+        self._diff_ir_numpy = [lambdify(
+            [t, l, alpha, beta, tm, b, *a.values(), *da.values(), *dphi.values(), *th.values(), *dth.values(), ],
+            expr[i, 0],
+            'numpy'
+        ) for i in range(expr.rows)]
 
         for j in range(self.number_of_outputs):
             # Lambdify intensity response for numpy used in model count generation with photon noise
