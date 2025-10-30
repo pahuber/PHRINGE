@@ -234,7 +234,7 @@ class PHRINGE:
                                 sky_coordinates_x,
                                 sky_coordinates_y,
                                 torch.tensor(self._observation.modulation_period, device=self._device),
-                                torch.tensor(self._instrument._nulling_baseline, device=self._device),
+                                torch.tensor(self.get_nulling_baseline(), device=self._device),
                                 *[self._instrument._get_amplitude(self._device) for _ in
                                   range(self._instrument.number_of_inputs)],
                                 *[amplitude_pert_time_series[k][
@@ -549,7 +549,7 @@ class PHRINGE:
                     x_positions,
                     y_positions,
                     self._observation.modulation_period,
-                    self._instrument._nulling_baseline,
+                    self.get_nulling_baseline,
                     *[amplitude for _ in range(self._instrument.number_of_inputs)],
                     *[0 for _ in range(self._instrument.number_of_inputs)],
                     *[0 for _ in range(self._instrument.number_of_inputs)],
@@ -563,7 +563,7 @@ class PHRINGE:
                     x_positions,
                     y_positions,
                     self._observation.modulation_period,
-                    self._instrument._nulling_baseline,
+                    self.get_nulling_baseline,
                     *[amplitude for _ in range(self._instrument.number_of_inputs)],
                     *[0 for _ in range(self._instrument.number_of_inputs)],
                     *[0 for _ in range(self._instrument.number_of_inputs)],
@@ -590,7 +590,7 @@ class PHRINGE:
                 x_positions,
                 y_positions,
                 self._observation.modulation_period,
-                self._instrument._nulling_baseline,
+                self.get_nulling_baseline,
                 *[amplitude for _ in range(self._instrument.number_of_inputs)],
                 *[0 for _ in range(self._instrument.number_of_inputs)],
                 *[0 for _ in range(self._instrument.number_of_inputs)],
@@ -640,7 +640,7 @@ class PHRINGE:
         torch.Tensor
             Indices of the time slices.
         """
-        return self._instrument._nulling_baseline
+        return self._observation._nulling_baseline
 
     def get_source_spectrum(self, source_name: str) -> Tensor:
         """Return the spectral energy distribution of a source.

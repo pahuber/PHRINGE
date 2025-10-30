@@ -1,4 +1,3 @@
-import warnings
 from typing import Tuple, Any, Union
 
 import numpy as np
@@ -171,34 +170,6 @@ class Instrument(BaseEntity):
     @property
     def _number_of_simulation_time_steps(self):
         return len(self._simulation_time_steps)
-
-    @property
-    def _nulling_baseline(self) -> float:
-        # Get the optimized separation in angular units, if it is not yet in angular units
-        if self._phringe._observation.optimized_star_separation == "habitable-zone":
-            optimized_star_separation = self._phringe._scene.star._habitable_zone_central_angular_radius
-        else:
-            optimized_star_separation = self._phringe._observation.optimized_star_separation
-
-        # Get the optimal baseline and check if it is within the allowed range
-
-        nulling_baseline = (
-                self.sep_at_max_mod_eff[self._phringe._observation.optimized_differential_output]
-                * self._phringe._observation.optimized_wavelength
-                / optimized_star_separation
-        )
-
-        # Set nulling baseline to optimum value or to min/max value if it is outside the allowed range
-        if self.baseline_minimum <= nulling_baseline and nulling_baseline <= self.baseline_maximum:
-            return nulling_baseline
-        elif nulling_baseline < self.baseline_minimum:
-            warnings.warn(
-                f"Nulling baseline of {nulling_baseline} is below the minimum allowed baseline of {self.baseline_minimum}. Setting to minimum baseline.")
-            return self.baseline_minimum
-        elif nulling_baseline > self.baseline_maximum:
-            warnings.warn(
-                f"Nulling baseline of {nulling_baseline} is above the maximum allowed baseline of {self.baseline_maximum}. Setting to maximum baseline.")
-            return self.baseline_maximum
 
     @property
     def _wavelength_bins(self) -> Tuple[np.ndarray, np.ndarray]:
