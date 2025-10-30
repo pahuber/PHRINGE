@@ -12,7 +12,7 @@ from phringe.io.validation import validate_quantity_units
 class OptimizedNullingBaseline(BaseModel):
     angular_star_separation: Union[float, str, Quantity]
     wavelength: Union[float, str, Quantity]
-    separation_at_max_mod_efficiency: float
+    sep_at_max_mod_eff: float
 
     class Config:
         arbitrary_types_allowed = True
@@ -49,32 +49,32 @@ class OptimizedNullingBaseline(BaseModel):
 
     def get_value(
             self,
-            star_habitable_zone_central_radius: Union[float, None],
-            nulling_baseline_minimum: float,
-            nulling_baseline_maximum: float
+            star_habitable_zone_central_angular_radius: Union[float, None],
+            nulling_baseline_min: float,
+            nulling_baseline_max: float
     ) -> float:
         """Compute the optimized nulling baseline.
 
         :return: The optimized nulling baseline in units of length
         """
         if self.angular_star_separation == 'habitable-zone':
-            if star_habitable_zone_central_radius is None:
+            if star_habitable_zone_central_angular_radius is None:
                 raise ValueError(
                     'A star is required to optimize the nulling baseline for the habitable zone. Alternatively, set to an angular value instead of "habitable-zone".')
-            angular_star_separation = star_habitable_zone_central_radius
+            angular_star_separation = star_habitable_zone_central_angular_radius
         else:
             angular_star_separation = self.angular_star_separation
 
-        nulling_baseline = self.separation_at_max_mod_efficiency * self.wavelength / angular_star_separation
+        nulling_baseline = self.sep_at_max_mod_eff * self.wavelength / angular_star_separation
 
         # Set nulling baseline to optimum value or to min/max value if it is outside the allowed range
-        if nulling_baseline_minimum <= nulling_baseline and nulling_baseline <= nulling_baseline_maximum:
+        if nulling_baseline_min <= nulling_baseline and nulling_baseline <= nulling_baseline_max:
             return nulling_baseline
-        elif nulling_baseline < nulling_baseline_maximum:
+        elif nulling_baseline < nulling_baseline_max:
             warnings.warn(
-                f"Nulling baseline of {nulling_baseline} is below the minimum allowed baseline of {nulling_baseline_minimum}. Setting to minimum baseline.")
-            return nulling_baseline_minimum
-        elif nulling_baseline > nulling_baseline_maximum:
+                f"Nulling baseline of {nulling_baseline} is below the min allowed baseline of {nulling_baseline_min}. Setting to min baseline.")
+            return nulling_baseline_min
+        elif nulling_baseline > nulling_baseline_max:
             warnings.warn(
-                f"Nulling baseline of {nulling_baseline} is above the maximum allowed baseline of {nulling_baseline_maximum}. Setting to maximum baseline.")
-            return nulling_baseline_maximum
+                f"Nulling baseline of {nulling_baseline} is above the max allowed baseline of {nulling_baseline_max}. Setting to max baseline.")
+            return nulling_baseline_max

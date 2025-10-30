@@ -1,6 +1,7 @@
 from phringe.core.perturbations.power_law_psd_perturbation import PowerLawPSDPerturbation
 from phringe.lib.array_configuration import XArrayConfiguration
 from phringe.lib.beam_combiner import DoubleBracewell
+from phringe.util.baseline import OptimizedNullingBaseline
 
 config = {
     'observation': {
@@ -8,19 +9,19 @@ config = {
         'total_integration_time': '4 d',  # Total integration time of the observation
         'detector_integration_time': '0.02 d',  # Results in 200 time steps; use between 100 and 1000
         'modulation_period': '4 d',  # Period of the interferometer modulation, e.g. rotation
-        'optimized_differential_output': 0,  # Index of the kernel to optimize the baseline for
-        'optimized_star_separation': 'habitable-zone',  # Sep. to optimize the baseline for; also e.g. '0.1 arcsec'
-        'optimized_wavelength': '10 um',  # Wavelength to optimize the baseline for
+        'nulling_baseline': OptimizedNullingBaseline(  # Alternatively a fixed value, e.g. '10 m'
+            angular_star_separation='habitable-zone',  # Alternatively a numerical value, e.g. '0.1 arcsec'
+            wavelength='10 um',
+            sep_at_max_mod_eff=DoubleBracewell.sep_at_max_mod_eff[0]
+        ),
     },
     'instrument': {
         'array_configuration_matrix': XArrayConfiguration.acm,  # Array configuration; collector position and motion
         'complex_amplitude_transfer_matrix': DoubleBracewell.catm,  # Beam combiner transfer matrix
-        'differential_outputs': DoubleBracewell.diff_out,  # Differential outputs (kernels) description
-        'kernels': DoubleBracewell.kernels,
-        'sep_at_max_mod_eff': DoubleBracewell.sep_at_max_mod_eff,  # Modulation efficiency maximum
+        'kernels': DoubleBracewell.kernels,  # Kernel matrix
         'aperture_diameter': '3.5 m',
-        'baseline_maximum': '600 m',
-        'baseline_minimum': '5 m',
+        'nulling_baseline_max': '600 m',
+        'nulling_baseline_min': '5 m',
         'spectral_resolving_power': 30,
         'wavelength_min': '4 um',
         'wavelength_max': '18.5 um',

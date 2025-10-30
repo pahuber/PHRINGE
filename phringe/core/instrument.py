@@ -23,10 +23,10 @@ class Instrument(BaseEntity):
         The aperture diameter in meters.
     array_configuration_matrix : Tensor
         The array configuration matrix.
-    baseline_maximum : str or float or Quantity
-        The maximum baseline in meters.
-    baseline_minimum : str or float or Quantity
-        The minimum baseline in meters.
+    baseline_max : str or float or Quantity
+        The max baseline in meters.
+    baseline_min : str or float or Quantity
+        The min baseline in meters.
     complex_amplitude_transfer_matrix : Tensor
         The complex amplitude transfer matrix.
     perturbations : Perturbations
@@ -34,15 +34,15 @@ class Instrument(BaseEntity):
     quantum_efficiency : float
         The quantum efficiency.
     sep_at_max_mod_eff : list
-        The separation at maximum modulation efficiency.
+        The separation at max modulation efficiency.
     spectral_resolving_power : int
         The spectral resolving power.
     throughput : float
         The throughput.
     wavelength_min : str or float or Quantity
-        The minimum wavelength in meters.
+        The min wavelength in meters.
     wavelength_max : str or float or Quantity
-        The maximum wavelength in meters.
+        The max wavelength in meters.
 
     Attributes
     ----------
@@ -56,8 +56,8 @@ class Instrument(BaseEntity):
     """
     aperture_diameter: Union[str, float, Quantity]
     array_configuration_matrix: Matrix
-    nulling_baseline_maximum: Union[str, float, Quantity]
-    nulling_baseline_minimum: Union[str, float, Quantity]
+    nulling_baseline_max: Union[str, float, Quantity]
+    nulling_baseline_min: Union[str, float, Quantity]
     complex_amplitude_transfer_matrix: Matrix
     kernels: Matrix
     quantum_efficiency: float
@@ -102,23 +102,23 @@ class Instrument(BaseEntity):
             dtype=torch.float32
         )
 
-    @field_validator('nulling_baseline_minimum')
-    def _validate_nulling_baseline_minimum(cls, value: Any, info: ValidationInfo) -> float:
-        """Validate the nulling baseline minimum input.
+    @field_validator('nulling_baseline_min')
+    def _validate_nulling_baseline_min(cls, value: Any, info: ValidationInfo) -> float:
+        """Validate the nulling baseline min input.
 
         :param value: Value given as input
         :param info: ValidationInfo object
-        :return: The minimum nulling baseline in units of length
+        :return: The min nulling baseline in units of length
         """
         return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,))
 
-    @field_validator('nulling_baseline_maximum')
-    def _validate_nulling_baseline_maximum(cls, value: Any, info: ValidationInfo) -> float:
-        """Validate the nulling baseline maximum input.
+    @field_validator('nulling_baseline_max')
+    def _validate_nulling_baseline_max(cls, value: Any, info: ValidationInfo) -> float:
+        """Validate the nulling baseline max input.
 
         :param value: Value given as input
         :param info: ValidationInfo object
-        :return: The maximum nulling baseline in units of length
+        :return: The max nulling baseline in units of length
         """
         return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,))
 
@@ -320,17 +320,17 @@ class Instrument(BaseEntity):
 
         :return: A tuple containing the wavelength bin centers and widths
         """
-        current_minimum_wavelength = self.wavelength_min
+        current_min_wavelength = self.wavelength_min
         wavelength_bin_centers = []
         wavelength_bin_widths = []
 
-        while current_minimum_wavelength <= self.wavelength_max:
-            center_wavelength = current_minimum_wavelength / (1 - 1 / (2 * self.spectral_resolving_power))
-            bin_width = 2 * (center_wavelength - current_minimum_wavelength)
+        while current_min_wavelength <= self.wavelength_max:
+            center_wavelength = current_min_wavelength / (1 - 1 / (2 * self.spectral_resolving_power))
+            bin_width = 2 * (center_wavelength - current_min_wavelength)
             if (center_wavelength + bin_width / 2 <= self.wavelength_max):
                 wavelength_bin_centers.append(center_wavelength)
                 wavelength_bin_widths.append(bin_width)
-                current_minimum_wavelength = center_wavelength + bin_width / 2
+                current_min_wavelength = center_wavelength + bin_width / 2
 
             # If there is not enough space for the last bin, leave it away
             else:
