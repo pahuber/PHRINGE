@@ -7,7 +7,7 @@ from pydantic_core.core_schema import ValidationInfo
 
 from phringe.core.base_entity import BaseEntity
 from phringe.io.validation import validate_quantity_units
-from phringe.util.baseline import OptimizedNullingBaseline
+from phringe.util.baseline import OptimalNullingBaseline
 
 
 class Observation(BaseEntity):
@@ -19,7 +19,7 @@ class Observation(BaseEntity):
         The detector integration time in seconds.
     modulation_period : str or float or Quantity
         The modulation/rotation period of the array in seconds.
-    nulling_baseline : str or float or Quantity or OptimizedNullingBaseline
+    nulling_baseline : str or float or Quantity or OptimalNullingBaseline
         The nulling baseline in meters or an optimized nulling baseline
     solar_ecliptic_latitude : str or float or Quantity
         The solar ecliptic latitude in degrees. Used for the local zodi contribution calculation.
@@ -28,7 +28,7 @@ class Observation(BaseEntity):
     """
     detector_integration_time: Union[str, float, Quantity]
     modulation_period: Union[str, float, Quantity]
-    nulling_baseline: Union[str, float, Quantity, OptimizedNullingBaseline]
+    nulling_baseline: Union[str, float, Quantity, OptimalNullingBaseline]
     solar_ecliptic_latitude: Union[str, float, Quantity]
     total_integration_time: Union[str, float, Quantity]
 
@@ -53,14 +53,14 @@ class Observation(BaseEntity):
         return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.s,))
 
     @field_validator('nulling_baseline')
-    def _validate_nulling_baseline(cls, value: Any, info: ValidationInfo) -> Union[float, OptimizedNullingBaseline]:
+    def _validate_nulling_baseline(cls, value: Any, info: ValidationInfo) -> Union[float, OptimalNullingBaseline]:
         """Validate the nulling baseline input.
 
         :param value: Value given as input
         :param info: ValidationInfo object
         :return: The nulling baseline in units of length
         """
-        if isinstance(value, OptimizedNullingBaseline):
+        if isinstance(value, OptimalNullingBaseline):
             return value
         return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,))
 
@@ -86,7 +86,7 @@ class Observation(BaseEntity):
 
     @property
     def _nulling_baseline(self) -> float:
-        if not isinstance(self.nulling_baseline, OptimizedNullingBaseline):
+        if not isinstance(self.nulling_baseline, OptimalNullingBaseline):
             return self.nulling_baseline
 
         star_habitable_zone_central_angular_radius = self._phringe._scene.star._habitable_zone_central_angular_radius \

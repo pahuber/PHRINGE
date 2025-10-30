@@ -4,19 +4,17 @@ Custom Instrument
 =================
 
 `PHRINGE` provides a couple predefined ``Instrument``s, but also allows the creation of custom instruments.
-This requires the specification of the ``array_configuration_matrix``, the ``complex_amplitude_transfer_matrix``, the ``differential_outputs``, and
-the ``sep_at_max_mod_eff`` arguments,
+This requires the specification of the ``array_configuration_matrix``, the ``complex_amplitude_transfer_matrix`` and the ``kernels`` arguments,
 
 .. code-block:: Python
 
     inst = Instrument(
         array_configuration_matrix=acm,
         complex_amplitude_transfer_matrix=catm,
-        differential_outputs=diff_outs,
-        sep_at_max_mod_eff=sep_at_max_mod_eff,
+        kernels=kernels
         aperture_diameter=aperture_diameter,
-        baseline_maximum=baseline_maximum,
-        baseline_minimum=baseline_minimum,
+        nulling_baseline_max=nulling_baseline_max,
+        nulling_baseline_min=nulling_baseline_min,
         quantum_efficiency=quantum_efficiency,
         spectral_resolving_power=spectral_resolving_power,
         throughput=throughput,
@@ -87,24 +85,23 @@ We define this equivalently in Python as
                        [1, -1, -exp(I * pi / 2), exp(I * pi / 2)],
                        [1, -1, exp(I * pi / 2), -exp(I * pi / 2)]])
 
-Differential Outputs
---------------------
-The differential outputs are created by the difference of the outputs of the beam combiner.
+Kernels
+-------
+The kernels are created by the difference of pairwise outputs of the beam combiner.
 Different beam combiners can have different numbers of differential outputs. They are specified in
-`PHRINGE` as a list of tuples, containing the two indices of the outputs that are subtracted.
-For instance, the dual Bracewell nuller has one differnetial output formed by the third and fourth outputs.
+`PHRINGE` as matrix of shape (N_kernels x N_inputs). For instance, the dual Bracewell nuller has one differnetial output formed by the third and fourth outputs.
 Thus:
 
 .. code-block:: python
 
-    diff_outs = [(2, 3)]
+    kernels = Matrix([[0, 0, 1, -1]])
 
 With indices starting at 0 in Python, this corresponds to the third and fourth outputs.
 
 Separation at Maximum Modulation Efficiency
 -------------------------------------------
-The separation at maximum modulation efficiency describes the angular separation at which the instrument response modulates most efficiently and
-is used to calculate the optimal baseline length. For instance, for a dual Bracewell nuller, the angular separation for which
+The separation at maximum modulation efficiency describes the angular separation at which the instrument response modulates most efficiently. It
+is only used to calculate the optimal nulling baseline length. For instance, for a dual Bracewell nuller, the angular separation for which
 the modulation efficiency is maximized is given by (`Dannert et al. 2022 <https://www.aanda.org/articles/aa/abs/2022/08/aa41958-21/aa41958-21.html>`_)
 
 .. math::
@@ -121,7 +118,14 @@ We specify this in Python as a list containing the coefficient in front of the w
 Note that this list must contain a value for each differential output; they are usually different for different outputs.
 
 .. note::
-    These coefficients can be calculated by calculating the RMS of the intsrument response throughout the observation and plotting it as a function of angular separation.
+    These coefficients can be calculated by calculating the RMS of the instrument response throughout the observation and plotting it as a function of angular separation.
     The maximum of this curve corresponds to the coefficient.
 
+They can then be used to get the optimal nulling baseline as follows:
+.. code-block:: python
 
+    nulling_baseline=OptimalNullingBaseline(  # Alternatively a fixed value, e.g. 10 * u.m
+        angular_star_separation=0.1 * u.arcsec,
+        wavelength=10 * u.um,
+        sep_at_max_mod_eff=sep_at_max_mod_eff[0] # Index corresponding to kernel index to be optimized for
+    ),

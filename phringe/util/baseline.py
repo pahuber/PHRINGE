@@ -9,7 +9,7 @@ from pydantic_core.core_schema import ValidationInfo
 from phringe.io.validation import validate_quantity_units
 
 
-class OptimizedNullingBaseline(BaseModel):
+class OptimalNullingBaseline(BaseModel):
     angular_star_separation: Union[float, str, Quantity]
     wavelength: Union[float, str, Quantity]
     sep_at_max_mod_eff: float

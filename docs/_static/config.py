@@ -1,7 +1,7 @@
 from phringe.core.perturbations.power_law_psd_perturbation import PowerLawPSDPerturbation
 from phringe.lib.array_configuration import XArrayConfiguration
 from phringe.lib.beam_combiner import DoubleBracewell
-from phringe.util.baseline import OptimizedNullingBaseline
+from phringe.util.baseline import OptimalNullingBaseline
 
 config = {
     'observation': {
@@ -9,7 +9,7 @@ config = {
         'total_integration_time': '4 d',  # Total integration time of the observation
         'detector_integration_time': '0.02 d',  # Results in 200 time steps; use between 100 and 1000
         'modulation_period': '4 d',  # Period of the interferometer modulation, e.g. rotation
-        'nulling_baseline': OptimizedNullingBaseline(  # Alternatively a fixed value, e.g. '10 m'
+        'nulling_baseline': OptimalNullingBaseline(  # Alternatively a fixed value, e.g. '10 m'
             angular_star_separation='habitable-zone',  # Alternatively a numerical value, e.g. '0.1 arcsec'
             wavelength='10 um',
             sep_at_max_mod_eff=DoubleBracewell.sep_at_max_mod_eff[0]
