@@ -1,14 +1,14 @@
 from phringe.lib.array_configuration import XArrayConfiguration, KiteArrayConfiguration, PentagonArrayConfiguration
-from phringe.lib.beam_combiner import DoubleBracewellBeamCombiner, Kernel4BeamCombiner, Kernel5BeamCombiner
+from phringe.lib.beam_combiner import DoubleBracewell, Kernel4, Kernel5
 
 
-class LIFEBaselineArchitecture(XArrayConfiguration, DoubleBracewellBeamCombiner):
+class LIFEBaselineArchitecture(XArrayConfiguration, DoubleBracewell):
     pass
 
 
-class Kernel4Kite(KiteArrayConfiguration, Kernel4BeamCombiner):
+class Kernel4Kite(KiteArrayConfiguration, Kernel4):
     pass
 
 
-class Kernel5Pentagon(PentagonArrayConfiguration, Kernel5BeamCombiner):
+class Kernel5Pentagon(PentagonArrayConfiguration, Kernel5):
     pass

@@ -308,9 +308,14 @@ class PHRINGE:
             )
 
             # Calculate the kernel outputs/differential counts
-            for i in range(len(self._instrument.differential_outputs)):
-                counts_kernels_unbinned[i] = (counts_unbinned[self._instrument.differential_outputs[i][0]] -
-                                              counts_unbinned[self._instrument.differential_outputs[i][1]])
+            M_torch = torch.tensor(self._instrument.kernels.tolist(), dtype=torch.float32)
+
+            # counts_kernels_unbinned = M_torch[:, None, None] @ counts_unbinned
+            counts_kernels_unbinned = torch.einsum('ij, jkl -> ikl', M_torch, counts_unbinned)
+
+            # for i in range(len(self._instrument.differential_outputs)):
+            #     counts_kernels_unbinned[i] = (counts_unbinned[self._instrument.differential_outputs[i][0]] -
+            #                                   counts_unbinned[self._instrument.differential_outputs[i][1]])
 
             return torch.asarray(
                 block_reduce(

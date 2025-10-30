@@ -1,6 +1,6 @@
 from phringe.core.perturbations.power_law_psd_perturbation import PowerLawPSDPerturbation
 from phringe.lib.array_configuration import XArrayConfiguration
-from phringe.lib.beam_combiner import DoubleBracewellBeamCombiner
+from phringe.lib.beam_combiner import DoubleBracewell
 
 config = {
     'observation': {
@@ -14,9 +14,10 @@ config = {
     },
     'instrument': {
         'array_configuration_matrix': XArrayConfiguration.acm,  # Array configuration; collector position and motion
-        'complex_amplitude_transfer_matrix': DoubleBracewellBeamCombiner.catm,  # Beam combiner transfer matrix
-        'differential_outputs': DoubleBracewellBeamCombiner.diff_out,  # Differential outputs (kernels) description
-        'sep_at_max_mod_eff': DoubleBracewellBeamCombiner.sep_at_max_mod_eff,  # Modulation efficiency maximum
+        'complex_amplitude_transfer_matrix': DoubleBracewell.catm,  # Beam combiner transfer matrix
+        'differential_outputs': DoubleBracewell.diff_out,  # Differential outputs (kernels) description
+        'kernels': DoubleBracewell.kernels,
+        'sep_at_max_mod_eff': DoubleBracewell.sep_at_max_mod_eff,  # Modulation efficiency maximum
         'aperture_diameter': '3.5 m',
         'baseline_maximum': '600 m',
         'baseline_minimum': '5 m',

@@ -63,6 +63,7 @@ class Instrument(BaseEntity):
     baseline_minimum: Union[str, float, Quantity]
     complex_amplitude_transfer_matrix: Matrix
     differential_outputs: list
+    kernels: Matrix
     quantum_efficiency: float
     sep_at_max_mod_eff: list
     spectral_resolving_power: int
@@ -310,6 +311,12 @@ class Instrument(BaseEntity):
         self._diff_ir_torch = {}
         self._diff_ir_numpy = {}
         self._ir_numpy = {}
+
+        # self._diff_ir_torch = lambdify(
+        #     [t, l, alpha, beta, tm, b, *a.values(), *da.values(), *dphi.values(), *th.values(), *dth.values(), ],
+        #     self.kernels @ r,
+        #     [torch_func_dict]
+        # )
 
         for i in range(len(self.differential_outputs)):
             # Lambdify differential output for torch
