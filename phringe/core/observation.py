@@ -90,7 +90,7 @@ class Observation(BaseEntity):
             return self.nulling_baseline
 
         star_habitable_zone_central_angular_radius = self._phringe._scene.star._habitable_zone_central_angular_radius \
-            if self._phringe._scene.star is not None else None
+            if (self._phringe._scene is not None and self._phringe._scene.star is not None) else None
         return self.nulling_baseline.get_value(
             star_habitable_zone_central_angular_radius,
             self._phringe._instrument.nulling_baseline_min,

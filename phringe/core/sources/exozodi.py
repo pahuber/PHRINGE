@@ -67,7 +67,8 @@ class Exozodi(BaseSource):
     @property
     def _sky_brightness_distribution(self):
         host_star_luminosity = self.host_star_luminosity if self.host_star_luminosity is not None else self._phringe._scene.star.luminosity
-        reference_radius_in_au = torch.sqrt(torch.tensor(host_star_luminosity / 3.86e26, device=self._phringe._device))
+        reference_radius_in_au = torch.sqrt(
+            torch.tensor(host_star_luminosity / 3.86e26, device=self._phringe._device, dtype=torch.float32))
         surface_maps = self.level * 7.12e-8 * (self._field_of_view_in_au_radial_map / reference_radius_in_au) ** (-0.34)
         return surface_maps * self._spectral_energy_distribution
 

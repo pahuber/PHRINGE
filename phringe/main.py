@@ -1,14 +1,17 @@
 from pathlib import Path
 from typing import Union, overload
 
+import astropy.units as u
 import numpy as np
 import torch
 from astropy.constants.codata2018 import G
+from matplotlib import pyplot as plt
 from poliastro.bodies import Body
 from poliastro.twobody import Orbit
 from skimage.measure import block_reduce
 from sympy import lambdify, symbols
 from torch import Tensor
+from torch.distributions import Normal
 from tqdm import tqdm
 
 from phringe.core.configuration import Configuration
@@ -23,6 +26,7 @@ from phringe.io.nifits_writer import NIFITSWriter
 from phringe.util.device import get_available_memory
 from phringe.util.device import get_device
 from phringe.util.grid import get_meshgrid
+from phringe.util.spectrum import get_blackbody_spectrum_standard_units
 
 
 class PHRINGE:
@@ -227,15 +231,16 @@ class PHRINGE:
                                 self._instrument.wavelength_bin_centers[:, None, None, None],
                                 sky_coordinates_x,
                                 sky_coordinates_y,
-                                torch.tensor(self._observation.modulation_period, device=self._device),
-                                torch.tensor(self.get_nulling_baseline(), device=self._device),
+                                torch.tensor(self._observation.modulation_period, device=self._device,
+                                             dtype=torch.float32),
+                                torch.tensor(self.get_nulling_baseline(), device=self._device, dtype=torch.float32),
                                 *[self._instrument._get_amplitude(self._device) for _ in
                                   range(self._instrument.number_of_inputs)],
                                 *[amplitude_pert_time_series[k][None, it_low:it_high, None, None] for k in
                                   range(self._instrument.number_of_inputs)],
                                 *[phase_pert_time_series[k][:, it_low:it_high, None, None] for k in
                                   range(self._instrument.number_of_inputs)],
-                                *[torch.tensor(0, device=self._device) for _ in
+                                *[torch.tensor(0, device=self._device, dtype=torch.float32) for _ in
                                   range(self._instrument.number_of_inputs)],
                                 *[polarization_pert_time_series[k][None, it_low:it_high,
                                 None, None] for k in
@@ -248,7 +253,10 @@ class PHRINGE:
                         )
                     )
                     # Add photon (Poisson) noise
-                    current_counts = torch.poisson(current_counts)
+                    if self._device != torch.device('mps'):
+                        current_counts = torch.poisson(current_counts)
+                    else:
+                        current_counts = torch.poisson(current_counts.cpu()).to(self._device)
                     counts[i, :, it_low:it_high] += current_counts
 
         # Bin data to from simulation time steps detector time steps
@@ -581,6 +589,106 @@ class PHRINGE:
             Indices of the time slices.
         """
         return self._observation._nulling_baseline
+
+    def get_sensitivity_limits(
+            self,
+            temperature: float,
+            pfa: float = 2.9e-7,
+            pdet: float = 0.9,
+            ang_sep_mas_min: float = 10,
+            ang_sep_mas_max: float = 150,
+            num_ang_seps: int = 10,
+            num_reps: int = 1,
+            as_radius: bool = True,
+            make_2d: bool = False
+    ) -> Tensor:
+        """Return the sensitivity limits of the instrument.
+
+
+        Returns
+        -------
+        torch.Tensor
+            Sensitivity limits.
+        """
+        ang_seps_mas = np.linspace(ang_sep_mas_min, ang_sep_mas_max, num_ang_seps)
+        ang_seps_rad = ang_seps_mas * (1e-3 / 3600) * (np.pi / 180)
+        sensitivities = torch.zeros((num_reps, num_ang_seps), device=self._device)
+
+        for i, ang_sep in enumerate(tqdm(ang_seps_rad)):
+            for rep in range(num_reps):
+                # Get whitening matrix
+                n_ref = self.get_counts(kernels=True)
+                n_ref = n_ref.permute(1, 0, 2).reshape(n_ref.shape[1], -1)
+
+                cov = torch.cov(n_ref)
+                # eigvals, eigvecs = torch.linalg.eigh(cov)
+                # w = eigvecs @ torch.diag(1.0 / torch.sqrt(eigvals + 1e-8)) @ eigvecs.T
+                eigvals, eigvecs = torch.linalg.eigh(cov)
+                w = eigvecs @ torch.diag(eigvals.clamp(min=1e-12).rsqrt()) @ eigvecs.T
+                plt.imshow(cov.cpu().numpy(), aspect='auto')
+                plt.colorbar()
+                plt.show()
+
+                # Get model
+                solid_angle_ref = 1e-20
+
+                x0 = self.get_model_counts(
+                    spectral_energy_distribution=get_blackbody_spectrum_standard_units(
+                        temperature,
+                        self.get_wavelength_bin_centers()
+                    ).cpu().numpy(),
+                    x_position=ang_sep,
+                    y_position=0,
+                    kernels=True
+                )
+                x0 = x0.transpose(1, 0, 2).reshape(x0.shape[1], -1) * solid_angle_ref
+                x0 = torch.from_numpy(x0).float().to(n_ref.device)
+
+                # Whiten model
+                xw = w @ x0
+                xw = xw.flatten()
+                s = torch.linalg.norm(xw)
+
+                # Calculate sensitivity limit
+                std_normal = Normal(0.0, 1.0)
+                zfa = std_normal.icdf(torch.tensor(1.0 - pfa, device=s.device))
+                zdet = std_normal.icdf(torch.tensor(pdet, device=s.device))
+                omega_min = solid_angle_ref * (zfa - zdet) / s  # minimal solid angle (sr) to hit (pfa,pdet)
+
+                sensitivities[rep, i] = omega_min
+
+        if as_radius:
+            sensitivities = self._scene.star.distance * torch.sqrt(sensitivities / torch.pi) / (1 * u.Rearth).to(
+                u.m).value
+            # if make_2d:
+        #     profile = radii.cpu().numpy()
+        #     N = 2 * len(radii)  # image size (NxN)
+        #     cx = cy = (N - 1) / 2
+        #
+        #     # pixel radii
+        #     y, x = np.ogrid[:N, :N]
+        #     r = np.hypot(x - cx, y - cy)
+        #
+        #     # map radii to profile indices
+        #     # assume profile is uniformly sampled in radius from 0 to r_max
+        #     r_max = r.max()
+        #     r_profile = np.linspace(0, r_max, profile.size)
+        #
+        #     # fast linear interpolation
+        #     img = np.interp(r, r_profile, profile, left=profile[0], right=profile[-1])
+        #
+        #     # optional: smoother interpolation
+        #     # f = interp1d(r_profile, profile, kind='cubic', bounds_error=False,
+        #     #              fill_value=(profile[0], profile[-1]))
+        #     # img = f(r)
+        #
+        #     plt.imshow(img, origin='lower', cmap='viridis')
+        #     plt.colorbar()
+        #     plt.show()
+        #
+        #     return None
+
+        return sensitivities
 
     def get_source_spectrum(self, source_name: str) -> Tensor:
         """Return the spectral energy distribution of a source.
