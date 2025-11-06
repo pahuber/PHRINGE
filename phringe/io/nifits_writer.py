@@ -100,7 +100,7 @@ class NIFITSWriter:
 
         # 6. KIOUT
         # phringe.get_data has shape (n differential outputs, n wavelength bins, n timesteps)
-        mydata = phringe.get_counts().cpu().numpy()
+        mydata = phringe.get_counts(kernels=True).cpu().numpy()
         kiout_frames = np.mean(mydata[0, :, :].reshape(n_wl_ch, n_t_frames, dit_per_frame), axis=-1)
         KIout_table = Table(data=(kiout_frames,), names=("value",), dtype=(float,))
         KIout_header = io.fits.Header()
@@ -118,7 +118,7 @@ class NIFITSWriter:
         # 8. APPXY
         t, tm, b = sp.symbols('t tm b')
         acm_w_b_tm = (phringe._instrument.array_configuration_matrix.subs(
-            [(b, phringe._instrument._nulling_baseline),
+            [(b, phringe._observation._nulling_baseline),
              (tm, phringe._observation.modulation_period)]))
         acm_w_b_tm_num = sp.lambdify([t], acm_w_b_tm, modules="numpy")
         arraylocpertimestep = np.array([acm_w_b_tm_num(t) for t in all_time_steps])
@@ -127,11 +127,13 @@ class NIFITSWriter:
 
         # 9. KMAT
         # Currently hard-coded for one differential output. To be revised if there are multiple pairs.
-        diffouts = phringe._instrument.differential_outputs
-        kmat = [0] * my_ni_catm.shape[-2]
-        for i, val in enumerate([1, -1]):
-            kmat[diffouts[0][i]] = val
-        mykmat = io.NI_KMAT(data_array=np.array([kmat]))
+        # diffouts = phringe._instrument.differential_outputs
+        # diffouts = [(2, 3), ]
+        # kmat = [0] * my_ni_catm.shape[-2]
+        # for i, val in enumerate([1, -1]):
+        #     kmat[diffouts[0][i]] = val
+        kmat = phringe._instrument.kernels.tolist()
+        mykmat = io.NI_KMAT(data_array=np.array([kmat], dtype=float))
 
         # 10. ARRCOL
         arrcol = np.ones((n_t_frames, n_tel)) * (
