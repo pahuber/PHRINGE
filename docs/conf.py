@@ -32,8 +32,8 @@ html_title = "PHRINGE Docs"
 html_theme_options = {
     "logo_only": True,  # Show only the logo, not the project name
     "sidebar_hide_name": True,
-    "light_logo": "phringe2_light.png",
-    "dark_logo": "phringe2_dark.png",
+    "light_logo": "phringe2_dark.png",
+    "dark_logo": "phringe2_light.png",
 }
 html_context = {
     "display_github": False,  # Example of context variable
