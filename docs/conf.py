@@ -27,11 +27,13 @@ copyright = f'2024, Philipp A. Huber'
 #     "logo_dark": "_static/phringe.png"
 # }
 html_static_path = ['_static']
-html_logo = "_static/phringe_logo.png"
+# html_logo = "_static/phringe_logo.png"
 html_title = "PHRINGE Docs"
 html_theme_options = {
     "logo_only": True,  # Show only the logo, not the project name
     "sidebar_hide_name": True,
+    "light_logo": "phringe2_bright.png",
+    "dark_logo": "phringe2_dark.png",
 }
 html_context = {
     "display_github": False,  # Example of context variable
