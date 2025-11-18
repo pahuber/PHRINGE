@@ -3,7 +3,7 @@
 Features
 ========
 
-*PHRINGE* offers the following features:
+`PHRINGE` offers the following features:
 
 * | **Flexible Instrument Architectures:**
   | Model any array configuration or beam combiner thanks to symbolic matrix-based input with `SymPy <https://www.sympy.org>`_.
