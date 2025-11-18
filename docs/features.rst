@@ -5,9 +5,9 @@ Features
 
 *PHRINGE* offers the following features:
 
-* | **Flexible Instrument Architecture Modeling:**
-  | Support for symbolic input of beam combiner matrices and collector positions thanks to the integration of `SymPy <https://www.sympy.org>`_.
-* | **Detailed Instrumental Noise Modeling:**
+* | **Flexible Instrument Architecture:**
+  | Model any array configuration or beam combiner thanks to symbolic matrix-based input with `SymPy <https://www.sympy.org>`_.
+* | **Instrumental Noise Modeling:**
   | Monte Carlo sampled instrument perturbations such as amplitude, phase and polarization rotation errors.
 * | **Custom Astrophysical Scenes:**
   | User-specifiable exoplanetary systems with the option for modeling planetary orbital motion.
