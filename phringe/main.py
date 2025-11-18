@@ -5,7 +5,6 @@ import astropy.units as u
 import numpy as np
 import torch
 from astropy.constants.codata2018 import G
-from matplotlib import pyplot as plt
 from poliastro.bodies import Body
 from poliastro.twobody import Orbit
 from skimage.measure import block_reduce
@@ -625,9 +624,6 @@ class PHRINGE:
                 # w = eigvecs @ torch.diag(1.0 / torch.sqrt(eigvals + 1e-8)) @ eigvecs.T
                 eigvals, eigvecs = torch.linalg.eigh(cov)
                 w = eigvecs @ torch.diag(eigvals.clamp(min=1e-12).rsqrt()) @ eigvecs.T
-                plt.imshow(cov.cpu().numpy(), aspect='auto')
-                plt.colorbar()
-                plt.show()
 
                 # Get model
                 solid_angle_ref = 1e-20
