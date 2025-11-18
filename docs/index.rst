@@ -1,7 +1,7 @@
 .. _index:
 
-PHRINGE Docs
-============
+PHRINGE
+=======
 
 **PHRINGE** is a **PH**\ otoelectron counts generato\ **R** for null\ **ING** int\ **E**\ rferometers and offers
 fast Monte Carlo-based generation of synthetic data for space-based nulling interferometer arrays observing exoplanetary systems.
