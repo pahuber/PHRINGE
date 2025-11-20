@@ -5,7 +5,7 @@ Usage
 At the beginning of every simulation done with `PHRINGE` is a :doc:`PHRINGE <source/phringe>` object. Upon its initialization, the user
 has to specify the observation, instrument and astrophysical scene parameters, as illustrated here:
 
-.. image:: _static/usage.png
+.. image:: _static/usage.jpg
     :alt: Architecture
     :width: 100%
 
