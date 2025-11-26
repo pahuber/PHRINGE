@@ -63,3 +63,8 @@ html_static_path = ['_static']
 
 nbsphinx_execute = 'never'
 nb_execution_mode = 'off'
+
+import matplotlib as mpl
+
+# Disable TeX rendering on ReadTheDocs to avoid slow font scans
+mpl.rcParams["text.usetex"] = False
