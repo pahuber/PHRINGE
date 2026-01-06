@@ -32,6 +32,7 @@
 [black]: https://github.com/psf/black
 
 <img src="docs/_static/phringe2_dark.png" alt="Projekt-Logo" width="200"/>
+<img src="docs/_static/phringe2_light.png" alt="Projekt-Logo" width="200"/>
 
 <br>
 
