@@ -1,3 +1,4 @@
+import warnings
 from typing import Any, Union
 
 from astropy import units as u
@@ -86,13 +87,31 @@ class Observation(BaseEntity):
 
     @property
     def _nulling_baseline(self) -> float:
-        if not isinstance(self.nulling_baseline, OptimalNullingBaseline):
-            return self.nulling_baseline
+        nulling_baseline = None
 
-        star_habitable_zone_central_angular_radius = self._phringe._scene.star._habitable_zone_central_angular_radius \
-            if (self._phringe._scene is not None and self._phringe._scene.star is not None) else None
-        return self.nulling_baseline.get_value(
-            star_habitable_zone_central_angular_radius,
-            self._phringe._instrument.nulling_baseline_min,
-            self._phringe._instrument.nulling_baseline_max
-        )
+        # Return the nulling baseline value if already a float in meters
+        if not isinstance(self.nulling_baseline, OptimalNullingBaseline):
+            nulling_baseline = self.nulling_baseline
+
+        # Get optimized nulling baseline value in meters
+        else:
+            star_habitable_zone_central_angular_radius = self._phringe._scene.star._habitable_zone_central_angular_radius \
+                if (self._phringe._scene is not None and self._phringe._scene.star is not None) else None
+            nulling_baseline = self.nulling_baseline.get_value(
+                star_habitable_zone_central_angular_radius,
+            )
+
+        # Check min and max nulling baseline limits
+        nulling_baseline_min = self._phringe._instrument.nulling_baseline_min
+        nulling_baseline_max = self._phringe._instrument.nulling_baseline_max
+
+        if nulling_baseline_min <= nulling_baseline and nulling_baseline <= nulling_baseline_max:
+            return nulling_baseline
+        elif nulling_baseline < nulling_baseline_max:
+            warnings.warn(
+                f"Nulling baseline of {nulling_baseline} is below the min allowed baseline of {nulling_baseline_min}. Setting to min baseline.")
+            return nulling_baseline_min
+        elif nulling_baseline > nulling_baseline_max:
+            warnings.warn(
+                f"Nulling baseline of {nulling_baseline} is above the max allowed baseline of {nulling_baseline_max}. Setting to max baseline.")
+            return nulling_baseline_max

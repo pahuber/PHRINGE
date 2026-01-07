@@ -1,4 +1,3 @@
-import warnings
 from typing import Union, Any
 
 import astropy.units as u
@@ -47,12 +46,7 @@ class OptimalNullingBaseline(BaseModel):
         """
         return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,))
 
-    def get_value(
-            self,
-            star_habitable_zone_central_angular_radius: Union[float, None],
-            nulling_baseline_min: float,
-            nulling_baseline_max: float
-    ) -> float:
+    def get_value(self, star_habitable_zone_central_angular_radius: Union[float, None]) -> float:
         """Compute the optimized nulling baseline.
 
         :return: The optimized nulling baseline in units of length
@@ -65,16 +59,4 @@ class OptimalNullingBaseline(BaseModel):
         else:
             angular_star_separation = self.angular_star_separation
 
-        nulling_baseline = self.sep_at_max_mod_eff * self.wavelength / angular_star_separation
-
-        # Set nulling baseline to optimum value or to min/max value if it is outside the allowed range
-        if nulling_baseline_min <= nulling_baseline and nulling_baseline <= nulling_baseline_max:
-            return nulling_baseline
-        elif nulling_baseline < nulling_baseline_max:
-            warnings.warn(
-                f"Nulling baseline of {nulling_baseline} is below the min allowed baseline of {nulling_baseline_min}. Setting to min baseline.")
-            return nulling_baseline_min
-        elif nulling_baseline > nulling_baseline_max:
-            warnings.warn(
-                f"Nulling baseline of {nulling_baseline} is above the max allowed baseline of {nulling_baseline_max}. Setting to max baseline.")
-            return nulling_baseline_max
+        return self.sep_at_max_mod_eff * self.wavelength / angular_star_separation
