@@ -46,4 +46,4 @@ class Kernel5(BaseBeamCombiner):
                                  [1, e8, e6, e4, e2]])
     kernels = Matrix([[0, 1, 0, 0, -1],
                       [0, 0, 1, -1, 0]])
-    sep_at_max_mod_eff = [2.68, 1.03]
+    sep_at_max_mod_eff = [1.03, 0.66]
