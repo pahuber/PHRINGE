@@ -72,11 +72,31 @@ class Instrument(BaseEntity):
     number_of_inputs: int = None
     number_of_outputs: int = None
     response: Tensor = None
+    _torch_func_dict: dict = None
 
-    def __init__(self, **data):
+    def __init__(self, **data: object) -> None:
         super().__init__(**data)
         self.number_of_inputs = self.complex_amplitude_transfer_matrix.shape[1]
         self.number_of_outputs = self.complex_amplitude_transfer_matrix.shape[0]
+
+        def _torch_sqrt(x):
+            if not isinstance(x, torch.Tensor):
+                x = torch.tensor(x)
+            return torch.sqrt(x)
+
+        def _torch_exp(x):
+            if not isinstance(x, torch.Tensor):
+                x = torch.tensor(x)
+            return torch.exp(x)
+
+        self._torch_func_dict = {
+            'sin': torch.sin,
+            'cos': torch.cos,
+            'exp': _torch_exp,
+            'log': torch.log,
+            'sqrt': _torch_sqrt,
+            'transpose': torch.transpose,
+        }
         self.response = self._get_lambdafied_response()
 
     def __setattr__(self, key, value):
@@ -257,24 +277,6 @@ class Instrument(BaseEntity):
             self._symbolic_intensity_response[j] = r[j]
 
         # Compile the intensity response functions for numerical calculations and save the lambdified functions
-        def _torch_sqrt(x):
-            if not isinstance(x, torch.Tensor):
-                x = torch.tensor(x)
-            return torch.sqrt(x)
-
-        def _torch_exp(x):
-            if not isinstance(x, torch.Tensor):
-                x = torch.tensor(x)
-            return torch.exp(x)
-
-        torch_func_dict = {
-            'sin': torch.sin,
-            'cos': torch.cos,
-            'exp': _torch_exp,
-            'log': torch.log,
-            'sqrt': _torch_sqrt
-        }
-
         self._diff_ir_torch = {}
         self._diff_ir_numpy = {}
         self._ir_numpy = {}
@@ -286,7 +288,7 @@ class Instrument(BaseEntity):
         self._diff_ir_torch = [lambdify(
             [t, l, alpha, beta, tm, b, *a.values(), *da.values(), *dphi.values(), *th.values(), *dth.values(), ],
             expr[i, 0],
-            [torch_func_dict]
+            [self._torch_func_dict]
         ) for i in range(expr.rows)]
 
         # Lambdify differential output for numpy
@@ -308,10 +310,198 @@ class Instrument(BaseEntity):
             r[j] = lambdify(
                 [t, l, alpha, beta, tm, b, *a.values(), *da.values(), *dphi.values(), *th.values(), *dth.values(), ],
                 r[j],
-                [torch_func_dict]
+                [self._torch_func_dict]
             )
 
         return r
+
+    #
+    # def _get_lambdified_spectral_covariance(self) -> torch.Tensor:
+    #     catm = self.complex_amplitude_transfer_matrix
+    #     acm = self.array_configuration_matrix
+    #     A = {}
+    #     a = {}
+    #     psi = {}
+    #     gamma = {}
+    #     C = {}
+    #     c = {}
+    #     vecl = {}
+    #     H = {}
+    #     tildec = {}
+    #     tildel = {}
+    #     tildeH = {}
+    #     for k in range(self.number_of_inputs):
+    #         A[k] = Symbol(f'A_{k}', real=True)
+    #     t, tm, b, lambd, alpha, beta = symbols('t tm b lambd alpha beta')
+    #
+    #     N = symbols('N', integer=True, positive=True)
+    #     # alpha = IndexedBase('alpha')
+    #     # beta = IndexedBase('beta')
+    #     # ii = Idx('ii', N)
+    #     # jj = Idx('jj', N)
+    #     # Istar = IndexedBase('Istar')
+    #
+    #     # Get amplitude and phase of catm for ajk and psijk
+    #     for j in range(self.number_of_outputs):
+    #         for k in range(self.number_of_inputs):
+    #             a[j, k] = abs(catm[j, k])
+    #             psi[j, k] = arg(catm[j, k])
+    #             if math.isnan(psi[j, k]):
+    #                 psi[j, k] = 0
+    #
+    #     # Define gammakl
+    #     for k in range(self.number_of_inputs):
+    #         for l in range(self.number_of_inputs):
+    #             gamma[k, l] = 2 * pi / lambd * (
+    #                     (acm[0, k] - acm[0, l]) * alpha + (acm[1, k] - acm[1, l]) * beta)
+    #
+    #     # Define Cjkl
+    #     for j in range(self.number_of_outputs):
+    #         for k in range(self.number_of_inputs):
+    #             for l in range(self.number_of_inputs):
+    #                 C[j, k, l] = a[j, k] * a[j, l] * A[k] * A[l] * cos(psi[j, k] - psi[j, l])
+    #
+    #     # Define cj
+    #     for j in range(self.number_of_outputs):
+    #         c[j] = 0
+    #         for k in range(self.number_of_inputs):
+    #             for l in range(self.number_of_inputs):
+    #                 c[j] += C[j, k, l] * cos(gamma[k, l])
+    #
+    #     # Define veclj
+    #     for j in range(self.number_of_outputs):
+    #         for m in range(3 * self.number_of_inputs):
+    #             vecl[j, m] = Float(0)
+    #
+    #             # amplitude terms
+    #             if (m + 1) <= 1 * self.number_of_inputs:
+    #                 for k in range(self.number_of_inputs):
+    #                     vecl[j, m] = vecl[j, m] + C[j, k, m] * cos(gamma[k, m])
+    #                 for l in range(self.number_of_inputs):
+    #                     vecl[j, m] = vecl[j, m] + C[j, m, l] * cos(gamma[m, l])
+    #
+    #             # phase terms
+    #             elif (m + 1) <= 2 * self.number_of_inputs:
+    #                 mm = m - self.number_of_inputs
+    #                 for k in range(self.number_of_inputs):
+    #                     vecl[j, m] = vecl[j, m] + 2 * pi / lambd * (C[j, k, mm] * sin(gamma[k, mm]))
+    #                 for l in range(self.number_of_inputs):
+    #                     vecl[j, m] = vecl[j, m] + 2 * pi / lambd * (-C[j, mm, l] * sin(gamma[mm, l]))
+    #
+    #             # polarization terms
+    #             elif (m + 1) <= 3 * self.number_of_inputs:
+    #                 pass  # all = 0
+    #
+    #     # Define Hj
+    #
+    #     n = self.number_of_inputs
+    #     J = self.number_of_outputs
+    #     M = 3 * n
+    #
+    #     # H is now a list of SymPy matrices of shape (M,M)
+    #     H = [zeros(M, M) for _ in range(J)]
+    #
+    #     for j in range(J):
+    #         for m_row in range(M):
+    #             for m_col in range(M):
+    #                 # da da
+    #                 if m_row < n and m_col < n:
+    #                     if m_row == m_col:
+    #                         # H[j][m_row, m_col] = 0
+    #                         pass
+    #                     else:
+    #                         H[j][m_row, m_col] = Rational(1, 2) * C[j, m_row, m_col] * cos(gamma[m_row, m_col])
+    #                 # da dphi
+    #                 elif m_row < n and n <= m_col < 2 * n:
+    #                     mm_col = m_col - n
+    #                     H[j][m_row, m_col] = (pi / lambd) * C[j, m_row, mm_col] * sin(gamma[m_row, mm_col])
+    #                     if m_row == mm_col:
+    #                         H[j][m_row, m_col] = H[j][m_row, m_col] * (-1)
+    #                 # da dth all 0
+    #                 # dphi da
+    #                 elif n <= m_row < 2 * n and m_col < n:
+    #                     mm_row = m_row - n
+    #                     H[j][m_row, m_col] = (pi / lambd) * C[j, mm_row, m_col] * sin(gamma[mm_row, m_col])
+    #                     if mm_row == m_col:
+    #                         H[j][m_row, m_col] = H[j][m_row, m_col] * (-1)
+    #                 # dphi dphi
+    #                 elif n <= m_row < 2 * n and n <= m_col < 2 * n:
+    #                     mm_row = m_row - n
+    #                     mm_col = m_col - n
+    #                     H[j][m_row, m_col] = 2 * (pi / lambd) ** 2 * C[j, mm_row, mm_col] * cos(gamma[mm_row, mm_col])
+    #                     if mm_row == mm_col:
+    #                         H[j][m_row, m_col] = H[j][m_row, m_col] * (-1)
+    #                 # dphi dth all 0
+    #                 # dth da all 0
+    #                 # dth dphi all 0
+    #                 # dth dth
+    #                 elif 2 * n <= m_row < 3 * n and 2 * n <= m_col < 3 * n:
+    #                     mm_row = m_row - 2 * n
+    #                     mm_col = m_col - 2 * n
+    #                     H[j][m_row, m_col] = Rational(1, 2) * C[j, mm_row, mm_col] * cos(gamma[mm_row, mm_col])
+    #                     if mm_row == mm_col:
+    #                         H[j][m_row, m_col] = H[j][m_row, m_col] * (-1)
+    #                 # else stays zero (already)
+    #     # n = self.number_of_inputs
+    #     # # Initialise ALL entries of H to a SymPy zero
+    #     # for j in range(self.number_of_outputs):
+    #     #     for m1 in range(3 * self.number_of_inputs):
+    #     #         for m2 in range(3 * self.number_of_inputs):
+    #     #             H = 0
+    #     #
+    #     # # Then overwrite only the analytical blocks
+    #     # for j in range(self.number_of_outputs):
+    #     #     for m1 in range(3 * n):
+    #     #         for m2 in range(3 * n):
+    #     #             if m1 < n and m2 < n:
+    #     #                 H[j, m1, m2] = 0.5 * C[j, m1, m2] * cos(gamma[m1, m2])
+    #     #             elif m1 < n and n <= m2 < 2 * n:
+    #     #                 mm2 = m2 - n
+    #     #                 H[j, m1, m2] = -(pi / lambd) * C[j, m1, mm2] * sin(gamma[m1, mm2])
+    #     #             elif n <= m1 < 2 * n and m2 < n:
+    #     #                 mm1 = m1 - n
+    #     #                 H[j, m1, m2] = (pi / lambd) * C[j, mm1, m2] * sin(gamma[mm1, m2])
+    #     #             elif n <= m1 < 2 * n and n <= m2 < 2 * n:
+    #     #                 mm1 = m1 - n
+    #     #                 mm2 = m2 - n
+    #     #                 H[j, m1, m2] = -(2 * pi / lambd) ** 2 * C[j, mm1, mm2] * cos(gamma[mm1, mm2])
+    #     #             # else: polarisation terms stay zero (already set)
+    #
+    #     # Lambdify vecl_mat and H_mat
+    #     J = self.number_of_outputs
+    #     M = 3 * self.number_of_inputs
+    #     X = Symbol("X")
+    #
+    #     vecl_mat = Matrix([[vecl[j, m] for m in range(M)] for j in range(J)])
+    #     vecl_mat = vecl_mat.applyfunc(lambda e: Lambda(X, e)(X))
+    #
+    #     H_mat = [[[H[j][m1, m2] for m2 in range(M)]  # inner (columns)
+    #               for m1 in range(M)]  # middle (rows)
+    #              for j in range(J)]
+    #     H_mat = [
+    #         [
+    #             [Lambda(X, e)(X) for e in row]
+    #             for row in block
+    #         ]
+    #         for block in H_mat
+    #     ]
+    #
+    #     # Lambdify to return a nested Python list, NOT a SymPy matrix
+    #     vecl_output = vecl_mat.tolist()
+    #
+    #     l_eval = lambdify(
+    #         [t, lambd, alpha, beta, tm, b, *A.values()],
+    #         vecl_output,  # IMPORTANT: not vecl_mat
+    #         [self._torch_func_dict]
+    #     )
+    #
+    #     H_eval = lambdify(
+    #         [t, lambd, alpha, beta, tm, b, *A.values()],
+    #         H_mat,
+    #         [self._torch_func_dict]
+    #     )
+    #
+    #     return l_eval, H_eval
 
     def _get_wavelength_bins(self) -> Tuple[np.ndarray, np.ndarray]:
         """Return the wavelength bin centers and widths. The wavelength bin widths are calculated starting from the
