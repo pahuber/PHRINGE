@@ -97,7 +97,7 @@ class Instrument(BaseEntity):
             'sqrt': _torch_sqrt,
             'transpose': torch.transpose,
         }
-        self.response = self._get_lambdafied_response()
+        self.response = self._get_lambdified_response()
 
     def __setattr__(self, key, value):
         super().__setattr__(key, value)
@@ -232,7 +232,7 @@ class Instrument(BaseEntity):
     def _get_field_of_view(self) -> Tensor:
         return self.wavelength_bin_centers / self.aperture_diameter
 
-    def _get_lambdafied_response(self):
+    def _get_lambdified_response(self):
         # Define symbols for symbolic expressions
         catm = self.complex_amplitude_transfer_matrix
         acm = self.array_configuration_matrix
@@ -245,6 +245,13 @@ class Instrument(BaseEntity):
         dth = {}
         t, tm, b, l, alpha, beta = symbols('t tm b l alpha beta')
 
+        # NEW: telescope diameter (or any width parameter you want)
+        D = self.aperture_diameter  # metres if l is metres
+        r0 = l / D / 2
+        # G = exp(-((alpha ** 2 + beta ** 2) / (r0 ** 2)))  # == exp(-(r/r0)^2)
+
+        fov_taper = exp(-(pi ** 2 * (alpha ** 2 + beta ** 2) * D ** 2 / l ** 2))
+
         # Define complex amplitudes
         for k in range(self.number_of_inputs):
             a[k] = Symbol(f'a_{k}', real=True)
@@ -252,12 +259,20 @@ class Instrument(BaseEntity):
             dphi[k] = Symbol(f'dphi_{k}', real=True)
             th[k] = Symbol(f'th_{k}', real=True)
             dth[k] = Symbol(f'dth_{k}', real=True)
-            ex[k] = a[k] * sqrt(pi) * (da[k] + 1) * exp(
-                I * (2 * pi / l * (acm[0, k] * alpha + acm[1, k] * beta) + dphi[k])) * cos(
-                th[k] + dth[k])
-            ey[k] = a[k] * sqrt(pi) * (da[k] + 1) * exp(
-                I * (2 * pi / l * (acm[0, k] * alpha + acm[1, k] * beta) + dphi[k])) * sin(
-                th[k] + dth[k])
+            # ex[k] = a[k] * sqrt(pi) * (da[k] + 1) * exp(
+            #     I * (2 * pi / l * (acm[0, k] * alpha + acm[1, k] * beta) + dphi[k])) * cos(
+            #     th[k] + dth[k])
+            # ey[k] = a[k] * sqrt(pi) * (da[k] + 1) * exp(
+            #     I * (2 * pi / l * (acm[0, k] * alpha + acm[1, k] * beta) + dphi[k])) * sin(
+            #     th[k] + dth[k])
+
+            phase = 2 * pi / l * (acm[0, k] * alpha + acm[1, k] * beta) + dphi[k]
+
+            # APPLY GAUSSIAN TAPER HERE (field level)
+            common = a[k] * sqrt(pi) * (da[k] + 1) * exp(I * phase)  # * (fov_taper)
+
+            ex[k] = common * cos(th[k] + dth[k])
+            ey[k] = common * sin(th[k] + dth[k])
 
         # Define intensity response and save the symbolic expression
         r = {}
@@ -273,7 +288,7 @@ class Instrument(BaseEntity):
             for k in range(self.number_of_inputs):
                 rx[j] += catm[j, k] * ex[k]
                 ry[j] += catm[j, k] * ey[k]
-            r[j] = Abs(rx[j]) ** 2 + Abs(ry[j]) ** 2
+            r[j] = (Abs(rx[j]) ** 2 + Abs(ry[j]) ** 2) * fov_taper
             self._symbolic_intensity_response[j] = r[j]
 
         # Compile the intensity response functions for numerical calculations and save the lambdified functions
