@@ -5,7 +5,7 @@ import numpy as np
 import torch
 from phringe.util.input_spectrum import get_blackbody_spectrum_standard_units
 from scipy.optimize import leastsq
-from scipy.stats import chi2, ncx2
+from scipy.stats import ncx2
 from torch import Tensor
 from torch.distributions import Normal
 
@@ -27,7 +27,8 @@ def get_sensitivity_limits(
         as_radius: bool = True,
         diag_only: bool = False,
 ) -> Tensor:
-    """Return the sensitivity limits of the instrument. Returns inf if the planet is outside the fov.
+    """Return the sensitivity limits of the instrument based on the energy detector and Neyman-Pearson test.
+    Returns inf if the planet is outside the fov.
 
 
     Returns
@@ -39,6 +40,7 @@ def get_sensitivity_limits(
     ang_seps_rad = ang_seps_mas * (1e-3 / 3600) * (np.pi / 180)
     num_ang_seps = len(ang_seps_rad)
     sensitivities = torch.zeros((2, num_reps, num_ang_seps), device=device)
+    i = 10
 
     # Loop through repetitions i.e. random samples
     for rep in range(num_reps):
@@ -79,16 +81,16 @@ def get_sensitivity_limits(
             # Calculate sensitivity limit NP
             std_normal = Normal(0.0, 1.0)
             zfa = std_normal.icdf(torch.tensor(1.0 - pfa, device=s.device))
-            zdet = std_normal.icdf(torch.tensor(pdet, device=s.device))
+            zdet = std_normal.icdf(torch.tensor(1 - pdet, device=s.device))
             omega_min = solid_angle_ref * (zfa - zdet) / s  # minimal solid angle (sr) to hit (pfa,pdet)
-            sensitivities[0, rep, i] = omega_min
+            sensitivities[1, rep, i] = omega_min
 
             # Calculate sensitivity limit ED
             df = xw.numel()
 
             # H0 threshold (central chi-square)
             threshold = torch.tensor(
-                chi2.ppf(1.0 - pfa, df),
+                ncx2.ppf(1.0 - pfa, df=df, nc=0),
                 device=xw.device,
                 dtype=xw.dtype
             )
@@ -106,7 +108,7 @@ def get_sensitivity_limits(
             lmbda_sol = leastsq(residual, lmbda0)[0][0]
             lmbda = torch.tensor(lmbda_sol, device=xw.device, dtype=xw.dtype)
             omega_min = solid_angle_ref * torch.sqrt(lmbda / xtx)
-            sensitivities[1, rep, i] = omega_min
+            sensitivities[0, rep, i] = omega_min
 
     if as_radius:
         try:
