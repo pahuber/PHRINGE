@@ -3,7 +3,6 @@ from typing import Union
 import astropy.units as u
 import numpy as np
 import torch
-from phringe.util.input_spectrum import get_blackbody_spectrum_standard_units
 from scipy.optimize import leastsq
 from scipy.stats import ncx2
 from torch import Tensor
@@ -11,6 +10,7 @@ from torch.distributions import Normal
 
 from phringe.core.scene import Scene
 from phringe.util.baseline import OptimalNullingBaseline
+from phringe.util.spectrum import get_blackbody_spectrum_standard_units
 
 
 def get_sensitivity_limits(
@@ -64,12 +64,12 @@ def get_sensitivity_limits(
                 spectral_energy_distribution=get_blackbody_spectrum_standard_units(
                     temperature,
                     wavelength_bin_centers,
-                ).cpu().numpy(),
+                ).cpu().numpy() * solid_angle_ref,
                 x_position=ang_sep,
                 y_position=0,
                 kernels=True
             )
-            x0 = x0.transpose(1, 0, 2).reshape(x0.shape[1], -1) * solid_angle_ref
+            x0 = x0.transpose(1, 0, 2).reshape(x0.shape[1], -1)
             x0 = torch.from_numpy(x0).float().to(noise_ref.device)
 
             # Whiten model
@@ -104,7 +104,7 @@ def get_sensitivity_limits(
                         - pdet
                 )
 
-            lmbda0 = df * 1e-3
+            lmbda0 = df * 1e-1
             lmbda_sol = leastsq(residual, lmbda0)[0][0]
             lmbda = torch.tensor(lmbda_sol, device=xw.device, dtype=xw.dtype)
             omega_min = solid_angle_ref * torch.sqrt(lmbda / xtx)
@@ -120,6 +120,142 @@ def get_sensitivity_limits(
                 u.m).value
 
     return sensitivities
+
+
+def get_detection_probabilities(
+        get_counts: classmethod,
+        get_model_counts: classmethod,
+        wavelength_bin_centers: Tensor,
+        scene,
+        device: torch.device,
+        temperature: float,
+        ang_sep_mas: float,
+        radius_earth: Union[float, np.ndarray, Tensor],
+        pfa: float = 2.9e-7,
+        num_reps: int = 1,
+        diag_only: bool = False,
+) -> dict:
+    """
+    Given a planet radius (in Earth radii), return Pdet for:
+      - Neyman-Pearson matched filter (NP)
+      - Energy detector (ED)
+    at a fixed Pfa, for each angular separation.
+
+    Returns a dict with:
+      - "pdet_np": Tensor [num_reps, num_ang_seps]
+      - "pdet_ed": Tensor [num_reps, num_ang_seps]
+    """
+
+    # ---- helpers: distance and omega <-> radius ----
+    def get_star_distance_m(scene_obj) -> float:
+        # Prefer scene.star.distance; fallback to exozodi.host_star_distance
+        try:
+            d = scene_obj.star.distance
+        except Exception:
+            d = scene_obj.exozodi.host_star_distance
+        # d should already be in meters in your codebase; if it's an astropy quantity, convert
+        if hasattr(d, "to"):
+            d = d.to(u.m).value
+        return float(d)
+
+    d_m = get_star_distance_m(scene)
+    Rearth_m = (1 * u.Rearth).to(u.m).value
+
+    # Convert input radius (Earth radii) -> omega (sr):  omega = pi * (R/d)^2
+    radius_earth_t = torch.as_tensor(radius_earth, device=device, dtype=torch.float32)
+    radius_m_t = radius_earth_t * Rearth_m
+    omega_in = torch.pi * (radius_m_t / d_m) ** 2  # sr
+
+    # Prepare angular separations
+    ang_sep_rad = torch.as_tensor(ang_sep_mas, device=device, dtype=torch.float32) * (
+            (1e-3 / 3600) * (np.pi / 180)
+    )
+    num_ang_seps = 1
+
+    # Output arrays
+    pdet_np = torch.zeros((num_reps, num_ang_seps), device=device, dtype=torch.float32)
+    pdet_ed = torch.zeros((num_reps, num_ang_seps), device=device, dtype=torch.float32)
+
+    # Broadcast omega to [num_reps, num_ang_seps] if needed
+    # Accept scalar, [num_ang_seps], or [num_reps, num_ang_seps]
+    if omega_in.ndim == 0:
+        omega_grid = omega_in.expand(num_reps, num_ang_seps)
+    elif omega_in.ndim == 1:
+        if omega_in.numel() != num_ang_seps:
+            raise ValueError("If radius_earth is 1D, it must have length == num_ang_seps.")
+        omega_grid = omega_in.unsqueeze(0).expand(num_reps, num_ang_seps)
+    elif omega_in.ndim == 2:
+        if omega_in.shape != (num_reps, num_ang_seps):
+            raise ValueError("If radius_earth is 2D, it must have shape (num_reps, num_ang_seps).")
+        omega_grid = omega_in
+    else:
+        raise ValueError("radius_earth must be scalar, 1D [num_ang_seps], or 2D [num_reps,num_ang_seps].")
+
+    std_normal = Normal(0.0, 1.0)
+
+    # Loop repetitions (noise draws)
+    for rep in range(num_reps):
+
+        # --- whitening matrix from noise reference ---
+        noise_ref = get_counts(kernels=True)
+        noise_ref = noise_ref.permute(1, 0, 2).reshape(noise_ref.shape[1], -1)
+        cov = torch.cov(noise_ref)
+
+        eigvals, eigvecs = torch.linalg.eigh(cov)
+        w = eigvecs @ torch.diag(eigvals.clamp(min=1e-12).rsqrt()) @ eigvecs.T
+        if diag_only:
+            w = torch.diag(torch.diag(w))
+
+        # --- fixed H0 threshold for ED for this rep (depends on df and pfa only) ---
+        # (df may vary if your flattening size varies; here it’s constant across ang_seps)
+        # We'll compute df from first model once per rep, but easiest is inside loop after xw exists.
+
+        # for j, ang_sep in enumerate(ang_seps_rad):
+
+        # Model at unit reference solid angle
+        solid_angle_ref = 1e-20
+
+        x0 = get_model_counts(
+            spectral_energy_distribution=get_blackbody_spectrum_standard_units(
+                temperature,
+                wavelength_bin_centers,
+            ).cpu().numpy(),
+            x_position=float(ang_sep_rad),
+            y_position=0,
+            kernels=True,
+        )
+        x0 = x0.transpose(1, 0, 2).reshape(x0.shape[1], -1) * solid_angle_ref
+        x0 = torch.from_numpy(x0).float().to(noise_ref.device)
+
+        # Whiten model
+        xw = (w @ x0).flatten()
+        s = torch.linalg.norm(xw)  # ||xw||
+        xtx = torch.dot(xw, xw)  # xw^T xw  (== s^2)
+
+        # Requested omega for this (rep, ang_sep)
+        omega = omega_grid[rep, 0]
+
+        # ---------------- NP: invert closed form ----------------
+        # Original: omega_min = solid_angle_ref * (zfa - zdet) / s
+        # where zfa = Phi^{-1}(1-pfa) and zdet = Phi^{-1}(1-pdet)
+        zfa = std_normal.icdf(torch.tensor(1.0 - pfa, device=device, dtype=torch.float32))
+        zdet = zfa - (omega / solid_angle_ref) * s
+        # 1 - pdet = Phi(zdet)  => pdet = 1 - Phi(zdet)
+        pdet_np[rep, 0] = 1.0 - std_normal.cdf(zdet)
+
+        # ---------------- ED: use noncentral chi-square CDF ----------------
+        # Original: omega_min = solid_angle_ref * sqrt(lambda / xtx)
+        # => lambda = (omega/solid_angle_ref)^2 * xtx
+        df = int(xw.numel())
+        threshold = ncx2.ppf(1.0 - pfa, df=df, nc=0.0)  # scalar float
+
+        lmbda = ((omega / solid_angle_ref) ** 2) * xtx
+        lmbda_cpu = float(lmbda.detach().cpu().item())
+        # Pdet = P(T > threshold | df, lambda) = 1 - CDF(threshold)
+        pdet_ed_val = 1.0 - ncx2.cdf(threshold, df=df, nc=lmbda_cpu)
+        pdet_ed[rep, 0] = torch.tensor(pdet_ed_val, device=device, dtype=torch.float32)
+
+    return pdet_ed[0, 0].item(), pdet_np[0, 0].item()
 
 
 def get_sep_at_max_mod_eff(
