@@ -203,7 +203,7 @@ class Planet(BaseSource):
         return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.kg,))
 
     @property
-    def _sky_brightness_distribution(self) -> np.ndarray:
+    def _sky_brightness_distribution(self) -> Tensor:
         """Calculate and return the sky brightness distribution.
 
         :param context: The context
