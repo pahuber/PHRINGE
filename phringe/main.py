@@ -20,7 +20,7 @@ from phringe.core.sources.local_zodi import LocalZodi
 from phringe.core.sources.planet import Planet
 from phringe.core.sources.star import Star
 from phringe.io.nifits_writer import NIFITSWriter
-from phringe.processing.processing import get_sensitivity_limits, get_sep_at_max_mod_eff
+from phringe.processing.processing import get_sensitivity_limits, get_sep_at_max_mod_eff, get_detection_probabilities
 from phringe.util.baseline import OptimalNullingBaseline
 from phringe.util.device import get_available_memory
 from phringe.util.device import get_device
@@ -332,202 +332,6 @@ class PHRINGE:
         """
         return self._instrument._field_of_view
 
-    def get_spectral_covariance(self, amplitude_var, phase_var, polarization_var):
-        times = self.simulation_time_steps[None, :, None, None]
-        wavelength_bin_centers = self._instrument.wavelength_bin_centers[:, None, None, None]
-        wavelength_bin_widths = self._instrument.wavelength_bin_widths[:, None, None, None]
-        alpha = self._scene.star._sky_coordinates[0][None, None, :, :]
-        beta = self._scene.star._sky_coordinates[1][None, None, :, :]
-        star_sky_brightness_distribution = self._scene.star._sky_brightness_distribution[:, None, :, :]
-        modulation_period = self._observation.modulation_period
-        nulling_baseline = self.get_nulling_baseline()
-        detector_integration_time = self._observation.detector_integration_time
-        amplitudes = [self._instrument._get_amplitude(self._device) for _ in range(self._instrument.number_of_inputs)]
-        perturbation_covariance = torch.diag(
-            torch.ones(3 * self._instrument.number_of_inputs, dtype=torch.float32, device=self._device)
-        )
-        for i in range(3 * self._instrument.number_of_inputs):
-            if i < self._instrument.number_of_inputs:
-                perturbation_covariance[i, i] *= amplitude_var
-            elif i < 2 * self._instrument.number_of_inputs:
-                perturbation_covariance[i, i] *= phase_var
-            else:
-                perturbation_covariance[i, i] *= polarization_var
-
-        # Get lambdified functions
-        l_func, H_func = self._instrument._get_lambdified_spectral_covariance()
-
-        # Get l and stack into tensor
-        l = l_func(
-            times,
-            wavelength_bin_centers,
-            alpha,
-            beta,
-            modulation_period,
-            nulling_baseline,
-            *amplitudes,
-        )
-
-        ref = None
-        for row in l:
-            for elem in row:
-                if isinstance(elem, torch.Tensor):
-                    ref = elem
-                    break
-            if ref is not None:
-                break
-
-        if ref is None:
-            raise RuntimeError("No tensor found in output.")
-
-        target_shape = ref.shape
-        device = ref.device
-        dtype = ref.dtype
-
-        l_fixed = [
-            [
-                (elem if isinstance(elem, torch.Tensor)
-                 else torch.full(target_shape, float(elem), device=device, dtype=dtype))
-                for elem in row
-            ]
-            for row in l
-        ]
-
-        l = torch.stack([torch.stack(row, dim=0) for row in l_fixed], dim=0)
-
-        # Calc tilde l
-        tilde_l = self._instrument.quantum_efficiency * self._observation.detector_integration_time * \
-                  self.get_wavelength_bin_widths()[None, None, :, None] * torch.sum(
-            l * star_sky_brightness_distribution[None, None, :, :, :, :],
-            dim=(-1, -2)
-        )
-
-        # Get H and stack into tensor
-        H = H_func(
-            times,
-            wavelength_bin_centers,
-            alpha,
-            beta,
-            modulation_period,
-            nulling_baseline,
-            *amplitudes,
-        )
-
-        ref = None
-        for row in H:
-            for row2 in row:
-                for elem in row2:
-                    if isinstance(elem, torch.Tensor):
-                        ref = elem
-                        break
-            if ref is not None:
-                break
-
-        if ref is None:
-            raise RuntimeError("No tensor found in output.")
-
-        target_shape = ref.shape
-        device = ref.device
-        dtype = ref.dtype
-
-        # print(target_shape)
-
-        def ensure_tensor(x):
-            return x if isinstance(x, torch.Tensor) else torch.zeros(target_shape, device=device, dtype=dtype)
-
-        # First convert every single entry, THEN stack three levels
-        H_fixed = [
-            [
-                [ensure_tensor(elem) for elem in row]  # m2
-                for row in block  # m1
-            ]
-            for block in H  # j
-        ]
-
-        for j1, i1 in enumerate(H):
-            for j2, i2 in enumerate(i1):
-                for j3, i3 in enumerate(i2):
-                    if not isinstance(i3, torch.Tensor):
-                        H[j1][j2][j3] = torch.zeros(target_shape, device=device, dtype=dtype)
-
-        def bla(x):
-            if x.shape != target_shape:
-                x = torch.zeros(target_shape, device=device, dtype=dtype)
-            return x
-
-        H_tensor = torch.stack(
-            [
-                torch.stack(
-                    [
-                        torch.stack([
-                            bla(elem) for elem in row
-                        ], dim=0)
-                        for row in block  # stack m1
-                    ],
-                    dim=0
-                )
-                for block in H_fixed  # stack j
-            ],
-            dim=0
-        )
-
-        tilde_H = self._instrument.quantum_efficiency * self._observation.detector_integration_time * \
-                  self.get_wavelength_bin_widths()[None, None, None, :, None] * torch.sum(
-            H_tensor * star_sky_brightness_distribution[None, None, None, :, :, :, :],
-            dim=(-1, -2)
-        )
-
-        # Get kernels
-        kernels_torch = torch.tensor(self._instrument.kernels.tolist(), dtype=torch.float32, device=self._device)
-
-        # diff_ir = torch.einsum('ij, jklmn -> iklmn', kernels_torch, ir)
-        # print(tilde_l.shape)
-        # print(tilde_H.shape)
-        # print(kernels_torch.shape)
-
-        tilde_l_kernel = tilde_l
-        # tilde_l_kernel = torch.einsum('ij, jklm -> iklm', kernels_torch, tilde_l)
-        tilde_H_kernel = tilde_H
-        # tilde_H_kernel = torch.einsum('ij, jklmn -> iklmn', kernels_torch, tilde_H)
-
-        tilde_l_reduced = tilde_l_kernel  # .mean(dim=(-1))
-        Lambda_kernel = tilde_l_reduced.permute(0, 2, 1, 3)
-
-        # print(tilde_l_reduced.shape)
-        # print(Lambda_kernel.shape)
-
-        tilde_H_reduced = tilde_H_kernel  # .mean(dim=(-1))
-        shape = tilde_H_reduced.shape
-        # print(shape)
-        Gamma_kernel = tilde_H_reduced.reshape((shape[0], shape[1] ** 2, shape[3], shape[4])).permute(0, 2, 1, 3)
-
-        # print(Gamma_kernel.shape)
-
-        kron = torch.kron(perturbation_covariance, perturbation_covariance)
-
-        # print(kron.shape)
-        #
-        # cov1 = (Lambda_kernel @ perturbation_covariance @ Lambda_kernel.transpose(1, 2) + \
-        #         2 * Gamma_kernel @ kron @ Gamma_kernel.transpose(1, 2)).mean(dim=-1)
-
-        # print(cov1)
-        linear = torch.einsum(
-            'o l m t, m n, o k n t -> o l k t',
-            Lambda_kernel, perturbation_covariance, Lambda_kernel
-        ).mean(dim=-1)  # -> (o, l, k)
-
-        quad = torch.einsum(
-            'o l a t, a b, o k b t -> o l k t',
-            Gamma_kernel, kron, Gamma_kernel
-        ).mean(dim=-1)
-        quad = 2 * quad
-
-        cov = linear + quad
-
-        # print(cov1.shape)
-
-        return cov
-
     def get_instrument_response(self, fov: float = 7.27e-7, kernels=False, perturbations=True) -> Tensor:
         """Get the empirical instrument response. This corresponds to an array of shape (n_out x n_wavelengths x
         n_time_steps x n_grid x n_grid) if kernels=False and (n_diff_out x n_wavelengths x n_time_steps x n_grid x
@@ -828,6 +632,37 @@ class PHRINGE:
             ang_seps_mas=ang_seps_mas,
             num_reps=num_reps,
             as_radius=as_radius,
+            diag_only=diag_only,
+        )
+
+    def get_detection_probabilities(
+            self,
+            temperature: float,
+            radius_planet: float,
+            pfa: float = 2.9e-7,
+            ang_sep_mas: Union[list, np.ndarray, torch.tensor] = np.linspace(10, 150, 2),
+            num_reps: int = 1,
+            diag_only: bool = False,
+    ) -> dict:
+        """Return the sensitivity limits of the instrument. Returns inf if the planet is outside the fov.
+
+
+        Returns
+        -------
+        torch.Tensor
+            Sensitivity limits.
+        """
+        return get_detection_probabilities(
+            get_counts=self.get_counts,
+            get_model_counts=self.get_model_counts,
+            wavelength_bin_centers=self.get_wavelength_bin_centers(),
+            scene=self._scene,
+            device=self._device,
+            temperature=temperature,
+            radius_earth=radius_planet,
+            pfa=pfa,
+            ang_seps_mas=ang_sep_mas,
+            num_reps=num_reps,
             diag_only=diag_only,
         )
 
