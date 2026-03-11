@@ -6,8 +6,8 @@ from astropy import units as u
 from astropy.units import Quantity
 from pydantic import field_validator
 from pydantic_core.core_schema import ValidationInfo
-from sympy import Matrix
-from sympy import symbols, Symbol, exp, I, pi, cos, sin, Abs, lambdify, sqrt
+from sympy import Matrix, lambdify
+from sympy import symbols, Symbol, exp, I, pi, cos, sin, Abs, sqrt
 from torch import Tensor
 
 from phringe.core.base_entity import BaseEntity
@@ -51,7 +51,7 @@ class Instrument(BaseEntity):
     number_of_outputs : int
         The number of outputs.
     response : Tensor
-        The response.
+        The intensity response of the instrument.
 
     """
     aperture_diameter: Union[str, float, Quantity]
@@ -97,7 +97,8 @@ class Instrument(BaseEntity):
             'sqrt': _torch_sqrt,
             'transpose': torch.transpose,
         }
-        self.response = self._get_lambdified_response()
+        self._calc_symbolic_response()
+        self._calc_lambdified_response()
 
     def __setattr__(self, key, value):
         super().__setattr__(key, value)
@@ -188,7 +189,7 @@ class Instrument(BaseEntity):
         return len(self._simulation_time_steps)
 
     @property
-    def _wavelength_bins(self) -> Tuple[np.ndarray, np.ndarray]:
+    def _wavelength_bins(self) -> Tuple[Tensor, Tensor]:
         """Return the wavelength bin centers and widths.
 
         :return: A tuple containing the wavelength bin centers and widths
@@ -196,7 +197,7 @@ class Instrument(BaseEntity):
         return self._get_wavelength_bins()
 
     @property
-    def wavelength_bin_centers(self) -> np.ndarray:
+    def wavelength_bin_centers(self) -> Tensor:
         """Return the wavelength bin centers.
 
         :return: An array containing the wavelength bin centers
@@ -204,7 +205,7 @@ class Instrument(BaseEntity):
         return self._wavelength_bins[0]
 
     @property
-    def wavelength_bin_widths(self) -> np.ndarray:
+    def wavelength_bin_widths(self) -> Tensor:
         """Return the wavelength bin widths.
 
         :return: An array containing the wavelength bin widths
@@ -212,7 +213,7 @@ class Instrument(BaseEntity):
         return self._wavelength_bins[1]
 
     @property
-    def wavelength_bin_edges(self) -> np.ndarray:
+    def wavelength_bin_edges(self) -> Tensor:
         """Return the wavelength bin edges.
 
         :return: An array containing the wavelength bin edges
@@ -224,304 +225,159 @@ class Instrument(BaseEntity):
             )
         )
 
-    def _get_amplitude(self, device: torch.device) -> Tensor:
-        return self.aperture_diameter / 2 * torch.sqrt(
-            torch.tensor(self.throughput * self.quantum_efficiency, device=device)
-        )
+    def _calc_lambdified_response(self):
+        # Build substitution dictionary for the symbolic expressions for fixed quantities
+        subs = {}
 
-    def _get_field_of_view(self) -> Tensor:
-        return self.wavelength_bin_centers / self.aperture_diameter
-
-    def _get_lambdified_response(self):
-        # Define symbols for symbolic expressions
-        catm = self.complex_amplitude_transfer_matrix
-        acm = self.array_configuration_matrix
-        ex = {}
-        ey = {}
-        a = {}
-        da = {}
-        dphi = {}
-        th = {}
-        dth = {}
-        t, tm, b, l, alpha, beta = symbols('t tm b l alpha beta')
-
-        # NEW: telescope diameter (or any width parameter you want)
-        D = self.aperture_diameter  # metres if l is metres
-        r0 = l / D / 2
-        # G = exp(-((alpha ** 2 + beta ** 2) / (r0 ** 2)))  # == exp(-(r/r0)^2)
-
-        fov_taper = exp(-(pi ** 2 * (alpha ** 2 + beta ** 2) * D ** 2 / l ** 2))
-
-        # Define complex amplitudes
-        for k in range(self.number_of_inputs):
-            a[k] = Symbol(f'a_{k}', real=True)
-            da[k] = Symbol(f'da_{k}', real=True)
-            dphi[k] = Symbol(f'dphi_{k}', real=True)
-            th[k] = Symbol(f'th_{k}', real=True)
-            dth[k] = Symbol(f'dth_{k}', real=True)
-            # ex[k] = a[k] * sqrt(pi) * (da[k] + 1) * exp(
-            #     I * (2 * pi / l * (acm[0, k] * alpha + acm[1, k] * beta) + dphi[k])) * cos(
-            #     th[k] + dth[k])
-            # ey[k] = a[k] * sqrt(pi) * (da[k] + 1) * exp(
-            #     I * (2 * pi / l * (acm[0, k] * alpha + acm[1, k] * beta) + dphi[k])) * sin(
-            #     th[k] + dth[k])
-
-            phase = 2 * pi / l * (acm[0, k] * alpha + acm[1, k] * beta) + dphi[k]
-
-            # APPLY GAUSSIAN TAPER HERE (field level)
-            common = a[k] * sqrt(pi) * (da[k] + 1) * exp(I * phase)  # * (fov_taper)
-
-            ex[k] = common * cos(th[k] + dth[k])
-            ey[k] = common * sin(th[k] + dth[k])
-
-        # Define intensity response and save the symbolic expression
-        r = {}
-        rx = {}
-        ry = {}
-        r_torch = {}
-        r_numpy = {}
-
-        self._symbolic_intensity_response = {}
         for j in range(self.number_of_outputs):
-            rx[j] = 0
-            ry[j] = 0
             for k in range(self.number_of_inputs):
-                rx[j] += catm[j, k] * ex[k]
-                ry[j] += catm[j, k] * ey[k]
-            r[j] = (Abs(rx[j]) ** 2 + Abs(ry[j]) ** 2) * fov_taper
-            self._symbolic_intensity_response[j] = r[j]
+                subs[self._sym_catm[j, k]] = self.complex_amplitude_transfer_matrix[j, k]
 
-        # Compile the intensity response functions for numerical calculations and save the lambdified functions
-        self._diff_ir_torch = {}
-        self._diff_ir_numpy = {}
-        self._ir_numpy = {}
+        for i in range(2):
+            for k in range(self.number_of_inputs):
+                subs[self._sym_acm[i, k]] = self.array_configuration_matrix[i, k]
 
-        # Lambdify differential output for torch
-        r_vec = Matrix([r[j] for j in range(self.number_of_outputs)])  # shape (n_out, 1)
-        expr = self.kernels @ r_vec
+        subs[self._sym_ap_diam] = self.aperture_diameter
 
-        self._diff_ir_torch = [lambdify(
-            [t, l, alpha, beta, tm, b, *a.values(), *da.values(), *dphi.values(), *th.values(), *dth.values(), ],
-            expr[i, 0],
-            [self._torch_func_dict]
-        ) for i in range(expr.rows)]
+        for k in range(self.number_of_inputs):
+            subs[self._sym_ampl[k]] = self._get_amplitude()
 
-        # Lambdify differential output for numpy
-        self._diff_ir_numpy = [lambdify(
-            [t, l, alpha, beta, tm, b, *a.values(), *da.values(), *dphi.values(), *th.values(), *dth.values(), ],
-            expr[i, 0],
-            'numpy'
-        ) for i in range(expr.rows)]
+        # Calculate kernels
+        response_vec = Matrix([self._response_symbolic[j] for j in range(self.number_of_outputs)])
+        response_vec = response_vec.xreplace(subs)
+        response_symbolic_kernels = self.kernels @ response_vec
 
-        for j in range(self.number_of_outputs):
-            # Lambdify intensity response for numpy used in model count generation with photon noise
-            self._ir_numpy[j] = lambdify(
-                [t, l, alpha, beta, tm, b, *a.values(), *da.values(), *dphi.values(), *th.values(), *dth.values(), ],
-                r[j],
-                'numpy'
-            )
+        # Lambdify response kernels for torch
+        self._response_kernels_torch = [
+            lambdify(
+                self._response_arg_symbols, response_symbolic_kernels[i, 0], [self._torch_func_dict]
+            ) for i in range(response_symbolic_kernels.rows)
+        ]
 
-            # Lambdify intensity response for torch used in major calculations
-            r[j] = lambdify(
-                [t, l, alpha, beta, tm, b, *a.values(), *da.values(), *dphi.values(), *th.values(), *dth.values(), ],
-                r[j],
+        # Lambdify response kernels for numpy
+        self._response_kernels_numpy = [
+            lambdify(
+                self._response_arg_symbols, response_symbolic_kernels[i, 0], 'numpy'
+            ) for i in range(response_symbolic_kernels.rows)
+        ]
+
+        # Lambdify full response for torch
+        self._response_torch = [
+            lambdify(
+                self._response_arg_symbols,
+                self._response_symbolic[j].xreplace(subs),
                 [self._torch_func_dict]
             )
+            for j in range(self.number_of_outputs)
+        ]
 
-        return r
+        # Lambdify full response for numpy
+        self._response_numpy = [
+            lambdify(
+                self._response_arg_symbols,
+                self._response_symbolic[j].xreplace(subs),
+                'numpy'
+            )
+            for j in range(self.number_of_outputs)
+        ]
 
-    #
-    # def _get_lambdified_spectral_covariance(self) -> torch.Tensor:
-    #     catm = self.complex_amplitude_transfer_matrix
-    #     acm = self.array_configuration_matrix
-    #     A = {}
-    #     a = {}
-    #     psi = {}
-    #     gamma = {}
-    #     C = {}
-    #     c = {}
-    #     vecl = {}
-    #     H = {}
-    #     tildec = {}
-    #     tildel = {}
-    #     tildeH = {}
-    #     for k in range(self.number_of_inputs):
-    #         A[k] = Symbol(f'A_{k}', real=True)
-    #     t, tm, b, lambd, alpha, beta = symbols('t tm b lambd alpha beta')
-    #
-    #     N = symbols('N', integer=True, positive=True)
-    #     # alpha = IndexedBase('alpha')
-    #     # beta = IndexedBase('beta')
-    #     # ii = Idx('ii', N)
-    #     # jj = Idx('jj', N)
-    #     # Istar = IndexedBase('Istar')
-    #
-    #     # Get amplitude and phase of catm for ajk and psijk
-    #     for j in range(self.number_of_outputs):
-    #         for k in range(self.number_of_inputs):
-    #             a[j, k] = abs(catm[j, k])
-    #             psi[j, k] = arg(catm[j, k])
-    #             if math.isnan(psi[j, k]):
-    #                 psi[j, k] = 0
-    #
-    #     # Define gammakl
-    #     for k in range(self.number_of_inputs):
-    #         for l in range(self.number_of_inputs):
-    #             gamma[k, l] = 2 * pi / lambd * (
-    #                     (acm[0, k] - acm[0, l]) * alpha + (acm[1, k] - acm[1, l]) * beta)
-    #
-    #     # Define Cjkl
-    #     for j in range(self.number_of_outputs):
-    #         for k in range(self.number_of_inputs):
-    #             for l in range(self.number_of_inputs):
-    #                 C[j, k, l] = a[j, k] * a[j, l] * A[k] * A[l] * cos(psi[j, k] - psi[j, l])
-    #
-    #     # Define cj
-    #     for j in range(self.number_of_outputs):
-    #         c[j] = 0
-    #         for k in range(self.number_of_inputs):
-    #             for l in range(self.number_of_inputs):
-    #                 c[j] += C[j, k, l] * cos(gamma[k, l])
-    #
-    #     # Define veclj
-    #     for j in range(self.number_of_outputs):
-    #         for m in range(3 * self.number_of_inputs):
-    #             vecl[j, m] = Float(0)
-    #
-    #             # amplitude terms
-    #             if (m + 1) <= 1 * self.number_of_inputs:
-    #                 for k in range(self.number_of_inputs):
-    #                     vecl[j, m] = vecl[j, m] + C[j, k, m] * cos(gamma[k, m])
-    #                 for l in range(self.number_of_inputs):
-    #                     vecl[j, m] = vecl[j, m] + C[j, m, l] * cos(gamma[m, l])
-    #
-    #             # phase terms
-    #             elif (m + 1) <= 2 * self.number_of_inputs:
-    #                 mm = m - self.number_of_inputs
-    #                 for k in range(self.number_of_inputs):
-    #                     vecl[j, m] = vecl[j, m] + 2 * pi / lambd * (C[j, k, mm] * sin(gamma[k, mm]))
-    #                 for l in range(self.number_of_inputs):
-    #                     vecl[j, m] = vecl[j, m] + 2 * pi / lambd * (-C[j, mm, l] * sin(gamma[mm, l]))
-    #
-    #             # polarization terms
-    #             elif (m + 1) <= 3 * self.number_of_inputs:
-    #                 pass  # all = 0
-    #
-    #     # Define Hj
-    #
-    #     n = self.number_of_inputs
-    #     J = self.number_of_outputs
-    #     M = 3 * n
-    #
-    #     # H is now a list of SymPy matrices of shape (M,M)
-    #     H = [zeros(M, M) for _ in range(J)]
-    #
-    #     for j in range(J):
-    #         for m_row in range(M):
-    #             for m_col in range(M):
-    #                 # da da
-    #                 if m_row < n and m_col < n:
-    #                     if m_row == m_col:
-    #                         # H[j][m_row, m_col] = 0
-    #                         pass
-    #                     else:
-    #                         H[j][m_row, m_col] = Rational(1, 2) * C[j, m_row, m_col] * cos(gamma[m_row, m_col])
-    #                 # da dphi
-    #                 elif m_row < n and n <= m_col < 2 * n:
-    #                     mm_col = m_col - n
-    #                     H[j][m_row, m_col] = (pi / lambd) * C[j, m_row, mm_col] * sin(gamma[m_row, mm_col])
-    #                     if m_row == mm_col:
-    #                         H[j][m_row, m_col] = H[j][m_row, m_col] * (-1)
-    #                 # da dth all 0
-    #                 # dphi da
-    #                 elif n <= m_row < 2 * n and m_col < n:
-    #                     mm_row = m_row - n
-    #                     H[j][m_row, m_col] = (pi / lambd) * C[j, mm_row, m_col] * sin(gamma[mm_row, m_col])
-    #                     if mm_row == m_col:
-    #                         H[j][m_row, m_col] = H[j][m_row, m_col] * (-1)
-    #                 # dphi dphi
-    #                 elif n <= m_row < 2 * n and n <= m_col < 2 * n:
-    #                     mm_row = m_row - n
-    #                     mm_col = m_col - n
-    #                     H[j][m_row, m_col] = 2 * (pi / lambd) ** 2 * C[j, mm_row, mm_col] * cos(gamma[mm_row, mm_col])
-    #                     if mm_row == mm_col:
-    #                         H[j][m_row, m_col] = H[j][m_row, m_col] * (-1)
-    #                 # dphi dth all 0
-    #                 # dth da all 0
-    #                 # dth dphi all 0
-    #                 # dth dth
-    #                 elif 2 * n <= m_row < 3 * n and 2 * n <= m_col < 3 * n:
-    #                     mm_row = m_row - 2 * n
-    #                     mm_col = m_col - 2 * n
-    #                     H[j][m_row, m_col] = Rational(1, 2) * C[j, mm_row, mm_col] * cos(gamma[mm_row, mm_col])
-    #                     if mm_row == mm_col:
-    #                         H[j][m_row, m_col] = H[j][m_row, m_col] * (-1)
-    #                 # else stays zero (already)
-    #     # n = self.number_of_inputs
-    #     # # Initialise ALL entries of H to a SymPy zero
-    #     # for j in range(self.number_of_outputs):
-    #     #     for m1 in range(3 * self.number_of_inputs):
-    #     #         for m2 in range(3 * self.number_of_inputs):
-    #     #             H = 0
-    #     #
-    #     # # Then overwrite only the analytical blocks
-    #     # for j in range(self.number_of_outputs):
-    #     #     for m1 in range(3 * n):
-    #     #         for m2 in range(3 * n):
-    #     #             if m1 < n and m2 < n:
-    #     #                 H[j, m1, m2] = 0.5 * C[j, m1, m2] * cos(gamma[m1, m2])
-    #     #             elif m1 < n and n <= m2 < 2 * n:
-    #     #                 mm2 = m2 - n
-    #     #                 H[j, m1, m2] = -(pi / lambd) * C[j, m1, mm2] * sin(gamma[m1, mm2])
-    #     #             elif n <= m1 < 2 * n and m2 < n:
-    #     #                 mm1 = m1 - n
-    #     #                 H[j, m1, m2] = (pi / lambd) * C[j, mm1, m2] * sin(gamma[mm1, m2])
-    #     #             elif n <= m1 < 2 * n and n <= m2 < 2 * n:
-    #     #                 mm1 = m1 - n
-    #     #                 mm2 = m2 - n
-    #     #                 H[j, m1, m2] = -(2 * pi / lambd) ** 2 * C[j, mm1, mm2] * cos(gamma[mm1, mm2])
-    #     #             # else: polarisation terms stay zero (already set)
-    #
-    #     # Lambdify vecl_mat and H_mat
-    #     J = self.number_of_outputs
-    #     M = 3 * self.number_of_inputs
-    #     X = Symbol("X")
-    #
-    #     vecl_mat = Matrix([[vecl[j, m] for m in range(M)] for j in range(J)])
-    #     vecl_mat = vecl_mat.applyfunc(lambda e: Lambda(X, e)(X))
-    #
-    #     H_mat = [[[H[j][m1, m2] for m2 in range(M)]  # inner (columns)
-    #               for m1 in range(M)]  # middle (rows)
-    #              for j in range(J)]
-    #     H_mat = [
-    #         [
-    #             [Lambda(X, e)(X) for e in row]
-    #             for row in block
-    #         ]
-    #         for block in H_mat
-    #     ]
-    #
-    #     # Lambdify to return a nested Python list, NOT a SymPy matrix
-    #     vecl_output = vecl_mat.tolist()
-    #
-    #     l_eval = lambdify(
-    #         [t, lambd, alpha, beta, tm, b, *A.values()],
-    #         vecl_output,  # IMPORTANT: not vecl_mat
-    #         [self._torch_func_dict]
-    #     )
-    #
-    #     H_eval = lambdify(
-    #         [t, lambd, alpha, beta, tm, b, *A.values()],
-    #         H_mat,
-    #         [self._torch_func_dict]
-    #     )
-    #
-    #     return l_eval, H_eval
+    def _calc_symbolic_response(self) -> dict:
+        """Return the symbolic intensity response using SymPy.
+        """
+        # Define symbols for symbolic expressions
+        self._sym_catm = Matrix(
+            self.number_of_outputs,
+            self.number_of_inputs,
+            lambda j, k: Symbol(f"catm_{j}_{k}", complex=True)
+        )
 
-    def _get_wavelength_bins(self) -> Tuple[np.ndarray, np.ndarray]:
+        self._sym_acm = Matrix(
+            2,
+            self.number_of_inputs,
+            lambda i, k: Symbol(f"acm_{i}_{k}", real=True)
+        )
+
+        self._sym_ap_diam = Symbol("ap_diam", real=True)
+        self._sym_ampl = {k: Symbol(f'ampl_{k}', real=True) for k in range(self.number_of_inputs)}
+        self._sym_ampl_pert = {k: Symbol(f'ampl_pert_{k}', real=True) for k in range(self.number_of_inputs)}
+        self._sym_phase_pert = {k: Symbol(f'phase_pert_{k}', real=True) for k in range(self.number_of_inputs)}
+        self._sym_pol_pert = {k: Symbol(f'pol_pert_{k}', real=True) for k in range(self.number_of_inputs)}
+        (self._sym_time,
+         self._sym_nulling_baseline,
+         self._sym_wavelength,
+         self._sym_modulation_time,
+         self._sym_alpha_coord,
+         self._sym_beta_coord) = (symbols('t b l tm alpha beta'))
+
+        self._response_arg_symbols = [
+            self._sym_time,
+            self._sym_wavelength,
+            self._sym_alpha_coord,
+            self._sym_beta_coord,
+            self._sym_modulation_time,
+            self._sym_nulling_baseline,
+            *self._sym_ampl_pert.values(),
+            *self._sym_phase_pert.values(),
+            *self._sym_pol_pert.values(),
+        ]
+
+        # Calculate complex amplitudes
+        complex_ampl_x = {}
+        complex_ampl_y = {}
+        for k in range(self.number_of_inputs):
+            phase = 2 * pi / self._sym_wavelength * (
+                    self._sym_acm[0, k] * self._sym_alpha_coord + self._sym_acm[1, k] * self._sym_beta_coord) + \
+                    self._sym_phase_pert[k]
+            common = self._sym_ampl[k] * sqrt(pi) * (self._sym_ampl_pert[k] + 1) * exp(I * phase)
+            complex_ampl_x[k] = common * cos(
+                self._sym_pol_pert[k])  # cos(th[k] + pol_pert[k]) assuming th = 0 for all k
+            complex_ampl_y[k] = common * sin(
+                self._sym_pol_pert[k])  # sin(th[k] + pol_pert[k]) assuming th = 0 for all k
+
+        # Calculate fov taper function to account for the fov-limiting effect of the single-mode fiber
+        fov_taper = exp(-(pi ** 2 * (
+                self._sym_alpha_coord ** 2 + self._sym_beta_coord ** 2) * self._sym_ap_diam ** 2 / self._sym_wavelength ** 2))
+
+        # Calculate intensity response
+        response_total = {}
+        response_x = {}
+        response_y = {}
+
+        for j in range(self.number_of_outputs):
+            response_x[j] = 0
+            response_y[j] = 0
+            for k in range(self.number_of_inputs):
+                response_x[j] += self._sym_catm[j, k] * complex_ampl_x[k]
+                response_y[j] += self._sym_catm[j, k] * complex_ampl_y[k]
+            response_total[j] = (Abs(response_x[j]) ** 2 + Abs(response_y[j]) ** 2) * fov_taper
+
+        self._response_symbolic = response_total
+
+    def _get_amplitude(self) -> Tensor:
+        """Return the amplitude of the instrument based on collecting area and throughput terms.
+
+        Returns
+        -------
+        torch.Tensor
+            The amplitude of the instrument.
+        """
+        return self.aperture_diameter / 2 * np.sqrt(self.throughput * self.quantum_efficiency)
+
+    def _get_field_of_view(self) -> Tensor:
+        """Return the field of view.
+
+        Returns
+        -------
+        torch.Tensor
+            Fields of view for all wavelength bins.
+
+        """
+        return self.wavelength_bin_centers / self.aperture_diameter
+
+    def _get_wavelength_bins(self) -> Tuple[Tensor, Tensor]:
         """Return the wavelength bin centers and widths. The wavelength bin widths are calculated starting from the
-        wavelength lower range. As a consequence, the uppermost wavelength bin could be smaller than anticipated, in
-        which case it is added to the second last bin width, so the last bin might be a bit larger than anticipated.
+        lower wavelength range limit. The bins are iteratively calculated and increase in size towards longer wavelength.
+        If the uppermost bin does not fit into the remaining wavelength range, it is omitted.
 
         :return: A tuple containing the wavelength bin centers and widths
         """
@@ -547,3 +403,92 @@ class Instrument(BaseEntity):
             torch.asarray(wavelength_bin_centers, dtype=torch.float32, device=self._phringe._device),
             torch.asarray(wavelength_bin_widths, dtype=torch.float32, device=self._phringe._device)
         )
+
+    def get_response(
+            self,
+            times: Tensor,
+            wavelength_bin_centers: Tensor,
+            x_sky_coordinates: Tensor,
+            y_sky_coordinates: Tensor,
+            modulation_period: float,
+            nulling_baseline: float,
+            kernels: bool,
+            amplitude_perturbation: Tensor = None,
+            phase_perturbation: Tensor = None,
+            polarization_perturbation: Tensor = None,
+    ):
+        """Return the intensity response of the instrument as a tensor.
+
+        Parameters
+        ----------
+        times : Tensor
+            Times at which the response should be evaluated.
+        wavelength_bin_centers : Tensor
+            Wavelength bin centers.
+        x_sky_coordinates : Tensor
+            Sky coordinates along x (alpha).
+        y_sky_coordinates : Tensor
+            Sky coordinates along y (beta).
+        modulation_period : float
+            Modulation period.
+        nulling_baseline : float
+            Nulling baseline.
+        kernels : bool
+            Whether to return the kernels or the full response.
+        amplitude_perturbation : Tensor, optional
+            Amplitude perturbation for each input.
+            Expected shape: (..., number_of_inputs)
+        phase_perturbation : Tensor, optional
+            Phase perturbation for each input.
+            Expected shape: (..., number_of_inputs)
+        polarization_perturbation : Tensor, optional
+            Polarization perturbation for each input.
+            Expected shape: (..., number_of_inputs)
+
+        Returns
+        -------
+        Tensor
+            Instrument response tensor.
+        """
+        device = self._phringe._device
+        n_in = self.number_of_inputs
+        n_t = times.shape[0]
+        n_w = wavelength_bin_centers.shape[0]
+
+        # Default perturbations
+        if amplitude_perturbation is None:
+            amplitude_perturbation = torch.zeros((n_in, n_t), dtype=torch.float32, device=device)[
+                :, None, :, None, None]
+
+        if phase_perturbation is None:
+            phase_perturbation = torch.zeros((n_in, n_w, n_t), dtype=torch.float32, device=device)[:, :, :, None, None]
+
+        if polarization_perturbation is None:
+            polarization_perturbation = torch.zeros((n_in, n_t), dtype=torch.float32, device=device)[
+                :, None, :, None, None]
+
+        args = [
+            times,
+            wavelength_bin_centers,
+            x_sky_coordinates,
+            y_sky_coordinates,
+            modulation_period,
+            nulling_baseline,
+            *[amplitude_perturbation[i] for i in range(n_in)],
+            *[phase_perturbation[i] for i in range(n_in)],
+            *[polarization_perturbation[i] for i in range(n_in)],
+        ]
+
+        # Evaluate all outputs
+        if not kernels:
+            response = torch.stack(
+                [func(*args) for func in self._response_torch],
+                dim=0
+            )
+        else:
+            response = torch.stack(
+                [func(*args) for func in self._response_kernels_torch],
+                dim=0
+            )
+
+        return response
