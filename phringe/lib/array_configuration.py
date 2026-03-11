@@ -47,12 +47,3 @@ class PentagonArrayConfiguration(BaseArrayConfiguration):
                      [sin(2 * pi / tm * t), cos(2 * pi / tm * t)]])
            * Matrix([[cos(th[0]), cos(th[1]), cos(th[2]), cos(th[3]), cos(th[4])],
                      [sin(th[0]), sin(th[1]), sin(th[2]), sin(th[3]), sin(th[4])]]))
-
-
-class PentagonSpiralArrayConfiguration(BaseArrayConfiguration):
-    th = [0, 2 * pi / 5, 4 * pi / 5, 6 * pi / 5, 8 * pi / 5]
-    acm = (0.851 * b
-           * Matrix([[cos(2 * pi / tm * t), -sin(2 * pi / tm * t)],
-                     [sin(2 * pi / tm * t), cos(2 * pi / tm * t)]])
-           * Matrix([[cos(th[0]), 1 * cos(th[1]), 1 * cos(th[2]), 1 * cos(th[3]), 1 * cos(th[4])],
-                     [sin(th[0]), 1 * sin(th[1]), 1 * sin(th[2]), 1 * sin(th[3]), 1 * sin(th[4])]]))
