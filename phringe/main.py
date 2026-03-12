@@ -396,17 +396,9 @@ class PHRINGE:
         torch.Tensor
             Empirical instrument response.
         """
-        modulation_period = torch.tensor(
-            self._observation.modulation_period,
-            device=self._device,
-            dtype=torch.float32
-        )
+        modulation_period = torch.tensor(self._observation.modulation_period, device=self._device, dtype=torch.float32)
 
-        nulling_baseline = torch.tensor(
-            self.get_nulling_baseline(),
-            device=self._device,
-            dtype=torch.float32
-        )
+        nulling_baseline = torch.tensor(self.get_nulling_baseline(), device=self._device, dtype=torch.float32)
 
         times = self.simulation_time_steps[None, :, None, None]
         wavelengths = self._instrument.wavelength_bin_centers[:, None, None, None]
@@ -428,8 +420,8 @@ class PHRINGE:
 
         response = self._instrument.get_response(
             kernels=kernels,
-            times=self.simulation_time_steps[None, :, None, None],
-            wavelength_bin_centers=wavelengths[:, None, None, None],
+            times=times,
+            wavelength_bin_centers=wavelengths,
             x_sky_coordinates=x_coordinates,
             y_sky_coordinates=y_coordinates,
             modulation_period=modulation_period,
