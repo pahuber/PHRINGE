@@ -644,7 +644,6 @@ class PHRINGE:
     ) -> Tensor:
         """Return the sensitivity limits of the instrument. Returns inf if the planet is outside the fov.
 
-
         Returns
         -------
         torch.Tensor
@@ -675,7 +674,6 @@ class PHRINGE:
             diag_only: bool = False,
     ) -> dict:
         """Return the sensitivity limits of the instrument. Returns inf if the planet is outside the fov.
-
 
         Returns
         -------
@@ -734,7 +732,6 @@ class PHRINGE:
     def get_time_steps(self) -> Tensor:
         """Return the detector time steps.
 
-
         Returns
         -------
         torch.Tensor
@@ -746,7 +743,6 @@ class PHRINGE:
     def get_wavelength_bin_centers(self) -> Tensor:
         """Return the wavelength bin centers.
 
-
         Returns
         -------
         torch.Tensor
@@ -757,7 +753,6 @@ class PHRINGE:
     def get_wavelength_bin_edges(self) -> Tensor:
         """Return the wavelength bin edges.
 
-
         Returns
         -------
         torch.Tensor
@@ -767,7 +762,6 @@ class PHRINGE:
 
     def get_wavelength_bin_widths(self) -> Tensor:
         """Return the wavelength bin widths.
-
 
         Returns
         -------
