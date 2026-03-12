@@ -226,6 +226,8 @@ class Instrument(BaseEntity):
         )
 
     def _calc_lambdified_response(self):
+        """Calculate the lambdified instrument response.
+        """
         # Build substitution dictionary for the symbolic expressions for fixed quantities
         subs = {}
 
