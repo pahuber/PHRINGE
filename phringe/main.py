@@ -213,18 +213,8 @@ class PHRINGE:
              len(self.simulation_time_steps)),
             device=self._device
         )
-
-        modulation_period = torch.tensor(
-            self._observation.modulation_period,
-            device=self._device,
-            dtype=torch.float32
-        )
-
-        nulling_baseline = torch.tensor(
-            self.get_nulling_baseline(),
-            device=self._device,
-            dtype=torch.float32
-        )
+        modulation_period = torch.tensor(self._observation.modulation_period, device=self._device, dtype=torch.float32)
+        nulling_baseline = torch.tensor(self.get_nulling_baseline(), device=self._device, dtype=torch.float32)
 
         for it_low, it_high in self._iter_time_slices():
             for source in self._scene._get_all_sources():
@@ -237,8 +227,8 @@ class PHRINGE:
                     it_high
                 )
 
-                # Calculate counts of shape (N_outputs x N_wavelengths x N_time_steps) for all time step slices
-                # Within torch.sum, the shape is (N_wavelengths x N_time_steps x N_pix x N_pix)
+                # Calculate counts of shape (N_out x N_wavelengths x N_time_steps) for all time step slices
+                # Within torch.sum, the shape is (N_out x N_wavelengths x N_time_steps x N_pix x N_pix)
                 current_counts = (
                     torch.sum(
                         self._instrument.get_response(
@@ -379,7 +369,6 @@ class PHRINGE:
     def get_field_of_view(self) -> Tensor:
         """Return the field of view.
 
-
         Returns
         -------
         torch.Tensor
@@ -429,15 +418,18 @@ class PHRINGE:
         x_coordinates = x_coordinates[None, None, :, :]
         y_coordinates = y_coordinates[None, None, :, :]
 
-        amplitude_perturbation, phase_perturbation, polarization_perturbation = self._prepare_perturbations(
-            0,
-            times.shape[1]
-        )
+        if perturbations:
+            amplitude_perturbation, phase_perturbation, polarization_perturbation = self._prepare_perturbations(
+                0,
+                times.shape[1]
+            )
+        else:
+            amplitude_perturbation, phase_perturbation, polarization_perturbation = None, None, None
 
-        ir = self._instrument.get_response(
+        response = self._instrument.get_response(
             kernels=kernels,
             times=self.simulation_time_steps[None, :, None, None],
-            wavelength_bin_centers=self._instrument.wavelength_bin_centers[:, None, None, None],
+            wavelength_bin_centers=wavelengths[:, None, None, None],
             x_sky_coordinates=x_coordinates,
             y_sky_coordinates=y_coordinates,
             modulation_period=modulation_period,
@@ -447,7 +439,7 @@ class PHRINGE:
             polarization_perturbation=polarization_perturbation
         )
 
-        return ir
+        return response
 
     @overload
     def get_model_counts(
