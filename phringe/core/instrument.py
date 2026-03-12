@@ -281,7 +281,7 @@ class Instrument(BaseEntity):
             for j in range(self.number_of_outputs)
         ]
 
-    def _calc_symbolic_response(self) -> dict:
+    def _calc_symbolic_response(self):
         """Return the symbolic intensity response using SymPy.
         """
         # Define symbols for symbolic expressions
