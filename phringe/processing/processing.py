@@ -52,31 +52,18 @@ def get_sensitivity_limits(
         nl = noise_ref.shape[1]
         nt = noise_ref.shape[2]
 
-        wk = torch.zeros((nk, nl, nl), device=noise_ref.device, dtype=noise_ref.dtype)
+        noise_ref = noise_ref.reshape(nk * nl, nt)
 
-        for k in range(nk):
-            noise_ref_k = noise_ref[k]
-            cov_k = torch.cov(noise_ref_k)
-            eigvals, eigvecs = torch.linalg.eigh(cov_k)
-            wk[k] = eigvecs @ torch.diag(eigvals.clamp(min=1e-12).rsqrt()) @ eigvecs.T
-
-            # noise_ref = noise_ref.permute(1, 0, 2).reshape(noise_ref.shape[1], -1)
-
-            # plt.imshow(w.cpu().numpy())
-            # plt.colorbar()
-            # plt.show()
-
-            if diag_only:
-                wk[k] = torch.diag(torch.diag(wk[k]))
-
-        # Build block diag w matrix
-        w = torch.zeros((nk * nl, nk * nl), device=noise_ref.device, dtype=noise_ref.dtype)
-        for k in range(nk):
-            w[k * nl:(k + 1) * nl, k * nl:(k + 1) * nl] = wk[k]
+        cov = torch.cov(noise_ref)
+        eigvals, eigvecs = torch.linalg.eigh(cov)
+        w = eigvecs @ torch.diag(eigvals.clamp(min=1e-12).rsqrt()) @ eigvecs.T
 
         # plt.imshow(w.cpu().numpy())
         # plt.colorbar()
         # plt.show()
+
+        if diag_only:
+            w = torch.diag(torch.diag(w))
 
         # Loop through angular separations
         for i, ang_sep in enumerate((ang_seps_rad)):
@@ -99,8 +86,6 @@ def get_sensitivity_limits(
             # x0 = x0.transpose(1, 0, 2).reshape(x0.shape[1], -1)
             x0 = x0.reshape(nk * nl, nt)
             x0 = torch.from_numpy(x0).float().to(noise_ref.device)
-
-            # print(i, x0)
 
             # Whiten model
             xw = w @ x0
