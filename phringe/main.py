@@ -545,46 +545,31 @@ class PHRINGE:
 
         # Return the corresponding counts depending on kernel usage and photon noise inclusion
         if kernels:
-            diff_ir = np.concatenate([self._instrument._response_kernels_numpy[i](
-                times,
-                wavelength_bin_centers,
-                x_positions,
-                y_positions,
-                self._observation.modulation_period,
-                self.get_nulling_baseline(),
-                *[0 for _ in range(self._instrument.number_of_inputs)],
-                *[0 for _ in range(self._instrument.number_of_inputs)],
-                *[0 for _ in range(self._instrument.number_of_inputs)]
-            ) for i in range(self._instrument.kernels.shape[0])])
-
-            diff_counts = (diff_ir
-                           * spectral_energy_distribution
-                           * self._observation.detector_integration_time
-                           * wavelength_bin_widths
-                           * factors[None, :, None, None, None]
-                           )
-
-            return diff_counts[:, :, :, 0, 0]
+            response_func = self._instrument._response_kernels_numpy
+            n_elements = self._instrument.kernels.shape[0]
         else:
-            ir = np.concatenate([self._instrument._response_numpy[i](
-                times,
-                wavelength_bin_centers,
-                x_positions,
-                y_positions,
-                self._observation.modulation_period,
-                self.get_nulling_baseline(),
-                *[0 for _ in range(self._instrument.number_of_inputs)],
-                *[0 for _ in range(self._instrument.number_of_inputs)],
-                *[0 for _ in range(self._instrument.number_of_inputs)]
-            ) for i in range(self._instrument.number_of_outputs)])
+            response_func = self._instrument._response_numpy
+            n_elements = self._instrument.number_of_outputs
 
-            counts = (ir
-                      * spectral_energy_distribution
-                      * self._observation.detector_integration_time
-                      * wavelength_bin_widths
-                      * factors[None, :, None, None, None]
-                      )
-            return counts[:, :, :, 0, 0]
+        response = np.concatenate([response_func[i](
+            times,
+            wavelength_bin_centers,
+            x_positions,
+            y_positions,
+            self._observation.modulation_period,
+            self.get_nulling_baseline(),
+            *[0 for _ in range(self._instrument.number_of_inputs)],
+            *[0 for _ in range(self._instrument.number_of_inputs)],
+            *[0 for _ in range(self._instrument.number_of_inputs)]
+        ) for i in range(n_elements)])
+
+        counts = (response
+                  * spectral_energy_distribution
+                  * self._observation.detector_integration_time
+                  * wavelength_bin_widths
+                  * factors[None, :, None, None, None]
+                  )
+        return counts[:, :, :, 0, 0]
 
     def get_null_depth(self) -> Tensor:
         """Return the null depth as an array of shape (n_diff_out x n_wavelengths x n_time_steps).
