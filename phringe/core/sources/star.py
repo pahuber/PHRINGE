@@ -141,32 +141,33 @@ class Star(BaseSource):
         return 4 * np.pi * self.radius ** 2 * sigma * self.temperature ** 4
 
     @property
-    def _sky_brightness_distribution(self) -> np.ndarray:
+    def sky_brightness_distribution(self) -> np.ndarray:
         number_of_wavelength_steps = len(self._phringe._instrument.wavelength_bin_centers)
         sky_brightness_distribution = torch.zeros(
             (number_of_wavelength_steps, self._phringe._grid_size, self._phringe._grid_size),
             device=self._phringe._device)
-        radius_map = (torch.sqrt(self._sky_coordinates[0] ** 2 + self._sky_coordinates[1] ** 2) <= self._angular_radius)
+        radius_map = (torch.sqrt(
+            self.angular_sky_coordinates[0] ** 2 + self.angular_sky_coordinates[1] ** 2) <= self._angular_radius)
 
-        for index_wavelength in range(len(self._spectral_energy_distribution)):
-            sky_brightness_distribution[index_wavelength] = radius_map * self._spectral_energy_distribution[
+        for index_wavelength in range(len(self.spectral_energy_distribution)):
+            sky_brightness_distribution[index_wavelength] = radius_map * self.spectral_energy_distribution[
                 index_wavelength]
 
         return sky_brightness_distribution
 
     @property
-    def _sky_coordinates(self) -> Tensor:
+    def angular_sky_coordinates(self) -> Tensor:
         sky_coordinates = get_meshgrid(2 * (1.05 * self._angular_radius), self._phringe._grid_size,
                                        device=self._phringe._device)
         return torch.stack((sky_coordinates[0], sky_coordinates[1]))
 
     @property
-    def _solid_angle(self):
+    def solid_angle(self):
         return np.pi * (self.radius / self.distance) ** 2
 
     @property
-    def _spectral_energy_distribution(self) -> Tensor:
+    def spectral_energy_distribution(self) -> Tensor:
         return get_blackbody_spectrum_standard_units(
             self.temperature,
             self._phringe._instrument.wavelength_bin_centers
-        ) * self._solid_angle
+        ) * self.solid_angle

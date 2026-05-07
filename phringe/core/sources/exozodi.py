@@ -65,15 +65,16 @@ class Exozodi(BaseSource):
         return field_of_view_in_au_radial_map
 
     @property
-    def _sky_brightness_distribution(self):
+    def sky_brightness_distribution(self):
         host_star_luminosity = self.host_star_luminosity if self.host_star_luminosity is not None else self._phringe._scene.star.luminosity
         reference_radius_in_au = torch.sqrt(
             torch.tensor(host_star_luminosity / 3.86e26, device=self._phringe._device, dtype=torch.float32))
         surface_maps = self.level * 7.12e-8 * (self._field_of_view_in_au_radial_map / reference_radius_in_au) ** (-0.34)
-        return surface_maps * self._spectral_energy_distribution
+
+        return surface_maps * self.spectral_energy_distribution
 
     @property
-    def _sky_coordinates(self):
+    def angular_sky_coordinates(self):
         sky_coordinates = torch.zeros(
             (2, len(self._phringe._instrument._field_of_view), self._phringe._grid_size, self._phringe._grid_size),
             dtype=torch.float32,
@@ -92,11 +93,11 @@ class Exozodi(BaseSource):
         return sky_coordinates
 
     @property
-    def _solid_angle(self) -> np.ndarray:
+    def solid_angle(self) -> np.ndarray:
         return self._phringe._instrument._field_of_view ** 2
 
     @property
-    def _spectral_energy_distribution(self):
+    def spectral_energy_distribution(self):
         host_star_luminosity = self.host_star_luminosity if self.host_star_luminosity is not None else self._phringe._scene.star.luminosity
         temperature_map = self._get_temperature_profile(
             self._field_of_view_in_au_radial_map,
@@ -111,7 +112,7 @@ class Exozodi(BaseSource):
             spectral_energy_distribution[ifov] = get_blackbody_spectrum_standard_units(
                 temperature_map[ifov, :, :],
                 self._phringe._instrument.wavelength_bin_centers[ifov, None, None]
-            ) * self._solid_angle[ifov, None, None]
+            ) * self.solid_angle[ifov, None, None]
 
         return spectral_energy_distribution
 

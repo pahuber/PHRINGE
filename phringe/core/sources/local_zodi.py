@@ -63,13 +63,13 @@ class LocalZodi(BaseSource):
         return ecliptic_latitude, relative_ecliptic_longitude
 
     @property
-    def _sky_brightness_distribution(self):
+    def sky_brightness_distribution(self):
         grid = torch.ones((self._phringe._grid_size, self._phringe._grid_size), dtype=torch.float32,
                           device=self._phringe._device)
-        return torch.einsum('i, jk ->ijk', self._spectral_energy_distribution, grid)
+        return torch.einsum('i, jk ->ijk', self.spectral_energy_distribution, grid)
 
     @property
-    def _sky_coordinates(self):
+    def angular_sky_coordinates(self):
         number_of_wavelength_steps = len(self._phringe._instrument.wavelength_bin_centers)
 
         sky_coordinates = torch.zeros(
@@ -85,11 +85,11 @@ class LocalZodi(BaseSource):
         return sky_coordinates
 
     @property
-    def _solid_angle(self):
+    def solid_angle(self):
         return self._phringe._instrument._field_of_view ** 2
 
     @property
-    def _spectral_energy_distribution(self) -> torch.Tensor:
+    def spectral_energy_distribution(self) -> torch.Tensor:
         variable_tau = 4e-8
         variable_a = 0.22
 
@@ -106,10 +106,10 @@ class LocalZodi(BaseSource):
                 variable_tau *
                 (
                         get_blackbody_spectrum_standard_units(265,
-                                                              self._phringe._instrument.wavelength_bin_centers) * self._solid_angle
+                                                              self._phringe._instrument.wavelength_bin_centers) * self.solid_angle
                         + variable_a
                         * get_blackbody_spectrum_standard_units(5778,
-                                                                self._phringe._instrument.wavelength_bin_centers) * self._solid_angle
+                                                                self._phringe._instrument.wavelength_bin_centers) * self.solid_angle
                         * ((1 * u.Rsun).to(u.au) / (1.5 * u.au)).value ** 2
                 ) *
                 ((torch.pi / torch.arccos(torch.cos(torch.tensor(relative_ecliptic_longitude)) * torch.cos(

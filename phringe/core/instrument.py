@@ -73,6 +73,7 @@ class Instrument(BaseEntity):
     number_of_outputs: int = None
     response: Tensor = None
     _torch_func_dict: dict = None
+    _fov_taper: Any = None
 
     def __init__(self, **data: object) -> None:
         super().__init__(**data)
@@ -283,6 +284,23 @@ class Instrument(BaseEntity):
             for j in range(self.number_of_outputs)
         ]
 
+        # Lambdify fov taper
+        # Substitute fixed aperture diameter into fov taper
+        fov_taper_symbolic = self._fov_taper.xreplace({
+            self._sym_ap_diam: self.aperture_diameter
+        })
+
+        # Lambdify fov taper for torch
+        self._fov_taper_torch = lambdify(
+            [
+                self._sym_wavelength,
+                self._sym_alpha_coord,
+                self._sym_beta_coord,
+            ],
+            fov_taper_symbolic,
+            [self._torch_func_dict]
+        )
+
     def _calc_symbolic_response(self):
         """Return the symbolic intensity response using SymPy.
         """
@@ -339,6 +357,8 @@ class Instrument(BaseEntity):
         # Calculate fov taper function to account for the fov-limiting effect of the single-mode fiber
         fov_taper = exp(-(pi ** 2 * (
                 self._sym_alpha_coord ** 2 + self._sym_beta_coord ** 2) * self._sym_ap_diam ** 2 / self._sym_wavelength ** 2))
+        self._fov_taper = fov_taper
+        # fov_taper = 1
 
         # Calculate intensity response
         response_total = {}
@@ -405,6 +425,28 @@ class Instrument(BaseEntity):
             torch.asarray(wavelength_bin_centers, dtype=torch.float32, device=self._phringe._device),
             torch.asarray(wavelength_bin_widths, dtype=torch.float32, device=self._phringe._device)
         )
+
+    # def _get_wavelength_bins(self) -> Tuple[Tensor, Tensor]:
+    #     """Return 50 equally sized wavelength bins (uniform spacing)."""
+    #
+    #     n_bins = 50
+    #
+    #     # Create bin edges
+    #     edges = torch.linspace(
+    #         self.wavelength_min,
+    #         self.wavelength_max,
+    #         n_bins + 1,
+    #         dtype=torch.float32,
+    #         device=self._phringe._device
+    #     )
+    #
+    #     # Bin centres = midpoint of edges
+    #     wavelength_bin_centers = 0.5 * (edges[:-1] + edges[1:])
+    #
+    #     # Bin widths = constant
+    #     wavelength_bin_widths = edges[1:] - edges[:-1]
+    #
+    #     return wavelength_bin_centers, wavelength_bin_widths
 
     def get_response(
             self,

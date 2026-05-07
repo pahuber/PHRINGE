@@ -1,5 +1,4 @@
 from abc import abstractmethod, ABC
-from typing import Any, Union
 
 from torch import Tensor
 
@@ -7,74 +6,57 @@ from phringe.core.base_entity import BaseEntity
 
 
 class BaseSource(ABC, BaseEntity):
-    """Class representation of a photon source1.
+    """Class representation of a photon source in the scene.
 
-    :param mean_spectral_flux_density: An array containing the mean spectral flux density of the photon source1 for each
-        wavelength in units of ph/(s * um * m**2). If the mean spectral flux density is constant over time, then the
-        time axis is omitted
-    :param sky_brightness_distribution: An array containing for each time and wavelength a grid with the sky
-        brightness distribution of the photon source1 in units of ph/(s * um * m**2). If the sky brightness distribution
-        is constant over time, then the time axis is omitted
-    :param sky_coordinates: An array containing the sky coordinates for each time and wavelength in units of radians.
-        If the sky coordinates are constant over time and/or wavelength, the time/wavelength axes are omitted
+    Parameters
+    ----------
+
     """
-    # name: str = None
-    # __spectral_energy_density: Any = None
-    # __sky_brightness_distribution: Any = None
-    # __sky_coordinates: Any = None
-    # _solid_angle: Any = None
-    _grid_size: int = None
-    _instrument: Any = None
-    _observation: Any = None
 
     @property
     @abstractmethod
-    def _spectral_energy_distribution(self) -> Union[Tensor, None]:
-        """Return the mean spectral flux density of the source1 object for each wavelength.
+    def angular_sky_coordinates(self) -> Tensor:
+        """Return the angular sky coordinates of the source of shape 2 x n_wavelengths x n_time_steps x n_grid x n_grid.
 
-        :param wavelength_steps: The wavelength steps
-        :param grid_size: The grid size
-        :param kwargs: Additional keyword arguments
-        :return: The mean spectral flux density
+        Returns
+        -------
+        torch.Tensor
+            The angular sky coordinates as a 4D array of shape 2 x n_wavelengths x n_time_steps x n_grid x n_grid
         """
         pass
 
     @property
     @abstractmethod
-    def _sky_brightness_distribution(self) -> Union[Tensor, None]:
-        """Calculate and return the sky brightness distribution of the source1 object for each (time and) wavelength as
-        an array of shape N_wavelengths x N_pix x N_pix or N_time_steps x N_wavelengths x N_pix x N_pix (e.g. when
-        accounting for planetary orbital motion).
+    def spectral_energy_distribution(self) -> Tensor:
+        """Return the spectral energy distribution of the source of shape n_wavelengths.
 
-        :param grid_size: The grid size
-        :param kwargs: Additional keyword arguments
-        :return: The sky brightness distribution
+        Returns
+        -------
+        torch.Tensor
+            The spectral energy distribution as a 1D array of shape n_wavelengths.
         """
         pass
 
     @property
     @abstractmethod
-    def _sky_coordinates(self) -> Union[Tensor, None]:
-        """Calculate and return the sky coordinates of the source1 for a given time. For moving all_sources, such as planets,
-         the sky coordinates might change over time to ensure optimal sampling, e.g. for a planet that moves in very
-         close to the star). The sky coordinates for the different all_sources are of the following shapes:
-            - star: 2 x N_pix x N_pix
-            - planet: 2 x N_pix x N_pix (no motion) or 2 x N_time_steps x N_pix x N_pix (with motion)
-            - local and exozodi: 2 x N_wavelength x N_pix x N_pix (N_wavelength, since they fill the whole FoV, which is
-              wavelength-dependent).
+    def sky_brightness_distribution(self) -> Tensor:
+        """Return the sky brightness distribution of the source of shape n_wavelengths x n_time_steps x n_grid x n_grid.
 
-        :param grid_size: The grid size
-        :param kwargs: Additional keyword arguments
-        :return: A coordinates object containing the x- and y-sky coordinate maps
+        Returns
+        -------
+        torch.Tensor
+            The sky brightness distribution as a 4D array of shape n_wavelengths x n_time_steps x n_grid x n_grid
         """
         pass
 
     @property
     @abstractmethod
-    def _solid_angle(self) -> Union[float, Tensor]:
-        """Calculate and return the solid angle of the source1 object.
+    def solid_angle(self) -> Tensor:
+        """Return the solid angle of the source of shape n_wavelengths.
 
-        :param kwargs: Additional keyword arguments
-        :return: The solid angle
+        Returns
+        -------
+        torch.Tensor
+            They solid angle of the source as a 1D array of shape n_wavelengths.
         """
         pass

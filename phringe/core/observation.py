@@ -109,7 +109,7 @@ class Observation(BaseEntity):
             return nulling_baseline
         elif nulling_baseline < nulling_baseline_max:
             warnings.warn(
-                f"Nulling baseline of {nulling_baseline} is below the min allowed baseline of {nulling_baseline_min}. Setting to min baseline.")
+                f'Nulling baseline of {nulling_baseline} is below the min allowed baseline of {nulling_baseline_min}. Setting to min baseline.')
             return nulling_baseline_min
         elif nulling_baseline > nulling_baseline_max:
             warnings.warn(
