@@ -168,7 +168,7 @@ class Star(BaseSource):
         return sky_brightness_distribution
 
     @property
-    def solid_angle(self) -> float:
+    def solid_angle(self) -> Union[float, Tensor]:
         return np.pi * (self.radius / self.distance) ** 2
 
     @property

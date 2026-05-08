@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Union
 
 import astropy.units as u
 import torch
@@ -71,7 +71,7 @@ class Exozodi(BaseSource):
         return radial_fov_map
 
     @property
-    def sky_brightness_distribution(self):
+    def sky_brightness_distribution(self) -> Tensor:
         device = self._phringe._device
 
         host_star_luminosity = (
@@ -89,7 +89,7 @@ class Exozodi(BaseSource):
         return sky_brightness_distribution[:, None, :, :]
 
     @property
-    def sky_coordinates(self):
+    def sky_coordinates(self) -> Tensor:
         sky_coordinates = get_meshgrid(
             self._phringe._instrument._field_of_view,
             self._phringe._grid_size,
@@ -100,11 +100,11 @@ class Exozodi(BaseSource):
         return sky_coordinates[:, :, None, :, :]
 
     @property
-    def solid_angle(self) -> Tensor:
+    def solid_angle(self) -> Union[float, Tensor]:
         return self._phringe._instrument._field_of_view ** 2
 
     @property
-    def spectral_energy_distribution(self):
+    def spectral_energy_distribution(self) -> Tensor:
         host_star_luminosity = (
             self.host_star_luminosity
             if self.host_star_luminosity is not None

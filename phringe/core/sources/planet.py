@@ -326,7 +326,7 @@ class Planet(BaseSource):
         return sky_brightness_distribution
 
     @property
-    def sky_coordinates(self) -> Union[Tensor, None]:
+    def sky_coordinates(self) -> Tensor:
         n_grid = self._phringe._grid_size
 
         ang_proj_pos = self._proj_ang_pos
@@ -345,7 +345,7 @@ class Planet(BaseSource):
         return angular_sky_coordinates[:, None, :, :, :]
 
     @property
-    def solid_angle(self):
+    def solid_angle(self) -> Union[float, Tensor]:
         host_star_distance = (
             self.host_star_distance
             if self.host_star_distance is not None
@@ -354,7 +354,7 @@ class Planet(BaseSource):
         return torch.pi * (self.radius / host_star_distance) ** 2
 
     @property
-    def spectral_energy_distribution(self) -> Union[Tensor, None]:
+    def spectral_energy_distribution(self) -> Tensor:
         if self.input_spectrum is not None:
             spectral_energy_distribution = self.input_spectrum.get_spectral_energy_distribution(
                 self._phringe._instrument.wavelength_bin_centers,
