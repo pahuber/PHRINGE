@@ -16,9 +16,9 @@ from torch import Tensor
 from phringe.io.validation import validate_quantity_units
 
 
-class InputSpectrum(BaseModel):
-    """Class representation of an input spectral energy distribution (SED). Can be used to give a custom spectrum to a
-    planet rather than the auto-generated blackbody spectrum.
+class SEDLoader(BaseModel):
+    """Class to load/import custom spectral energy distributions (SED, i.e., "spectra"). Can be used to give a custom
+     SEDto a planet rather than the auto-generated blackbody spectrum.
 
     Parameters
     ----------

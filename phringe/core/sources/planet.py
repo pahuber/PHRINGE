@@ -13,7 +13,7 @@ from pydantic_core.core_schema import ValidationInfo
 from torch import Tensor
 
 from phringe.core.sources.base_source import BaseSource
-from phringe.io.input_spectrum import InputSpectrum
+from phringe.io.input_spectrum import SEDLoader
 from phringe.io.validation import validate_quantity_units
 from phringe.util.grid import get_index_of_closest_value, get_meshgrid
 from phringe.util.spectrum import get_blackbody_spectrum_si_units
@@ -44,7 +44,7 @@ class Planet(BaseSource):
         The argument of periapsis of the planet's orbit in units of degrees.
     true_anomaly: float or str or Quantity
         The true anomaly of the planet's orbit in units of degrees.
-    input_spectrum: InputSpectrum, optional
+    sed_loader: InputSpectrum, optional
         The input spectrum of the planet. If None, a blackbody spectrum is generated.
     grid_position: Tuple[int, int] , optional
         The grid position of the planet in the sky. If None, the position is calculated from its orbital elements.
@@ -64,7 +64,7 @@ class Planet(BaseSource):
     raan: Union[str, float, Quantity]
     argument_of_periapsis: Union[str, float, Quantity]
     true_anomaly: Union[str, float, Quantity]
-    input_spectrum: Union[InputSpectrum, None]
+    sed_loader: Union[SEDLoader, None]
     grid_position: Tuple = None
     host_star_distance: Union[str, float, Quantity] = None
     host_star_mass: Union[str, float, Quantity] = None
@@ -290,7 +290,7 @@ class Planet(BaseSource):
 
         it = torch.arange(n_time_steps, device=device)
 
-        # sky_brightness_distribution[:, it, ix, iy] = self.spectral_energy_distribution[:, None, 0, 0]
+        sky_brightness_distribution[:, it, ix, iy] = self.spectral_energy_distribution[:, None, 0, 0]
 
         return sky_brightness_distribution
 
@@ -324,8 +324,8 @@ class Planet(BaseSource):
 
     @property
     def spectral_energy_distribution(self) -> Tensor:
-        if self.input_spectrum is not None:
-            spectral_energy_distribution = self.input_spectrum.get_spectral_energy_distribution(
+        if self.sed_loader is not None:
+            spectral_energy_distribution = self.sed_loader.get_spectral_energy_distribution(
                 self._phringe._instrument.wavelength_bin_centers,
                 self.solid_angle,
                 self._phringe._device

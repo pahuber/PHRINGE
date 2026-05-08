@@ -4,7 +4,7 @@ import astropy.units as u
 import numpy as np
 import torch
 
-from phringe.io.input_spectrum import InputSpectrum
+from phringe.io.input_spectrum import SEDLoader
 
 
 class TestInputSpectrum(unittest.TestCase):
@@ -29,7 +29,7 @@ class TestInputSpectrum(unittest.TestCase):
         self.device = torch.device("cpu")
 
     def test_initialization_with_data(self):
-        spectrum = InputSpectrum(fluxes=self.fluxes, wavelengths=self.wavelengths)
+        spectrum = SEDLoader(fluxes=self.fluxes, wavelengths=self.wavelengths)
         self.assertIsNone(spectrum.path_to_file)
         self.assertTrue(torch.equal(spectrum.flux, self.fluxes))
         self.assertTrue(torch.equal(spectrum.wavelengths, self.wavelengths))
@@ -37,7 +37,7 @@ class TestInputSpectrum(unittest.TestCase):
     def test_read_txt_file(self):
         # This test assumes the existence of a test file "test_spectrum.txt"
         # with known content for validation.
-        spectrum = InputSpectrum(path_to_file="test_spectrum.txt")
+        spectrum = SEDLoader(path_to_file="test_spectrum.txt")
         spectrum._read_txt_file()
         self.assertIsNotNone(spectrum.sed)
         self.assertIsNotNone(spectrum.wavelengths)
