@@ -129,7 +129,7 @@ class LocalZodi(BaseSource):
         tau = 4e-8
         a = 0.22
         wavelengths = self._phringe._instrument.wavelength_bin_centers
-
+        #
         host_star_right_ascension = (
             self.host_star_right_ascension
             if self.host_star_right_ascension is not None
@@ -153,9 +153,9 @@ class LocalZodi(BaseSource):
         )
 
         spectral_energy_distribution = (
-                tau * get_blackbody_spectrum_si_units(265, wavelengths) * self.solid_angle
-                + a * get_blackbody_spectrum_si_units(5778, wavelengths) * self.solid_angle
-                * ((1 * u.Rsun).to(u.au) / (1.5 * u.au)).value ** 2
+                tau * (get_blackbody_spectrum_si_units(265, wavelengths) * self.solid_angle
+                       + a * get_blackbody_spectrum_si_units(5778, wavelengths) * self.solid_angle
+                       * ((1 * u.Rsun).to(u.au) / (1.5 * u.au)).value ** 2)
                 * ((torch.pi / torch.arccos(torch.cos(torch.tensor(relative_ecliptic_longitude))
                                             * torch.cos(torch.tensor(ecliptic_latitude))))
                    / (torch.sin(torch.tensor(ecliptic_latitude)) ** 2
