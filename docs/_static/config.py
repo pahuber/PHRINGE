@@ -64,7 +64,7 @@ config = {
                 'raan': '0 deg',
                 'argument_of_periapsis': '135 deg',
                 'true_anomaly': '0 deg',
-                'input_spectrum': None  # Will generate a blackbody spectrum, see tutorial for custom spectra
+                'sed_loader': None  # Will generate a blackbody spectrum, see tutorial for custom spectra
             },
             # Add more planets here
             # {
@@ -78,7 +78,7 @@ config = {
             #     'raan': '0 deg',
             #     'argument_of_periapsis': '45 deg',
             #     'true_anomaly': '0 deg',
-            #     'input_spectrum': None
+            #     'sed_loader': None
             # },
         ],
     },

@@ -4,26 +4,26 @@ Custom Spectrum
 ===============
 
 `PHRINGE` can automatically generate blackbody spectra for the ``Planet`` objects in the ``Scene``, but also allows
-the use of custom spectra. This is specified by the ``input_spectrum`` argument of the ``Planet`` class.
+the use of custom spectra. This is specified by the ``sed_loader`` argument of the ``Planet`` class.
 
 Autogenerate A Blackbody Spectrum
 ---------------------------------
 
-To automatically create a blackbody spectrum, set ``input_spectrum=None``:
+To automatically create a blackbody spectrum, set ``sed_loader=None``:
 
 .. code-block:: python
 
     planet = Planet(
         name='Earth',
-        input_spectrum=None,
+        sed_loader=None,
         # Other arguments
     )
 
 Use A Custom Spectrum
 ---------------------
 
-To use a custom spectrum, an ``InputSpectrum`` object must be created and set as the ``input_spectrum`` argument of the ``Planet`` class.
-An input spectrum can be created from a spectrum file or directly from arrays of SED and wavelengths.
+To use a custom spectrum, an ``SEDLoader`` object must be created and set as the ``sed_loader`` argument of the ``Planet`` class.
+An custom spectrum can be loaded from a spectrum file or directly from arrays of SED and wavelengths.
 
 .. note::
     Units equivalent to the following are accepted:
@@ -43,13 +43,13 @@ A spectrum file must be a TXT file of the following structure:
     4.060300500e+00     6.5480636e-01
     ...                 ...
 
-This can be loaded into an ``InputSpectrum`` object as follows:
+This can be loaded into an ``SEDLoader`` object as follows:
 
 .. code-block:: python
 
     path_to_file = 'path/to/file.txt'
 
-    input_spectrum = InputSpectrum(
+    sed_loader = SEDLoader(
         path_to_file=path_to_file, # Alternatively: None
         sed=None, # Alternatively: NumPy array containing the sed
         wavelengths=None, # Alternatively: NumPy array containing the wavelengths
@@ -61,7 +61,7 @@ This can be loaded into an ``InputSpectrum`` object as follows:
 
     planet = Planet(
         name='Earth',
-        input_spectrum=input_spectrum,
+        sed_loader=sed_loader,
         # Other arguments
     )
 
