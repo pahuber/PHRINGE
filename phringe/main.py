@@ -199,13 +199,12 @@ class PHRINGE:
 
         return time_step_indices
 
-    def _get_unbinned_counts(self) -> Tuple[Tensor, int]:
-        """Calculate the differential counts for all time steps (, i.e. simulation time steps). Hence
-        the output is not yet binned to detector time steps.
+    def _get_unbinned_counts(self) -> Tensor:
+        """Return the unbinned counts of shape of shape n_kernels x n_wavelengths x n_simulation_time_steps.
 
         Returns
         -------
-            A tuple containing the counts and the binning factor.
+            A tensor of shape n_kernels x n_wavelengths x n_simulation_time_steps containing the counts.
         """
         counts = torch.zeros(
             (self._instrument.number_of_outputs,
@@ -216,8 +215,8 @@ class PHRINGE:
         modulation_period = torch.tensor(self._observation.modulation_period, device=self._device, dtype=torch.float32)
         nulling_baseline = torch.tensor(self.get_nulling_baseline(), device=self._device, dtype=torch.float32)
 
-        for it_low, it_high in self._iter_time_slices():
-            for source in self._scene._get_all_sources():
+        for source in self._scene._get_all_sources():
+            for it_low, it_high in self._iter_time_slices():
 
                 sky_coordinates_x, sky_coordinates_y = source.sky_coordinates
                 sky_brightness_distribution = source.sky_brightness_distribution
@@ -257,10 +256,7 @@ class PHRINGE:
                     current_counts = torch.poisson(current_counts.cpu()).to(self._device)
                 counts[:, :, it_low:it_high] += current_counts
 
-        # Calculate the binning factor to rebin the counts to the detector time steps
-        binning_factor = int(round(len(self.simulation_time_steps) / len(self.detector_time_steps), 0))
-
-        return counts, binning_factor
+        return counts
 
     def _iter_time_slices(self):
         time_step_indices = self._get_time_slices()
@@ -350,8 +346,9 @@ class PHRINGE:
         torch.Tensor
             Raw photoelectron counts.
         """
-        counts_unbinned, binning_factor = self._get_unbinned_counts()
-
+        counts_unbinned = self._get_unbinned_counts()
+        binning_factor = int(round(len(self.simulation_time_steps) / len(self.detector_time_steps), 0))
+        
         if kernels:
             kernels_torch = torch.tensor(self._instrument.kernels.tolist(), dtype=torch.float32, device=self._device)
             counts_unbinned = torch.einsum('ij, jkl -> ikl', kernels_torch, counts_unbinned)

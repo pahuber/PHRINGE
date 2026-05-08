@@ -22,7 +22,14 @@ class Configuration(BaseEntity):
         self.config_dict = self._load_config(path) if path is not None else config_dict
 
     @staticmethod
-    def _load_config(path: Path):
+    def _load_config(path: Path) -> dict:
+        """Load the configuration from a file.
+
+        Returns
+        -------
+        dict
+            The configuration dictionary.
+        """
         spec = importlib.util.spec_from_file_location("config", path)
         config_module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(config_module)
