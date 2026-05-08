@@ -1,3 +1,4 @@
+from functools import cached_property
 from typing import Any, Tuple, Union
 
 import numpy as np
@@ -15,7 +16,7 @@ from phringe.core.sources.base_source import BaseSource
 from phringe.io.input_spectrum import InputSpectrum
 from phringe.io.validation import validate_quantity_units
 from phringe.util.grid import get_index_of_closest_value, get_meshgrid
-from phringe.util.spectrum import get_blackbody_spectrum_standard_units
+from phringe.util.spectrum import get_blackbody_spectrum_si_units
 
 
 def _convert_orbital_elements_to_sky_position(a, e, i, Omega, omega, nu):
@@ -98,17 +99,25 @@ class Planet(BaseSource):
     grid_position: Tuple = None
     host_star_distance: Union[str, float, Quantity] = None
     host_star_mass: Union[str, float, Quantity] = None
-    _angular_separation_from_star_x: Any = None
-    _angular_separation_from_star_y: Any = None
+    _max_ang_sep_from_star_x: Any = None
+    _max_ang_sep_from_star_y: Any = None
     _simulation_time_steps: Any = None
 
     @field_validator('argument_of_periapsis')
     def _validate_argument_of_periapsis(cls, value: Any, info: ValidationInfo) -> float:
         """Validate the argument of periapsis input.
 
-        :param value: Value given as input
-        :param info: ValidationInfo object
-        :return: The argument of periapsis in units of degrees
+        Parameters
+        ----------
+        value : Any
+            Value given as input.
+        info : ValidationInfo
+            Validation information for the field.
+
+        Returns
+        -------
+        float
+            Argument of periapsis in units of degrees.
         """
         return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.deg,))
 
@@ -116,9 +125,17 @@ class Planet(BaseSource):
     def _validate_inclination(cls, value: Any, info: ValidationInfo) -> float:
         """Validate the inclination input.
 
-        :param value: Value given as input
-        :param info: ValidationInfo object
-        :return: The inclination in units of degrees
+        Parameters
+        ----------
+        value : Any
+            Value given as input.
+        info : ValidationInfo
+            Validation information for the field.
+
+        Returns
+        -------
+        float
+            Inclination in units of degrees.
         """
         return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.deg,))
 
@@ -126,19 +143,35 @@ class Planet(BaseSource):
     def _validate_mass(cls, value: Any, info: ValidationInfo) -> float:
         """Validate the mass input.
 
-        :param value: Value given as input
-        :param info: ValidationInfo object
-        :return: The mass in units of weight
+        Parameters
+        ----------
+        value : Any
+            Value given as input.
+        info : ValidationInfo
+            Validation information for the field.
+
+        Returns
+        -------
+        float
+            Mass in units of kilograms.
         """
         return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.kg,))
 
     @field_validator('raan')
     def _validate_raan(cls, value: Any, info: ValidationInfo) -> float:
-        """Validate the raan input.
+        """Validate the right ascension of the ascending node input.
 
-        :param value: Value given as input
-        :param info: ValidationInfo object
-        :return: The raan in units of degrees
+        Parameters
+        ----------
+        value : Any
+            Value given as input.
+        info : ValidationInfo
+            Validation information for the field.
+
+        Returns
+        -------
+        float
+            Right ascension of the ascending node in units of degrees.
         """
         return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.deg,))
 
@@ -146,9 +179,17 @@ class Planet(BaseSource):
     def _validate_radius(cls, value: Any, info: ValidationInfo) -> float:
         """Validate the radius input.
 
-        :param value: Value given as input
-        :param info: ValidationInfo object
-        :return: The radius in units of length
+        Parameters
+        ----------
+        value : Any
+            Value given as input.
+        info : ValidationInfo
+            Validation information for the field.
+
+        Returns
+        -------
+        float
+            Radius in units of meters.
         """
         return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,))
 
@@ -156,9 +197,17 @@ class Planet(BaseSource):
     def _validate_semi_major_axis(cls, value: Any, info: ValidationInfo) -> float:
         """Validate the semi-major axis input.
 
-        :param value: Value given as input
-        :param info: ValidationInfo object
-        :return: The semi-major axis in units of length
+        Parameters
+        ----------
+        value : Any
+            Value given as input.
+        info : ValidationInfo
+            Validation information for the field.
+
+        Returns
+        -------
+        float
+            Semi-major axis in units of meters.
         """
         return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,))
 
@@ -166,9 +215,17 @@ class Planet(BaseSource):
     def _validate_temperature(cls, value: Any, info: ValidationInfo) -> float:
         """Validate the temperature input.
 
-        :param value: Value given as input
-        :param info: ValidationInfo object
-        :return: The temperature in units of temperature
+        Parameters
+        ----------
+        value : Any
+            Value given as input.
+        info : ValidationInfo
+            Validation information for the field.
+
+        Returns
+        -------
+        float
+            Temperature in units of Kelvin.
         """
         return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.K,))
 
@@ -176,9 +233,17 @@ class Planet(BaseSource):
     def _validate_true_anomaly(cls, value: Any, info: ValidationInfo) -> float:
         """Validate the true anomaly input.
 
-        :param value: Value given as input
-        :param info: ValidationInfo object
-        :return: The true anomaly in units of degrees
+        Parameters
+        ----------
+        value : Any
+            Value given as input.
+        info : ValidationInfo
+            Validation information for the field.
+
+        Returns
+        -------
+        float
+            True anomaly in units of degrees.
         """
         return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.deg,))
 
@@ -186,9 +251,17 @@ class Planet(BaseSource):
     def _validate_host_star_distance(cls, value: Any, info: ValidationInfo) -> float:
         """Validate the host star distance input.
 
-        :param value: Value given as input
-        :param info: ValidationInfo object
-        :return: The host star distance in units of length
+        Parameters
+        ----------
+        value : Any
+            Value given as input.
+        info : ValidationInfo
+            Validation information for the field.
+
+        Returns
+        -------
+        float
+            Host star distance in units of meters.
         """
         return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,))
 
@@ -196,190 +269,146 @@ class Planet(BaseSource):
     def _validate_host_star_mass(cls, value: Any, info: ValidationInfo) -> float:
         """Validate the host star mass input.
 
-        :param value: Value given as input
-        :param info: ValidationInfo object
-        :return: The host star mass in units of weight
+        Parameters
+        ----------
+        value : Any
+            Value given as input.
+        info : ValidationInfo
+            Validation information for the field.
+
+        Returns
+        -------
+        float
+            Host star mass in units of kilograms.
         """
         return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.kg,))
 
-    @property
-    def _sky_brightness_distribution(self) -> Tensor:
-        """Calculate and return the sky brightness distribution.
+    @cached_property
+    def _proj_ang_pos(self) -> Tensor:
+        """Return the projected angular position of the planet as a tensor of shape 2 x 1 or 2 x n_time_steps.
 
-        :param context: The context
-        :return: The sky brightness distribution
+        Returns
+        -------
+        torch.Tensor
+            Tensor containing the projected angular position of the planet.
         """
-        number_of_wavelength_steps = len(self._phringe._instrument.wavelength_bin_centers)
+        host_star_distance = (
+            self.host_star_distance
+            if self.host_star_distance is not None
+            else self._phringe._scene.star.distance
+        )
+        return self._get_proj_sky_pos() / host_star_distance
 
-        if self.has_orbital_motion:
-            sky_brightness_distribution = torch.zeros(
-                (len(self._sky_coordinates[1]), number_of_wavelength_steps, self._phringe._grid_size,
-                 self._phringe._grid_size),
-                device=self._phringe._device)
-            for index_time in range(len(self._sky_coordinates[1])):
-                sky_coordinates = self._sky_coordinates[:, index_time]
-                index_x = get_index_of_closest_value(
-                    sky_coordinates[0, :, 0],
-                    self._angular_separation_from_star_x[index_time]
-                )
-                index_y = get_index_of_closest_value(
-                    sky_coordinates[1, 0, :],
-                    self._angular_separation_from_star_y[index_time]
-                )
-                sky_brightness_distribution[index_time, :, index_x, index_y] = self._spectral_energy_distribution
-        elif self.grid_position:
-            sky_brightness_distribution = torch.zeros(
-                (number_of_wavelength_steps, self._phringe._grid_size, self._phringe._grid_size),
-                device=self._phringe._device)
-            sky_brightness_distribution[:, self.grid_position[1],
-            self.grid_position[0]] = self._spectral_energy_distribution
-            self._angular_separation_from_star_x = self._sky_coordinates[
-                0, self.grid_position[1], self.grid_position[0]]
-            self._angular_separation_from_star_y = self._sky_coordinates[
-                1, self.grid_position[1], self.grid_position[0]]
-        else:
-            sky_brightness_distribution = torch.zeros(
-                (number_of_wavelength_steps, self._phringe._grid_size, self._phringe._grid_size),
-                device=self._phringe._device)
-            # device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-            index_x = get_index_of_closest_value(
-                torch.asarray(self._sky_coordinates[0, :, 0], device=self._phringe._device),
-                self._angular_separation_from_star_x[0])
-            index_y = get_index_of_closest_value(
-                torch.asarray(self._sky_coordinates[1, 0, :], device=self._phringe._device),
-                self._angular_separation_from_star_y[0])
-            sky_brightness_distribution[:, index_x, index_y] = self._spectral_energy_distribution
+    @property
+    def sky_brightness_distribution(self) -> Tensor:
+        n_wavelengths = len(self._phringe._instrument.wavelength_bin_centers)
+        n_grid = self._phringe._grid_size
+        n_time_steps = len(self.sky_coordinates[1])
+        device = self._phringe._device
+
+        sky_brightness_distribution = torch.zeros((n_wavelengths, n_time_steps, n_grid, n_grid), device=device)
+        ang_proj_sky_pos = self._proj_ang_pos
+
+        ix = get_index_of_closest_value(
+            self.sky_coordinates[0, 0, :, 0, :],
+            ang_proj_sky_pos[0]
+        ) if self.grid_position is None else self.grid_position[0]
+
+        iy = get_index_of_closest_value(
+            self.sky_coordinates[1, 0, :, :, 0],
+            ang_proj_sky_pos[1]
+        ) if self.grid_position is None else self.grid_position[1]
+
+        it = torch.arange(n_time_steps, device=device)
+
+        # sky_brightness_distribution[:, it, ix, iy] = self.spectral_energy_distribution[:, None, 0, 0]
+
         return sky_brightness_distribution
 
     @property
-    def _sky_coordinates(self) -> Union[Tensor, None]:
-        self._angular_separation_from_star_x = torch.zeros(len(self._phringe.simulation_time_steps),
-                                                           device=self._phringe._device)
-        self._angular_separation_from_star_y = torch.zeros(len(self._phringe.simulation_time_steps),
-                                                           device=self._phringe._device)
+    def sky_coordinates(self) -> Tensor:
+        n_grid = self._phringe._grid_size
 
-        # If planet motion is being considered, then the sky coordinates may change with each time step and thus
-        # coordinates are created for each time step, rather than just once
-        if self.has_orbital_motion:
-            sky_coordinates = torch.zeros(
-                (2, len(self._phringe.simulation_time_steps), self._phringe._grid_size, self._phringe._grid_size),
-                device=self._phringe._device
-            )
-            for index_time, time_step in enumerate(self._phringe.simulation_time_steps):
-                sky_coordinates[:, index_time] = self._get_coordinates(
-                    time_step.item(),
-                    index_time,
-                )
-            return sky_coordinates
-        else:
-            return self._get_coordinates(self._phringe.simulation_time_steps[0], 0)
+        ang_proj_pos = self._proj_ang_pos
+        ang_proj_pos_x = ang_proj_pos[0]
+        ang_proj_pos_y = ang_proj_pos[1]
+
+        angular_radius = torch.sqrt(ang_proj_pos_x ** 2 + ang_proj_pos_y ** 2)
+
+        angular_sky_coordinates = get_meshgrid(
+            2 * (1.2 * angular_radius),
+            n_grid,
+            device=self._phringe._device
+        )
+
+        # Broadcast to time dimension
+        return angular_sky_coordinates[:, None, :, :, :]
 
     @property
-    def _solid_angle(self):
-        host_star_distance = self.host_star_distance if self.host_star_distance is not None else self._phringe._scene.star.distance
+    def solid_angle(self) -> Union[float, Tensor]:
+        host_star_distance = (
+            self.host_star_distance
+            if self.host_star_distance is not None
+            else self._phringe._scene.star.distance
+        )
         return torch.pi * (self.radius / host_star_distance) ** 2
 
     @property
-    def _spectral_energy_distribution(self) -> Union[Tensor, None]:
+    def spectral_energy_distribution(self) -> Tensor:
         if self.input_spectrum is not None:
-            return self.input_spectrum.get_spectral_energy_distribution(
+            spectral_energy_distribution = self.input_spectrum.get_spectral_energy_distribution(
                 self._phringe._instrument.wavelength_bin_centers,
-                self._solid_angle,
+                self.solid_angle,
                 self._phringe._device
             )
 
-        # if self.path_to_spectrum:
-        #     fluxes, wavelengths = TXTReader.read(self.path_to_spectrum)
-        #     binned_spectral_flux_density = spectres.spectres(
-        #         self._phringe._instrument.wavelength_bin_centers.numpy(),
-        #         wavelengths.numpy(),
-        #         fluxes.numpy(),
-        #         fill=0,
-        #         verbose=False
-        #     ) * self._solid_angle
-        #     return torch.asarray(binned_spectral_flux_density, dtype=torch.float32, device=self._phringe._device)
         else:
-            binned_spectral_flux_density = torch.asarray(
-                get_blackbody_spectrum_standard_units(
+            spectral_energy_distribution = torch.asarray(
+                get_blackbody_spectrum_si_units(
                     self.temperature,
                     self._phringe._instrument.wavelength_bin_centers
                 )
-                , dtype=torch.float32, device=self._phringe._device) * self._solid_angle
-            return binned_spectral_flux_density
+                , dtype=torch.float32,
+                device=self._phringe._device
+            ) * self.solid_angle
 
-    def _get_coordinates(
-            self,
-            time_step: float,
-            index_time: int
-    ) -> np.ndarray:
-        """Return the sky coordinates of the planet.
+        # Broadcast to wavelength dimension
+        return spectral_energy_distribution[:, None, None]
 
-        :param grid_size: The grid size
-        :param time_step: The time step
-        :param index_time: The index of the time step
-        :param has_planet_orbital_motion: Whether the planet orbital motion is to be considered
-        :param star_distance: The distance of the star
-        :param star_mass: The mass of the star
-        :return: The sky coordinates
+    def _get_proj_sky_pos(self) -> Tensor:
+        """Return the projected x- and y-position of the planet on the sky as a tensor of shape 2 x 1 or 2 x n_time_steps.
+
+        Returns
+        -------
+        torch.Tensor
+            Tensor containing the projected x- and y-position of the planets on the sky.
         """
-        self._angular_separation_from_star_x[index_time], self._angular_separation_from_star_y[index_time] = (
-            self._get_x_y_angular_separation_from_star(time_step)
+        host_star_mass = (
+            self.host_star_mass
+            if self.host_star_mass is not None
+            else self._phringe._scene.star.mass
         )
-
-        angular_radius = torch.sqrt(
-            self._angular_separation_from_star_x[index_time] ** 2
-            + self._angular_separation_from_star_y[index_time] ** 2
-        )
-
-        sky_coordinates_at_time_step = get_meshgrid(2 * (1.2 * angular_radius), self._phringe._grid_size,
-                                                    device=self._phringe._device)
-
-        return torch.stack((sky_coordinates_at_time_step[0], sky_coordinates_at_time_step[1]))
-
-    def _get_x_y_angular_separation_from_star(
-            self,
-            time_step: float
-    ) -> Tuple:
-        """Return the angular separation of the planet from the star in x- and y-direction.
-
-        :param time_step: The time step
-        :param planet_orbital_motion: Whether the planet orbital motion is to be considered
-        :param star_distance: The distance of the star
-        :param star_mass: The mass of the star
-        :return: A tuple containing the x- and y- coordinates
-        """
-        host_star_distance = self.host_star_distance if self.host_star_distance is not None else self._phringe._scene.star.distance
-        separation_from_star_x, separation_from_star_y = self._get_x_y_separation_from_star(time_step)
-        angular_separation_from_star_x = separation_from_star_x / host_star_distance
-        angular_separation_from_star_y = separation_from_star_y / host_star_distance
-        return (angular_separation_from_star_x, angular_separation_from_star_y)
-
-    def _get_x_y_separation_from_star(self, time_step: float, ) -> Tuple:
-        """Return the separation of the planet from the star in x- and y-direction. If the planet orbital motion is
-        considered, calculate the new position for each time step.
-
-        :param time_step: The time step
-        :param has_planet_orbital_motion: Whether the planet orbital motion is to be considered
-        :param star_mass: The mass of the star
-        :return: A tuple containing the x- and y- coordinates
-        """
-        host_star_mass = self.host_star_mass if self.host_star_mass is not None else self._phringe._scene.star.mass
         star = Body(parent=None, k=G * (host_star_mass + self.mass) * u.kg, name='Star')
-        orbit = Orbit.from_classical(star, a=self.semi_major_axis * u.m, ecc=u.Quantity(self.eccentricity),
-                                     inc=self.inclination * u.rad,
-                                     raan=self.raan * u.rad,
-                                     argp=self.argument_of_periapsis * u.rad, nu=self.true_anomaly * u.rad)
-        if self.has_orbital_motion:
-            orbit_propagated = orbit.propagate(time_step * u.s)
-            x, y = (orbit_propagated.r[0].to(u.m).value, orbit_propagated.r[1].to(u.m).value)
-            pass
-        else:
-            a = self.semi_major_axis  # Semi-major axis
-            e = self.eccentricity  # Eccentricity
-            i = self.inclination  # Inclination in degrees
-            Omega = self.raan  # Longitude of the ascending node in degrees
-            omega = self.argument_of_periapsis  # Argument of periapsis in degrees
-            M = self.true_anomaly  # Mean anomaly in degrees
 
-            x, y = _convert_orbital_elements_to_sky_position(a, e, i, Omega, omega, M)
-        return x, y
+        orbit = Orbit.from_classical(
+            star,
+            a=self.semi_major_axis * u.m,
+            ecc=u.Quantity(self.eccentricity),
+            inc=self.inclination * u.rad,
+            raan=self.raan * u.rad,
+            argp=self.argument_of_periapsis * u.rad,
+            nu=self.true_anomaly * u.rad
+        )
+
+        if self.has_orbital_motion:
+            propagation_time_steps = self._phringe.simulation_time_steps.cpu().numpy()
+        else:
+            propagation_time_steps = [0]
+
+        states = [orbit.propagate(t * u.s) for t in propagation_time_steps]
+        rr = np.array([state.r.to(u.m).value for state in states])
+
+        pos_x = torch.tensor(rr[:, 1], device=self._phringe._device)
+        pos_y = torch.tensor(rr[:, 0], device=self._phringe._device)
+
+        return torch.stack([pos_x, pos_y], dim=0)

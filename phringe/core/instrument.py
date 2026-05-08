@@ -73,6 +73,7 @@ class Instrument(BaseEntity):
     number_of_outputs: int = None
     response: Tensor = None
     _torch_func_dict: dict = None
+    _fov_taper: Any = None
 
     def __init__(self, **data: object) -> None:
         super().__init__(**data)
@@ -114,9 +115,17 @@ class Instrument(BaseEntity):
     def _validate_aperture_diameter(cls, value: Any, info: ValidationInfo) -> Tensor:
         """Validate the aperture diameter input.
 
-        :param value: Value given as input
-        :param info: ValidationInfo object
-        :return: The aperture diameter in units of length
+        Parameters
+        ----------
+        value : Any
+            The value given as input.
+        info : ValidationInfo
+            The validation information object.
+
+        Returns
+        -------
+        torch.Tensor
+            The aperture diameter in units of meters.
         """
         return torch.tensor(
             validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,)),
@@ -125,31 +134,55 @@ class Instrument(BaseEntity):
 
     @field_validator('nulling_baseline_min')
     def _validate_nulling_baseline_min(cls, value: Any, info: ValidationInfo) -> float:
-        """Validate the nulling baseline min input.
+        """Validate the minimum nulling baseline input.
 
-        :param value: Value given as input
-        :param info: ValidationInfo object
-        :return: The min nulling baseline in units of length
+        Parameters
+        ----------
+        value : Any
+            The value given as input.
+        info : ValidationInfo
+            The validation information object.
+
+        Returns
+        -------
+        float
+            The minimum nulling baseline in units of meters.
         """
         return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,))
 
     @field_validator('nulling_baseline_max')
     def _validate_nulling_baseline_max(cls, value: Any, info: ValidationInfo) -> float:
-        """Validate the nulling baseline max input.
+        """Validate the maximum nulling baseline input.
 
-        :param value: Value given as input
-        :param info: ValidationInfo object
-        :return: The max nulling baseline in units of length
+        Parameters
+        ----------
+        value : Any
+            The value given as input.
+        info : ValidationInfo
+            The validation information object.
+
+        Returns
+        -------
+        float
+            The maximum nulling baseline in units of meters.
         """
         return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,))
 
     @field_validator('wavelength_bands_boundaries')
     def _validate_wavelength_bands_boundaries(cls, value: Any, info: ValidationInfo) -> list:
-        """Validate the wavelength bands boundaries input.
+        """Validate the wavelength band boundaries input.
 
-        :param value: Value given as input
-        :param info: ValidationInfo object
-        :return: The wavelength bands boundaries in units of length
+        Parameters
+        ----------
+        value : Any
+            The value given as input.
+        info : ValidationInfo
+            The validation information object.
+
+        Returns
+        -------
+        list
+            The wavelength band boundaries in units of meters.
         """
         return [
             validate_quantity_units(
@@ -162,37 +195,70 @@ class Instrument(BaseEntity):
 
     @field_validator('wavelength_min')
     def _validate_wavelength_min(cls, value: Any, info: ValidationInfo) -> float:
-        """Validate the wavelength range lower limit input.
+        """Validate the minimum wavelength input.
 
-        :param value: Value given as input
-        :param info: ValidationInfo object
-        :return: The lower wavelength range limit in units of length
+        Parameters
+        ----------
+        value : Any
+            The value given as input.
+        info : ValidationInfo
+            The validation information object.
+
+        Returns
+        -------
+        float
+            The minimum wavelength in units of meters.
         """
         return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,))
 
     @field_validator('wavelength_max')
     def _validate_wavelength_max(cls, value: Any, info: ValidationInfo) -> float:
-        """Validate the wavelength range upper limit input.
+        """Validate the maximum wavelength input.
 
-        :param value: Value given as input
-        :param info: ValidationInfo object
-        :return: The upper wavelength range limit in units of length
+        Parameters
+        ----------
+        value : Any
+            The value given as input.
+        info : ValidationInfo
+            The validation information object.
+
+        Returns
+        -------
+        float
+            The maximum wavelength in units of meters.
         """
         return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,))
 
     @property
     def _field_of_view(self):
+        """Return the field of view for each wavelength bin.
+
+        Returns
+        -------
+        torch.Tensor
+            The field of view for each wavelength bin.
+        """
         return self._get_field_of_view()
 
     @property
     def _number_of_simulation_time_steps(self):
+        """Return the number of simulation time steps.
+
+        Returns
+        -------
+        int
+            The number of simulation time steps.
+        """
         return len(self._simulation_time_steps)
 
     @property
     def _wavelength_bins(self) -> Tuple[Tensor, Tensor]:
         """Return the wavelength bin centers and widths.
 
-        :return: A tuple containing the wavelength bin centers and widths
+        Returns
+        -------
+        tuple of torch.Tensor
+            Tuple containing the wavelength bin centers and widths.
         """
         return self._get_wavelength_bins()
 
@@ -200,7 +266,10 @@ class Instrument(BaseEntity):
     def wavelength_bin_centers(self) -> Tensor:
         """Return the wavelength bin centers.
 
-        :return: An array containing the wavelength bin centers
+        Returns
+        -------
+        torch.Tensor
+            The wavelength bin centers.
         """
         return self._wavelength_bins[0]
 
@@ -208,7 +277,10 @@ class Instrument(BaseEntity):
     def wavelength_bin_widths(self) -> Tensor:
         """Return the wavelength bin widths.
 
-        :return: An array containing the wavelength bin widths
+        Returns
+        -------
+        torch.Tensor
+            The wavelength bin widths.
         """
         return self._wavelength_bins[1]
 
@@ -216,7 +288,10 @@ class Instrument(BaseEntity):
     def wavelength_bin_edges(self) -> Tensor:
         """Return the wavelength bin edges.
 
-        :return: An array containing the wavelength bin edges
+        Returns
+        -------
+        torch.Tensor
+            The wavelength bin edges.
         """
         return torch.concatenate(
             (
@@ -224,7 +299,7 @@ class Instrument(BaseEntity):
                 self.wavelength_bin_centers[-1:] + self.wavelength_bin_widths[-1:] / 2
             )
         )
-
+    
     def _calc_lambdified_response(self):
         """Calculate the lambdified instrument response.
         """
@@ -283,6 +358,23 @@ class Instrument(BaseEntity):
             for j in range(self.number_of_outputs)
         ]
 
+        # Lambdify fov taper
+        # Substitute fixed aperture diameter into fov taper
+        fov_taper_symbolic = self._fov_taper.xreplace({
+            self._sym_ap_diam: self.aperture_diameter
+        })
+
+        # Lambdify fov taper for torch
+        self._fov_taper_torch = lambdify(
+            [
+                self._sym_wavelength,
+                self._sym_alpha_coord,
+                self._sym_beta_coord,
+            ],
+            fov_taper_symbolic,
+            [self._torch_func_dict]
+        )
+
     def _calc_symbolic_response(self):
         """Return the symbolic intensity response using SymPy.
         """
@@ -339,6 +431,8 @@ class Instrument(BaseEntity):
         # Calculate fov taper function to account for the fov-limiting effect of the single-mode fiber
         fov_taper = exp(-(pi ** 2 * (
                 self._sym_alpha_coord ** 2 + self._sym_beta_coord ** 2) * self._sym_ap_diam ** 2 / self._sym_wavelength ** 2))
+        self._fov_taper = fov_taper
+        # fov_taper = 1
 
         # Calculate intensity response
         response_total = {}

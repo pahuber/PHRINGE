@@ -45,14 +45,14 @@ def _prepare_sky_coordinates(source: BaseSource, it_low: int, it_high: int) -> T
         Sky coordinates of the source.
     """
     if isinstance(source, LocalZodi) or isinstance(source, Exozodi):
-        sky_coordinates_x = source._sky_coordinates[0][:, None, :, :]
-        sky_coordinates_y = source._sky_coordinates[1][:, None, :, :]
-    elif isinstance(source, Planet) and source.has_orbital_motion:
-        sky_coordinates_x = source._sky_coordinates[0][None, it_low:it_high, :, :]
-        sky_coordinates_y = source._sky_coordinates[1][None, it_low:it_high, :, :]
+        sky_coordinates_x = source.sky_coordinates[0][:, None, :, :]
+        sky_coordinates_y = source.sky_coordinates[1][:, None, :, :]
+    # elif isinstance(source, Planet) and source.has_orbital_motion:
+    #     sky_coordinates_x = source.angular_sky_coordinates[0][None, it_low:it_high, :, :]
+    #     sky_coordinates_y = source.angular_sky_coordinates[1][None, it_low:it_high, :, :]
     else:
-        sky_coordinates_x = source._sky_coordinates[0][None, None, :, :]
-        sky_coordinates_y = source._sky_coordinates[1][None, None, :, :]
+        sky_coordinates_x = source.sky_coordinates[0]  # [None, None, :, :]
+        sky_coordinates_y = source.sky_coordinates[1]  # [None, None, :, :]
 
     return sky_coordinates_x, sky_coordinates_y
 
@@ -166,7 +166,7 @@ class PHRINGE:
             normalization = 1
         elif isinstance(source, Star):
             normalization = len(
-                source._sky_brightness_distribution[0][source._sky_brightness_distribution[0] > 0])
+                source.sky_brightness_distribution[0][source.sky_brightness_distribution[0] > 0])
         else:
             normalization = self._grid_size ** 2
 
@@ -199,13 +199,12 @@ class PHRINGE:
 
         return time_step_indices
 
-    def _get_unbinned_counts(self) -> Tuple[Tensor, int]:
-        """Calculate the differential counts for all time steps (, i.e. simulation time steps). Hence
-        the output is not yet binned to detector time steps.
+    def _get_unbinned_counts(self) -> Tensor:
+        """Return the unbinned counts of shape of shape n_kernels x n_wavelengths x n_simulation_time_steps.
 
         Returns
         -------
-            A tuple containing the counts and the binning factor.
+            A tensor of shape n_kernels x n_wavelengths x n_simulation_time_steps containing the counts.
         """
         counts = torch.zeros(
             (self._instrument.number_of_outputs,
@@ -216,11 +215,11 @@ class PHRINGE:
         modulation_period = torch.tensor(self._observation.modulation_period, device=self._device, dtype=torch.float32)
         nulling_baseline = torch.tensor(self.get_nulling_baseline(), device=self._device, dtype=torch.float32)
 
-        for it_low, it_high in self._iter_time_slices():
-            for source in self._scene._get_all_sources():
+        for source in self._scene._get_all_sources():
+            for it_low, it_high in self._iter_time_slices():
 
-                sky_coordinates_x, sky_coordinates_y = _prepare_sky_coordinates(source, it_low, it_high)
-                sky_brightness_distribution = self._prepare_sky_brightness_distribution(source, it_low, it_high)
+                sky_coordinates_x, sky_coordinates_y = source.sky_coordinates
+                sky_brightness_distribution = source.sky_brightness_distribution
                 normalization = self._get_source_normalization(source)
                 amplitude_perturbation, phase_perturbation, polarization_perturbation = self._prepare_perturbations(
                     it_low,
@@ -235,15 +234,15 @@ class PHRINGE:
                             kernels=False,
                             times=self.simulation_time_steps[None, it_low:it_high, None, None],
                             wavelength_bin_centers=self._instrument.wavelength_bin_centers[:, None, None, None],
-                            x_sky_coordinates=sky_coordinates_x,
-                            y_sky_coordinates=sky_coordinates_y,
+                            x_sky_coordinates=sky_coordinates_x[:, it_low:it_high, :, :],
+                            y_sky_coordinates=sky_coordinates_y[:, it_low:it_high, :, :],
                             modulation_period=modulation_period,
                             nulling_baseline=nulling_baseline,
                             amplitude_perturbation=amplitude_perturbation,
                             phase_perturbation=phase_perturbation,
                             polarization_perturbation=polarization_perturbation
                         )
-                        * sky_brightness_distribution
+                        * sky_brightness_distribution[None, :, it_low:it_high, :, :]
                         / normalization
                         * self._simulation_time_step_size
                         * self._instrument.wavelength_bin_widths[None, :, None, None, None], dim=(3, 4)
@@ -257,10 +256,7 @@ class PHRINGE:
                     current_counts = torch.poisson(current_counts.cpu()).to(self._device)
                 counts[:, :, it_low:it_high] += current_counts
 
-        # Calculate the binning factor to rebin the counts to the detector time steps
-        binning_factor = int(round(len(self.simulation_time_steps) / len(self.detector_time_steps), 0))
-
-        return counts, binning_factor
+        return counts
 
     def _iter_time_slices(self):
         time_step_indices = self._get_time_slices()
@@ -310,11 +306,11 @@ class PHRINGE:
             Sky brightness distribution of the source.
         """
         if isinstance(source, Planet) and source.has_orbital_motion:
-            sky_brightness_distribution = source._sky_brightness_distribution.swapaxes(0, 1)[
+            sky_brightness_distribution = source.sky_brightness_distribution.swapaxes(0, 1)[
                 None, :, it_low:it_high,
                 :, :]
         else:
-            sky_brightness_distribution = source._sky_brightness_distribution[None, :, None, :, :]
+            sky_brightness_distribution = source.sky_brightness_distribution[None, :, None, :, :]
 
         return sky_brightness_distribution
 
@@ -350,8 +346,9 @@ class PHRINGE:
         torch.Tensor
             Raw photoelectron counts.
         """
-        counts_unbinned, binning_factor = self._get_unbinned_counts()
-
+        counts_unbinned = self._get_unbinned_counts()
+        binning_factor = int(round(len(self.simulation_time_steps) / len(self.detector_time_steps), 0))
+        
         if kernels:
             kernels_torch = torch.tensor(self._instrument.kernels.tolist(), dtype=torch.float32, device=self._device)
             counts_unbinned = torch.einsum('ij, jkl -> ikl', kernels_torch, counts_unbinned)
@@ -432,6 +429,26 @@ class PHRINGE:
         )
 
         return response
+
+    def get_fov_taper(
+            self,
+            fov: float = 7.27e-7,
+    ) -> Tensor:
+        """Return the FOV taper evaluated on the wavelength/spatial grid."""
+        wavelengths = self._instrument.wavelength_bin_centers[:, None, None, None]
+        x_coordinates, y_coordinates = get_meshgrid(
+            fov,
+            self._grid_size,
+            self._device
+        )
+        x_coordinates = x_coordinates[None, None, :, :]
+        y_coordinates = y_coordinates[None, None, :, :]
+
+        return self._instrument._fov_taper_torch(
+            wavelengths,
+            x_coordinates,
+            y_coordinates,
+        )
 
     @overload
     def get_model_counts(
@@ -543,7 +560,7 @@ class PHRINGE:
             if x_pos > fov / 2 or y_pos > fov / 2:
                 factors[i] = 0
 
-        # Return the corresponding counts depending on kernel usage and photon noise inclusion
+        # Return the corresponding counts depending on kernel usage
         if kernels:
             response_func = self._instrument._response_kernels_numpy
             n_elements = self._instrument.kernels.shape[0]
@@ -583,8 +600,8 @@ class PHRINGE:
         if self._scene.star is None:
             raise ValueError('Null depth can only be calculated for a scene with a star.')
 
-        star_sky_brightness = self._scene.star._sky_brightness_distribution
-        star_sky_coordiantes = self._scene.star._sky_coordinates
+        star_sky_brightness = self._scene.star.sky_brightness_distribution
+        star_sky_coordiantes = self._scene.star.sky_coordinates
 
         x_max = star_sky_coordiantes[0].max()
         diff_ir_emp = self.get_instrument_response(fov=2 * abs(x_max), kernels=True, perturbations=True)
@@ -704,7 +721,7 @@ class PHRINGE:
         torch.Tensor
             Spectral energy distribution of the source.
         """
-        return self._scene._get_source(source_name)._spectral_energy_distribution
+        return self._scene._get_source(source_name).spectral_energy_distribution
 
     def get_time_steps(self) -> Tensor:
         """Return the detector time steps.

@@ -37,9 +37,17 @@ class Observation(BaseEntity):
     def _validate_detector_integration_time(cls, value: Any, info: ValidationInfo) -> float:
         """Validate the detector integration time input.
 
-        :param value: Value given as input
-        :param info: ValidationInfo object
-        :return: The detector integration time in units of time
+        Parameters
+        ----------
+        value : Any
+            The value given as input.
+        info : ValidationInfo
+            The validation information object.
+
+        Returns
+        -------
+        float
+            The detector integration time in units of seconds.
         """
         return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.s,))
 
@@ -47,9 +55,17 @@ class Observation(BaseEntity):
     def _validate_modulation_period(cls, value: Any, info: ValidationInfo) -> float:
         """Validate the modulation period input.
 
-        :param value: Value given as input
-        :param info: ValidationInfo object
-        :return: The modulation period in units of time
+        Parameters
+        ----------
+        value : Any
+            The value given as input.
+        info : ValidationInfo
+            The validation information object.
+
+        Returns
+        -------
+        float
+            The modulation period in units of seconds.
         """
         return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.s,))
 
@@ -57,21 +73,38 @@ class Observation(BaseEntity):
     def _validate_nulling_baseline(cls, value: Any, info: ValidationInfo) -> Union[float, OptimalNullingBaseline]:
         """Validate the nulling baseline input.
 
-        :param value: Value given as input
-        :param info: ValidationInfo object
-        :return: The nulling baseline in units of length
+        Parameters
+        ----------
+        value : Any
+            The value given as input.
+        info : ValidationInfo
+            The validation information object.
+
+        Returns
+        -------
+        float or OptimalNullingBaseline
+            The nulling baseline in units of meters, or an optimal nulling baseline object.
         """
         if isinstance(value, OptimalNullingBaseline):
             return value
+
         return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,))
 
     @field_validator('solar_ecliptic_latitude')
     def _validate_solar_ecliptic_latitude(cls, value: Any, info: ValidationInfo) -> float:
         """Validate the solar ecliptic latitude input.
 
-        :param value: Value given as input
-        :param info: ValidationInfo object
-        :return: The solar ecliptic latitude in units of degrees
+        Parameters
+        ----------
+        value : Any
+            The value given as input.
+        info : ValidationInfo
+            The validation information object.
+
+        Returns
+        -------
+        float
+            The solar ecliptic latitude in units of degrees.
         """
         return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.deg,))
 
@@ -79,9 +112,17 @@ class Observation(BaseEntity):
     def _validate_total_integration_time(cls, value: Any, info: ValidationInfo) -> float:
         """Validate the total integration time input.
 
-        :param value: Value given as input
-        :param info: ValidationInfo object
-        :return: The total integration time in units of time
+        Parameters
+        ----------
+        value : Any
+            The value given as input.
+        info : ValidationInfo
+            The validation information object.
+
+        Returns
+        -------
+        float
+            The total integration time in units of seconds.
         """
         return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.s,))
 
@@ -95,7 +136,7 @@ class Observation(BaseEntity):
 
         # Get optimized nulling baseline value in meters
         else:
-            star_habitable_zone_central_angular_radius = self._phringe._scene.star._habitable_zone_central_angular_radius \
+            star_habitable_zone_central_angular_radius = self._phringe._scene.star._hz_central_radius_angular \
                 if (self._phringe._scene is not None and self._phringe._scene.star is not None) else None
             nulling_baseline = self.nulling_baseline.get_value(
                 star_habitable_zone_central_angular_radius,
@@ -109,7 +150,7 @@ class Observation(BaseEntity):
             return nulling_baseline
         elif nulling_baseline < nulling_baseline_max:
             warnings.warn(
-                f"Nulling baseline of {nulling_baseline} is below the min allowed baseline of {nulling_baseline_min}. Setting to min baseline.")
+                f'Nulling baseline of {nulling_baseline} is below the min allowed baseline of {nulling_baseline_min}. Setting to min baseline.')
             return nulling_baseline_min
         elif nulling_baseline > nulling_baseline_max:
             warnings.warn(

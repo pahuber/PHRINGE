@@ -1,10 +1,12 @@
+from typing import Union
+
 import torch
 from scipy.constants import c, h, k
 from torch import Tensor
 
 
-def get_blackbody_spectrum_standard_units(
-        temperature: float,
+def get_blackbody_spectrum_si_units(
+        temperature: Union[float, Tensor],
         wavelengths: Tensor
 ) -> Tensor:
     """Return a blackbody spectrum for an astrophysical object.

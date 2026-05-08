@@ -12,7 +12,7 @@ from torch import Tensor
 from phringe.core.sources.base_source import BaseSource
 from phringe.io.validation import validate_quantity_units
 from phringe.util.grid import get_meshgrid
-from phringe.util.spectrum import get_blackbody_spectrum_standard_units
+from phringe.util.spectrum import get_blackbody_spectrum_si_units
 
 
 class Star(BaseSource):
@@ -106,18 +106,19 @@ class Star(BaseSource):
         return self.radius / self.distance
 
     @property
-    def _habitable_zone_central_angular_radius(self) -> float:
+    def _hz_central_radius_angular(self) -> float:
         """Return the central habitable zone radius in angular units.
 
         :return: The central habitable zone radius in angular units
         """
-        return self._habitable_zone_central_radius / self.distance
+        return self._hz_central_radius / self.distance
 
     @property
-    def _habitable_zone_central_radius(self) -> float:
-        """Return the central habitable zone radius of the star. Calculated as defined in Kopparapu et al. 2013.
+    def _hz_central_radius(self) -> float:
+        """Return the central habitable zone radius of the star in meters.
+        Calculated as defined in Kopparapu et al. 2013.
 
-        :return: The central habitable zone radius
+        :return: The central habitable zone radius in meters.
         """
         incident_solar_flux_inner, incident_solar_flux_outer = 1.7665, 0.3240
         parameter_a_inner, parameter_a_outer = 1.3351E-4, 5.3221E-5
@@ -125,48 +126,57 @@ class Star(BaseSource):
         parameter_c_inner, parameter_c_outer = -3.3488E-12, -1.1049E-12
         temperature_difference = self.temperature - 5780
 
-        incident_stellar_flux_inner = (incident_solar_flux_inner + parameter_a_inner * temperature_difference
-                                       + parameter_b_inner * temperature_difference ** 2 + parameter_c_inner
-                                       * temperature_difference ** 3)
-        incident_stellar_flux_outer = (incident_solar_flux_outer + parameter_a_outer * temperature_difference
-                                       + parameter_b_outer * temperature_difference ** 2 + parameter_c_outer
-                                       * temperature_difference ** 3)
+        incident_stellar_flux_inner = (
+                incident_solar_flux_inner
+                + parameter_a_inner * temperature_difference
+                + parameter_b_inner * temperature_difference ** 2
+                + parameter_c_inner * temperature_difference ** 3
+        )
+        incident_stellar_flux_outer = (
+                incident_solar_flux_outer
+                + parameter_a_outer * temperature_difference
+                + parameter_b_outer * temperature_difference ** 2
+                + parameter_c_outer * temperature_difference ** 3
+        )
 
         radius_inner = np.sqrt(self.luminosity / 3.86e26 / incident_stellar_flux_inner)
         radius_outer = np.sqrt(self.luminosity / 3.86e26 / incident_stellar_flux_outer)
+
         return ((radius_outer + radius_inner) / 2 * u.au).si.value
 
     @property
-    def luminosity(self):
+    def sky_coordinates(self) -> Tensor:
+        # Add 5% margin to the image
+        sky_coordinates = get_meshgrid(
+            2 * (1.05 * self._angular_radius),
+            self._phringe._grid_size,
+            device=self._phringe._device
+        )
+
+        # Stack and broadcast to wavelength and time dimensions
+        return torch.stack((sky_coordinates[0], sky_coordinates[1]))[:, None, None, :, :]
+
+    @property
+    def luminosity(self) -> float:
+        """Return the luminosity of the star in watts."""
         return 4 * np.pi * self.radius ** 2 * sigma * self.temperature ** 4
 
     @property
-    def _sky_brightness_distribution(self) -> np.ndarray:
-        number_of_wavelength_steps = len(self._phringe._instrument.wavelength_bin_centers)
-        sky_brightness_distribution = torch.zeros(
-            (number_of_wavelength_steps, self._phringe._grid_size, self._phringe._grid_size),
-            device=self._phringe._device)
-        radius_map = (torch.sqrt(self._sky_coordinates[0] ** 2 + self._sky_coordinates[1] ** 2) <= self._angular_radius)
-
-        for index_wavelength in range(len(self._spectral_energy_distribution)):
-            sky_brightness_distribution[index_wavelength] = radius_map * self._spectral_energy_distribution[
-                index_wavelength]
-
+    def sky_brightness_distribution(self) -> Tensor:
+        radius_map = (torch.sqrt(self.sky_coordinates[0] ** 2 + self.sky_coordinates[1] ** 2) <= self._angular_radius)
+        sky_brightness_distribution = radius_map * self.spectral_energy_distribution[:, None, :, :]
         return sky_brightness_distribution
 
     @property
-    def _sky_coordinates(self) -> Tensor:
-        sky_coordinates = get_meshgrid(2 * (1.05 * self._angular_radius), self._phringe._grid_size,
-                                       device=self._phringe._device)
-        return torch.stack((sky_coordinates[0], sky_coordinates[1]))
-
-    @property
-    def _solid_angle(self):
+    def solid_angle(self) -> Union[float, Tensor]:
         return np.pi * (self.radius / self.distance) ** 2
 
     @property
-    def _spectral_energy_distribution(self) -> Tensor:
-        return get_blackbody_spectrum_standard_units(
+    def spectral_energy_distribution(self) -> Tensor:
+        spectral_energy_distribution = get_blackbody_spectrum_si_units(
             self.temperature,
             self._phringe._instrument.wavelength_bin_centers
-        ) * self._solid_angle
+        ) * self.solid_angle
+
+        # Broadcast to grid dimension
+        return spectral_energy_distribution[:, None, None]

@@ -10,7 +10,7 @@ from torch.distributions import Normal
 
 from phringe.core.scene import Scene
 from phringe.util.baseline import OptimalNullingBaseline
-from phringe.util.spectrum import get_blackbody_spectrum_standard_units
+from phringe.util.spectrum import get_blackbody_spectrum_si_units
 
 
 def get_sensitivity_limits(
@@ -45,7 +45,7 @@ def get_sensitivity_limits(
     # Loop through repetitions i.e. random samples
     for rep in range(num_reps):
 
-        # Get whitening matrix
+        # Get whitening matrix from estimated noise
         noise_ref = get_counts(kernels=True)
 
         nk = noise_ref.shape[0]
@@ -55,12 +55,9 @@ def get_sensitivity_limits(
         noise_ref = noise_ref.reshape(nk * nl, nt)
 
         cov = torch.cov(noise_ref)
-        eigvals, eigvecs = torch.linalg.eigh(cov)
-        w = eigvecs @ torch.diag(eigvals.clamp(min=1e-12).rsqrt()) @ eigvecs.T
 
-        # plt.imshow(w.cpu().numpy())
-        # plt.colorbar()
-        # plt.show()
+        U, Svals, _ = torch.linalg.svd(cov)
+        w = U @ torch.diag(1 / torch.sqrt(Svals)) @ U.T
 
         if diag_only:
             w = torch.diag(torch.diag(w))
@@ -71,7 +68,7 @@ def get_sensitivity_limits(
             solid_angle_ref = 1e-20
 
             x0 = get_model_counts(
-                spectral_energy_distribution=get_blackbody_spectrum_standard_units(
+                spectral_energy_distribution=get_blackbody_spectrum_si_units(
                     temperature,
                     wavelength_bin_centers,
                 ).cpu().numpy() * solid_angle_ref,
@@ -79,22 +76,23 @@ def get_sensitivity_limits(
                 y_position=0,
                 kernels=True
             )
-            # plt.imshow(x0[0])
-            # plt.colorbar()
-            # plt.show()
-            # x_shape = x0.shape
-            # x0 = x0.transpose(1, 0, 2).reshape(x0.shape[1], -1)
+
             x0 = x0.reshape(nk * nl, nt)
             x0 = torch.from_numpy(x0).float().to(noise_ref.device)
+
+            # np.save(
+            #     f'/home/huberph/phringe/_wd/projects/2026/2_dbw_kernel_comparison/_huber+2026/data_cov_plot/out/cov_{nk}.npy',
+            #     cov.cpu().numpy())
+            # np.save(
+            #     f'/home/huberph/phringe/_wd/projects/2026/2_dbw_kernel_comparison/_huber+2026/data_cov_plot/out/noise_ref_{nk}.npy',
+            #     noise_ref.cpu().numpy())
+            # np.save(
+            #     f'/home/huberph/phringe/_wd/projects/2026/2_dbw_kernel_comparison/_huber+2026/data_cov_plot/out/x0_{nk}.npy',
+            #     x0.cpu().numpy())
 
             # Whiten model
             xw = w @ x0
             xw = xw.reshape(nk, nl, nt)
-
-            # reshape and permute xw back to original shape
-            # xw = xw.reshape(x_shape[1], x_shape[0], x_shape[2]).permute(1, 0, 2)
-
-            #
             xw = xw.flatten()
             s = torch.linalg.norm(xw)
             xtx = torch.dot(xw, xw)
@@ -237,7 +235,7 @@ def get_detection_probabilities1(
         solid_angle_ref = 1e-20
 
         x0 = get_model_counts(
-            spectral_energy_distribution=get_blackbody_spectrum_standard_units(
+            spectral_energy_distribution=get_blackbody_spectrum_si_units(
                 temperature,
                 wavelength_bin_centers,
             ).cpu().numpy(),
@@ -377,7 +375,7 @@ def get_detection_probabilities(
             # IMPORTANT: keep the same convention as in get_sensitivity_limits.
             x0 = get_model_counts(
                 spectral_energy_distribution=(
-                        get_blackbody_spectrum_standard_units(temperature, wavelength_bin_centers)
+                        get_blackbody_spectrum_si_units(temperature, wavelength_bin_centers)
                         .cpu().numpy() * solid_angle_ref
                 ),
                 x_position=float(ang_sep.item()),

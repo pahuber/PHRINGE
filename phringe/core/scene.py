@@ -70,6 +70,10 @@ class Scene(BaseEntity):
     def _get_all_sources(self) -> list[BaseSource]:
         """Return all all_sources in the scene.
 
+        Returns
+        -------
+        list[BaseSource]
+            The list of all sources in the scene.
         """
         all_sources = []
         if self.planets:
@@ -85,7 +89,15 @@ class Scene(BaseEntity):
     def _get_source(self, name: str) -> BaseSource:
         """Return the source with the given name.
 
-        :param name: The name of the source
+        Parameters
+        ----------
+        name : str
+            The name of the source to retrieve.
+
+        Returns
+        -------
+        BaseSource
+            The source with the given name.
         """
         for source in self._get_all_sources():
             if source.name == name:
