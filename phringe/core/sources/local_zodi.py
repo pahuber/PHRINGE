@@ -10,7 +10,7 @@ from pydantic_core.core_schema import ValidationInfo
 from phringe.core.sources.base_source import BaseSource
 from phringe.io.validation import validate_quantity_units
 from phringe.util.grid import get_meshgrid
-from phringe.util.spectrum import get_blackbody_spectrum_standard_units
+from phringe.util.spectrum import get_blackbody_spectrum_si_units
 
 
 class LocalZodi(BaseSource):
@@ -69,7 +69,7 @@ class LocalZodi(BaseSource):
         return torch.einsum('i, jk ->ijk', self.spectral_energy_distribution, grid)
 
     @property
-    def angular_sky_coordinates(self):
+    def sky_coordinates(self):
         number_of_wavelength_steps = len(self._phringe._instrument.wavelength_bin_centers)
 
         sky_coordinates = torch.zeros(
@@ -105,11 +105,11 @@ class LocalZodi(BaseSource):
         spectral_flux_density = (
                 variable_tau *
                 (
-                        get_blackbody_spectrum_standard_units(265,
-                                                              self._phringe._instrument.wavelength_bin_centers) * self.solid_angle
+                        get_blackbody_spectrum_si_units(265,
+                                                        self._phringe._instrument.wavelength_bin_centers) * self.solid_angle
                         + variable_a
-                        * get_blackbody_spectrum_standard_units(5778,
-                                                                self._phringe._instrument.wavelength_bin_centers) * self.solid_angle
+                        * get_blackbody_spectrum_si_units(5778,
+                                                          self._phringe._instrument.wavelength_bin_centers) * self.solid_angle
                         * ((1 * u.Rsun).to(u.au) / (1.5 * u.au)).value ** 2
                 ) *
                 ((torch.pi / torch.arccos(torch.cos(torch.tensor(relative_ecliptic_longitude)) * torch.cos(

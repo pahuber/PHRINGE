@@ -6,17 +6,17 @@ from astropy.units import Quantity
 from torch import Tensor
 
 
-#
-# def get_meshgrid(full_extent: float, grid_size: int, device: torch.device) -> Tensor:
-#     """Return a tuple of numpy arrays corresponding to a meshgrid.
-#
-#     :param full_extent: Full extent in one dimension
-#     :param grid_size: Grid size
-#     :return: Tuple of numpy arrays
-#     """
-#     extent = torch.linspace(-full_extent / 2, full_extent / 2, grid_size, device=device)
-#     meshgrid = torch.meshgrid((extent, extent), indexing='ij')
-#     return torch.stack([meshgrid[1], meshgrid[0]])
+def get_index_of_closest_value(array: torch.Tensor, values: torch.Tensor) -> torch.Tensor:
+    """
+    array  : shape (M, N)
+    values : shape (M,)
+
+    returns:
+        indices : shape (M,)
+    """
+    distances = torch.abs(array - values[:, None])
+
+    return distances.argmin(dim=1)
 
 
 def get_meshgrid(
@@ -55,53 +55,3 @@ def get_radial_map(full_extent: Quantity, grid_size: int, device=torch.device) -
     """
     meshgrid = get_meshgrid(full_extent, grid_size, device)
     return torch.sqrt(meshgrid[0] ** 2 + meshgrid[1] ** 2)
-
-
-def get_index_of_closest_value_numpy(array: np.ndarray, value: Quantity):
-    """Return the index of a value in an array closest to the provided value.
-
-    :param array: The array to search in
-    :param value: The value to check
-    :return: The index of the closest value
-    """
-    return np.abs(array - value).argmin()
-
-
-# def get_index_of_closest_value(array: Tensor, value: Tensor):
-#     """Return the index of a value in an array closest to the provided value.
-#
-#     :param array: The array to search in
-#     :param value: The value to check
-#     :return: The index of the closest value
-#     """
-#     return torch.abs(array - value).argmin()
-#
-# def get_index_of_closest_value(array: torch.Tensor,
-#                                values: torch.Tensor):
-#     """
-#     array  : shape (N,)
-#     values : shape (M,)
-#
-#     returns:
-#         indices : shape (M,)
-#     """
-#
-#     distances = torch.abs(array[None, :] - values[:, None])
-#
-#     return distances.argmin(dim=1)
-
-def get_index_of_closest_value(
-        array: torch.Tensor,
-        values: torch.Tensor
-):
-    """
-    array  : shape (M, N)
-    values : shape (M,)
-
-    returns:
-        indices : shape (M,)
-    """
-
-    distances = torch.abs(array - values[:, None])
-
-    return distances.argmin(dim=1)

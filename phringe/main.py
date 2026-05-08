@@ -45,14 +45,14 @@ def _prepare_sky_coordinates(source: BaseSource, it_low: int, it_high: int) -> T
         Sky coordinates of the source.
     """
     if isinstance(source, LocalZodi) or isinstance(source, Exozodi):
-        sky_coordinates_x = source.angular_sky_coordinates[0][:, None, :, :]
-        sky_coordinates_y = source.angular_sky_coordinates[1][:, None, :, :]
+        sky_coordinates_x = source.sky_coordinates[0][:, None, :, :]
+        sky_coordinates_y = source.sky_coordinates[1][:, None, :, :]
     # elif isinstance(source, Planet) and source.has_orbital_motion:
     #     sky_coordinates_x = source.angular_sky_coordinates[0][None, it_low:it_high, :, :]
     #     sky_coordinates_y = source.angular_sky_coordinates[1][None, it_low:it_high, :, :]
     else:
-        sky_coordinates_x = source.angular_sky_coordinates[0]  # [None, None, :, :]
-        sky_coordinates_y = source.angular_sky_coordinates[1]  # [None, None, :, :]
+        sky_coordinates_x = source.sky_coordinates[0]  # [None, None, :, :]
+        sky_coordinates_y = source.sky_coordinates[1]  # [None, None, :, :]
 
     return sky_coordinates_x, sky_coordinates_y
 
@@ -219,7 +219,7 @@ class PHRINGE:
         for it_low, it_high in self._iter_time_slices():
             for source in self._scene._get_all_sources():
 
-                sky_coordinates_x, sky_coordinates_y = _prepare_sky_coordinates(source, it_low, it_high)
+                sky_coordinates_x, sky_coordinates_y = source.sky_coordinates
                 sky_brightness_distribution = source.sky_brightness_distribution
                 normalization = self._get_source_normalization(source)
                 amplitude_perturbation, phase_perturbation, polarization_perturbation = self._prepare_perturbations(
@@ -235,15 +235,15 @@ class PHRINGE:
                             kernels=False,
                             times=self.simulation_time_steps[None, it_low:it_high, None, None],
                             wavelength_bin_centers=self._instrument.wavelength_bin_centers[:, None, None, None],
-                            x_sky_coordinates=sky_coordinates_x[:, it_low:it_high],
-                            y_sky_coordinates=sky_coordinates_y[:, it_low:it_high],
+                            x_sky_coordinates=sky_coordinates_x[:, it_low:it_high, :, :],
+                            y_sky_coordinates=sky_coordinates_y[:, it_low:it_high, :, :],
                             modulation_period=modulation_period,
                             nulling_baseline=nulling_baseline,
                             amplitude_perturbation=amplitude_perturbation,
                             phase_perturbation=phase_perturbation,
                             polarization_perturbation=polarization_perturbation
                         )
-                        * sky_brightness_distribution[None, :, :, :, :]
+                        * sky_brightness_distribution[None, :, it_low:it_high, :, :]
                         / normalization
                         * self._simulation_time_step_size
                         * self._instrument.wavelength_bin_widths[None, :, None, None, None], dim=(3, 4)
@@ -604,7 +604,7 @@ class PHRINGE:
             raise ValueError('Null depth can only be calculated for a scene with a star.')
 
         star_sky_brightness = self._scene.star.sky_brightness_distribution
-        star_sky_coordiantes = self._scene.star.angular_sky_coordinates
+        star_sky_coordiantes = self._scene.star.sky_coordinates
 
         x_max = star_sky_coordiantes[0].max()
         diff_ir_emp = self.get_instrument_response(fov=2 * abs(x_max), kernels=True, perturbations=True)

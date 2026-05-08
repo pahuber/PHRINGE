@@ -95,7 +95,7 @@ class Observation(BaseEntity):
 
         # Get optimized nulling baseline value in meters
         else:
-            star_habitable_zone_central_angular_radius = self._phringe._scene.star._habitable_zone_central_angular_radius \
+            star_habitable_zone_central_angular_radius = self._phringe._scene.star._hz_central_radius_angular \
                 if (self._phringe._scene is not None and self._phringe._scene.star is not None) else None
             nulling_baseline = self.nulling_baseline.get_value(
                 star_habitable_zone_central_angular_radius,

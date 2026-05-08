@@ -10,7 +10,7 @@ from torch.distributions import Normal
 
 from phringe.core.scene import Scene
 from phringe.util.baseline import OptimalNullingBaseline
-from phringe.util.spectrum import get_blackbody_spectrum_standard_units
+from phringe.util.spectrum import get_blackbody_spectrum_si_units
 
 
 def get_sensitivity_limits(
@@ -68,7 +68,7 @@ def get_sensitivity_limits(
             solid_angle_ref = 1e-20
 
             x0 = get_model_counts(
-                spectral_energy_distribution=get_blackbody_spectrum_standard_units(
+                spectral_energy_distribution=get_blackbody_spectrum_si_units(
                     temperature,
                     wavelength_bin_centers,
                 ).cpu().numpy() * solid_angle_ref,
@@ -235,7 +235,7 @@ def get_detection_probabilities1(
         solid_angle_ref = 1e-20
 
         x0 = get_model_counts(
-            spectral_energy_distribution=get_blackbody_spectrum_standard_units(
+            spectral_energy_distribution=get_blackbody_spectrum_si_units(
                 temperature,
                 wavelength_bin_centers,
             ).cpu().numpy(),
@@ -375,7 +375,7 @@ def get_detection_probabilities(
             # IMPORTANT: keep the same convention as in get_sensitivity_limits.
             x0 = get_model_counts(
                 spectral_energy_distribution=(
-                        get_blackbody_spectrum_standard_units(temperature, wavelength_bin_centers)
+                        get_blackbody_spectrum_si_units(temperature, wavelength_bin_centers)
                         .cpu().numpy() * solid_angle_ref
                 ),
                 x_position=float(ang_sep.item()),

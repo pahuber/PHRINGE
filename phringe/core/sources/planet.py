@@ -16,7 +16,7 @@ from phringe.core.sources.base_source import BaseSource
 from phringe.io.input_spectrum import InputSpectrum
 from phringe.io.validation import validate_quantity_units
 from phringe.util.grid import get_index_of_closest_value, get_meshgrid
-from phringe.util.spectrum import get_blackbody_spectrum_standard_units
+from phringe.util.spectrum import get_blackbody_spectrum_si_units
 
 
 def _convert_orbital_elements_to_sky_position(a, e, i, Omega, omega, nu):
@@ -283,11 +283,53 @@ class Planet(BaseSource):
         """
         return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.kg,))
 
+    @cached_property
+    def _proj_ang_pos(self) -> Tensor:
+        """Return the projected angular position of the planet as a tensor of shape 2 x 1 or 2 x n_time_steps.
+
+        Returns
+        -------
+        torch.Tensor
+            Tensor containing the projected angular position of the planet.
+        """
+        host_star_distance = (
+            self.host_star_distance
+            if self.host_star_distance is not None
+            else self._phringe._scene.star.distance
+        )
+        return self._get_proj_sky_pos() / host_star_distance
+
     @property
-    def angular_sky_coordinates(self) -> Union[Tensor, None]:
+    def sky_brightness_distribution(self) -> Tensor:
+        n_wavelengths = len(self._phringe._instrument.wavelength_bin_centers)
+        n_grid = self._phringe._grid_size
+        n_time_steps = len(self.sky_coordinates[1])
+        device = self._phringe._device
+
+        sky_brightness_distribution = torch.zeros((n_wavelengths, n_time_steps, n_grid, n_grid), device=device)
+        ang_proj_sky_pos = self._proj_ang_pos
+
+        ix = get_index_of_closest_value(
+            self.sky_coordinates[0, 0, :, 0, :],
+            ang_proj_sky_pos[0]
+        ) if self.grid_position is None else self.grid_position[0]
+
+        iy = get_index_of_closest_value(
+            self.sky_coordinates[1, 0, :, :, 0],
+            ang_proj_sky_pos[1]
+        ) if self.grid_position is None else self.grid_position[1]
+
+        it = torch.arange(n_time_steps, device=device)
+
+        # sky_brightness_distribution[:, it, ix, iy] = self.spectral_energy_distribution[:, None, 0, 0]
+
+        return sky_brightness_distribution
+
+    @property
+    def sky_coordinates(self) -> Union[Tensor, None]:
         n_grid = self._phringe._grid_size
 
-        ang_proj_pos = self.proj_ang_pos
+        ang_proj_pos = self._proj_ang_pos
         ang_proj_pos_x = ang_proj_pos[0]
         ang_proj_pos_y = ang_proj_pos[1]
 
@@ -299,61 +341,30 @@ class Planet(BaseSource):
             device=self._phringe._device
         )
 
+        # Broadcast to time dimension
         return angular_sky_coordinates[:, None, :, :, :]
 
     @property
-    def sky_brightness_distribution(self) -> Tensor:
-        n_wavelengths = len(self._phringe._instrument.wavelength_bin_centers)
-        n_grid = self._phringe._grid_size
-        n_time_steps = len(self.angular_sky_coordinates[1])
-
-        sky_brightness_distribution = torch.zeros(
-            (n_wavelengths, n_time_steps, n_grid, n_grid),
-            device=self._phringe._device
-        )
-        ang_proj_sky_pos = self.proj_ang_pos
-
-        if not self.grid_position:
-            ix = get_index_of_closest_value(
-                self.angular_sky_coordinates[0, 0, :, 0, :],
-                ang_proj_sky_pos[0]
-            )
-            iy = get_index_of_closest_value(
-                self.angular_sky_coordinates[1, 0, :, :, 0],
-                ang_proj_sky_pos[1]
-            )
-        else:
-            ix = self.grid_position[0]
-            iy = self.grid_position[1]
-
-        sky_brightness_distribution[
-            :,
-            torch.arange(n_time_steps, device=self._phringe._device),
-            ix,
-            iy
-        ] = self.spectral_energy_distribution[:, None]
-
-        return sky_brightness_distribution
-
-    @property
     def solid_angle(self):
-        if self.host_star_distance is None:
-            return torch.pi * (self.radius / self._phringe._scene.star.distance) ** 2
-        else:
-            return torch.pi * (self.radius / self.host_star_distance) ** 2
+        host_star_distance = (
+            self.host_star_distance
+            if self.host_star_distance is not None
+            else self._phringe._scene.star.distance
+        )
+        return torch.pi * (self.radius / host_star_distance) ** 2
 
     @property
     def spectral_energy_distribution(self) -> Union[Tensor, None]:
         if self.input_spectrum is not None:
-            return self.input_spectrum.get_spectral_energy_distribution(
+            spectral_energy_distribution = self.input_spectrum.get_spectral_energy_distribution(
                 self._phringe._instrument.wavelength_bin_centers,
                 self.solid_angle,
                 self._phringe._device
             )
 
         else:
-            binned_spectral_flux_density = torch.asarray(
-                get_blackbody_spectrum_standard_units(
+            spectral_energy_distribution = torch.asarray(
+                get_blackbody_spectrum_si_units(
                     self.temperature,
                     self._phringe._instrument.wavelength_bin_centers
                 )
@@ -361,20 +372,8 @@ class Planet(BaseSource):
                 device=self._phringe._device
             ) * self.solid_angle
 
-            return binned_spectral_flux_density
-
-    @cached_property
-    def proj_ang_pos(self) -> Tensor:
-        """Return the projected angular position of the planet as a tensor of shape 2 x 1 or 2 x n_time_steps.
-
-        Returns
-        -------
-        torch.Tensor
-            Tensor containing the projected angular position of the planet.
-        """
-        host_star_distance = self.host_star_distance if self.host_star_distance is not None \
-            else self._phringe._scene.star.distance
-        return self._get_proj_sky_pos() / host_star_distance
+        # Broadcast to wavelength dimension
+        return spectral_energy_distribution[:, None, None]
 
     def _get_proj_sky_pos(self) -> Tensor:
         """Return the projected x- and y-position of the planet on the sky as a tensor of shape 2 x 1 or 2 x n_time_steps.
@@ -384,7 +383,11 @@ class Planet(BaseSource):
         torch.Tensor
             Tensor containing the projected x- and y-position of the planets on the sky.
         """
-        host_star_mass = self.host_star_mass if self.host_star_mass is not None else self._phringe._scene.star.mass
+        host_star_mass = (
+            self.host_star_mass
+            if self.host_star_mass is not None
+            else self._phringe._scene.star.mass
+        )
         star = Body(parent=None, k=G * (host_star_mass + self.mass) * u.kg, name='Star')
 
         orbit = Orbit.from_classical(

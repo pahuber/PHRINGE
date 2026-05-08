@@ -1,4 +1,5 @@
 from abc import abstractmethod, ABC
+from typing import Union
 
 from torch import Tensor
 
@@ -15,20 +16,8 @@ class BaseSource(ABC, BaseEntity):
 
     @property
     @abstractmethod
-    def angular_sky_coordinates(self) -> Tensor:
-        """Return the angular sky coordinates of the source of shape 2 x n_wavelengths x n_time_steps x n_grid x n_grid.
-
-        Returns
-        -------
-        torch.Tensor
-            The angular sky coordinates as a 4D array of shape 2 x n_wavelengths x n_time_steps x n_grid x n_grid
-        """
-        pass
-
-    @property
-    @abstractmethod
     def spectral_energy_distribution(self) -> Tensor:
-        """Return the spectral energy distribution of the source of shape n_wavelengths.
+        """Return the spectral energy distribution of the source of shape n_wavelengths x n_grid x n_grid.
 
         Returns
         -------
@@ -40,7 +29,7 @@ class BaseSource(ABC, BaseEntity):
     @property
     @abstractmethod
     def sky_brightness_distribution(self) -> Tensor:
-        """Return the sky brightness distribution of the source of shape n_wavelengths x n_time_steps x n_grid x n_grid.
+        """Return the angular sky brightness distribution of the source of shape n_wavelengths x n_time_steps x n_grid x n_grid.
 
         Returns
         -------
@@ -51,7 +40,19 @@ class BaseSource(ABC, BaseEntity):
 
     @property
     @abstractmethod
-    def solid_angle(self) -> Tensor:
+    def sky_coordinates(self) -> Tensor:
+        """Return the angular sky coordinates of the source of shape 2 x n_wavelengths x n_time_steps x n_grid x n_grid.
+
+        Returns
+        -------
+        torch.Tensor
+            The angular sky coordinates as a 4D array of shape 2 x n_wavelengths x n_time_steps x n_grid x n_grid
+        """
+        pass
+
+    @property
+    @abstractmethod
+    def solid_angle(self) -> Union[float, Tensor]:
         """Return the solid angle of the source of shape n_wavelengths.
 
         Returns
