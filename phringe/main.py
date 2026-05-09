@@ -4,13 +4,13 @@ from typing import Union, overload, Tuple
 import numpy as np
 import torch
 from astropy.constants.codata2018 import G
-from phringe.analysis.processing import Analysis
 from poliastro.bodies import Body
 from poliastro.twobody import Orbit
 from skimage.measure import block_reduce
 from sympy import lambdify, symbols
 from torch import Tensor
 
+from phringe.analysis.analysis import Analysis
 from phringe.core.configuration import Configuration
 from phringe.core.instrument import Instrument
 from phringe.core.observation import Observation
