@@ -4,6 +4,7 @@ from typing import Union, overload, Tuple
 import numpy as np
 import torch
 from astropy.constants.codata2018 import G
+from phringe.analysis.processing import Analysis
 from poliastro.bodies import Body
 from poliastro.twobody import Orbit
 from skimage.measure import block_reduce
@@ -15,46 +16,12 @@ from phringe.core.instrument import Instrument
 from phringe.core.observation import Observation
 from phringe.core.scene import Scene
 from phringe.core.sources.base_source import BaseSource
-from phringe.core.sources.exozodi import Exozodi
-from phringe.core.sources.local_zodi import LocalZodi
 from phringe.core.sources.planet import Planet
 from phringe.core.sources.star import Star
 from phringe.io.nifits_writer import NIFITSWriter
-from phringe.processing.processing import get_sensitivity_limits, get_sep_at_max_mod_eff, get_detection_probabilities
-from phringe.util.baseline import OptimalNullingBaseline
 from phringe.util.device import get_available_memory
 from phringe.util.device import get_device
 from phringe.util.grid import get_meshgrid
-
-
-def _prepare_sky_coordinates(source: BaseSource, it_low: int, it_high: int) -> Tuple[Tensor, Tensor]:
-    """Get the sky coordinates of a source for a given time step slice.
-
-    Parameters
-    ----------
-    source : BaseSource
-        Source for which to get the coordinates.
-    it_low : int
-        Lower index of the time step slice.
-    it_high : int
-        Higher index of the time step slice.
-
-    Returns
-    -------
-    Tuple[Tensor, Tensor]
-        Sky coordinates of the source.
-    """
-    if isinstance(source, LocalZodi) or isinstance(source, Exozodi):
-        sky_coordinates_x = source.sky_coordinates[0][:, None, :, :]
-        sky_coordinates_y = source.sky_coordinates[1][:, None, :, :]
-    # elif isinstance(source, Planet) and source.has_orbital_motion:
-    #     sky_coordinates_x = source.angular_sky_coordinates[0][None, it_low:it_high, :, :]
-    #     sky_coordinates_y = source.angular_sky_coordinates[1][None, it_low:it_high, :, :]
-    else:
-        sky_coordinates_x = source.sky_coordinates[0]  # [None, None, :, :]
-        sky_coordinates_y = source.sky_coordinates[1]  # [None, None, :, :]
-
-    return sky_coordinates_x, sky_coordinates_y
 
 
 class PHRINGE:
@@ -97,6 +64,8 @@ class PHRINGE:
         Simulation time steps.
     _time_step_size : float
         Time step size.
+    analysis : Analysis
+        Analysis object adding additional functionality.
     seed : int
         Seed.
     """
@@ -119,6 +88,7 @@ class PHRINGE:
         self._scene = None
         self._simulation_time_steps = None
         self._time_step_size = time_step_size
+        self.analysis = Analysis(self)
 
         if seed is not None:
             torch.manual_seed(seed)
@@ -348,7 +318,7 @@ class PHRINGE:
         """
         counts_unbinned = self._get_unbinned_counts()
         binning_factor = int(round(len(self.simulation_time_steps) / len(self.detector_time_steps), 0))
-        
+
         if kernels:
             kernels_torch = torch.tensor(self._instrument.kernels.tolist(), dtype=torch.float32, device=self._device)
             counts_unbinned = torch.einsum('ij, jkl -> ikl', kernels_torch, counts_unbinned)
@@ -626,87 +596,87 @@ class PHRINGE:
         """
         return self._observation._nulling_baseline
 
-    def get_sensitivity_limits(
-            self,
-            temperature: float,
-            pfa: float = 2.9e-7,
-            pdet: float = 0.9,
-            ang_seps_mas: Union[list, np.ndarray, torch.tensor] = np.linspace(10, 150, 2),
-            num_reps: int = 1,
-            as_radius: bool = True,
-            diag_only: bool = False,
-    ) -> Tensor:
-        """Return the sensitivity limits of the instrument. Returns inf if the planet is outside the fov.
-
-        Returns
-        -------
-        torch.Tensor
-            Sensitivity limits.
-        """
-        return get_sensitivity_limits(
-            get_counts=self.get_counts,
-            get_model_counts=self.get_model_counts,
-            wavelength_bin_centers=self.get_wavelength_bin_centers(),
-            scene=self._scene,
-            device=self._device,
-            temperature=temperature,
-            pfa=pfa,
-            pdet=pdet,
-            ang_seps_mas=ang_seps_mas,
-            num_reps=num_reps,
-            as_radius=as_radius,
-            diag_only=diag_only,
-        )
-
-    def get_detection_probabilities(
-            self,
-            temperature: float,
-            radius_planet: float,
-            pfa: float = 2.9e-7,
-            ang_sep_mas: Union[list, np.ndarray, torch.tensor] = np.linspace(10, 150, 2),
-            num_reps: int = 1,
-            diag_only: bool = False,
-    ) -> dict:
-        """Return the sensitivity limits of the instrument. Returns inf if the planet is outside the fov.
-
-        Returns
-        -------
-        torch.Tensor
-            Sensitivity limits.
-        """
-        return get_detection_probabilities(
-            get_counts=self.get_counts,
-            get_model_counts=self.get_model_counts,
-            wavelength_bin_centers=self.get_wavelength_bin_centers(),
-            scene=self._scene,
-            device=self._device,
-            temperature=temperature,
-            radius_earth=radius_planet,
-            pfa=pfa,
-            ang_seps_mas=ang_sep_mas,
-            num_reps=num_reps,
-            diag_only=diag_only,
-        )
-
-    def get_sep_at_max_mod_eff(self, optimal_nulling_baseline: OptimalNullingBaseline) -> Union[float, tuple]:
-        """Return the separation at maximum modulation efficiency in units of (optimized wavelength / nulling baseline).
-
-        Parameters
-        ----------
-        optimal_nulling_baseline : OptimalNullingBaseline
-            Optimal nulling baseline object to extract the optimized wavelength that was used in the setup.
-
-        Returns
-        -------
-        torch.Tensor
-            Separation at maximum modulation efficiency.
-        """
-        return get_sep_at_max_mod_eff(
-            current_nulling_baseline=self.get_nulling_baseline(),
-            optimal_nulling_baseline=optimal_nulling_baseline,
-            get_instrument_response=self.get_instrument_response,
-            wavelength_bin_centers=self.get_wavelength_bin_centers()
-        )
+    # def get_sensitivity_limits(
+    #         self,
+    #         temperature: float,
+    #         pfa: float = 2.9e-7,
+    #         pdet: float = 0.9,
+    #         ang_seps_mas: Union[list, np.ndarray, torch.tensor] = np.linspace(10, 150, 2),
+    #         num_reps: int = 1,
+    #         as_radius: bool = True,
+    #         diag_only: bool = False,
+    # ) -> Tensor:
+    #     """Return the sensitivity limits of the instrument. Returns inf if the planet is outside the fov.
+    #
+    #     Returns
+    #     -------
+    #     torch.Tensor
+    #         Sensitivity limits.
+    #     """
+    #     return get_sensitivity_limits(
+    #         get_counts=self.get_counts,
+    #         get_model_counts=self.get_model_counts,
+    #         wavelength_bin_centers=self.get_wavelength_bin_centers(),
+    #         scene=self._scene,
+    #         device=self._device,
+    #         temperature=temperature,
+    #         pfa=pfa,
+    #         pdet=pdet,
+    #         ang_seps_mas=ang_seps_mas,
+    #         num_reps=num_reps,
+    #         as_radius=as_radius,
+    #         diag_only=diag_only,
+    #     )
+    #
+    # def get_detection_probabilities(
+    #         self,
+    #         temperature: float,
+    #         radius_planet: float,
+    #         pfa: float = 2.9e-7,
+    #         ang_sep_mas: Union[list, np.ndarray, torch.tensor] = np.linspace(10, 150, 2),
+    #         num_reps: int = 1,
+    #         diag_only: bool = False,
+    # ) -> dict:
+    #     """Return the sensitivity limits of the instrument. Returns inf if the planet is outside the fov.
+    #
+    #     Returns
+    #     -------
+    #     torch.Tensor
+    #         Sensitivity limits.
+    #     """
+    #     return get_detection_probabilities(
+    #         get_counts=self.get_counts,
+    #         get_model_counts=self.get_model_counts,
+    #         wavelength_bin_centers=self.get_wavelength_bin_centers(),
+    #         scene=self._scene,
+    #         device=self._device,
+    #         temperature=temperature,
+    #         radius_earth=radius_planet,
+    #         pfa=pfa,
+    #         ang_seps_mas=ang_sep_mas,
+    #         num_reps=num_reps,
+    #         diag_only=diag_only,
+    #     )
+    #
+    # def get_sep_at_max_mod_eff(self, optimal_nulling_baseline: OptimalNullingBaseline) -> Union[float, tuple]:
+    #     """Return the separation at maximum modulation efficiency in units of (optimized wavelength / nulling baseline).
+    #
+    #     Parameters
+    #     ----------
+    #     optimal_nulling_baseline : OptimalNullingBaseline
+    #         Optimal nulling baseline object to extract the optimized wavelength that was used in the setup.
+    #
+    #     Returns
+    #     -------
+    #     torch.Tensor
+    #         Separation at maximum modulation efficiency.
+    #     """
+    #     return get_sep_at_max_mod_eff(
+    #         current_nulling_baseline=self.get_nulling_baseline(),
+    #         optimal_nulling_baseline=optimal_nulling_baseline,
+    #         get_instrument_response=self.get_instrument_response,
+    #         wavelength_bin_centers=self.get_wavelength_bin_centers()
+    #     )
 
     def get_source_spectrum(self, source_name: str) -> Tensor:
         """Return the spectral energy distribution of a source.
