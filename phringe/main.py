@@ -19,9 +19,8 @@ from phringe.core.sources.base_source import BaseSource
 from phringe.core.sources.planet import Planet
 from phringe.core.sources.star import Star
 from phringe.io.nifits_writer import NIFITSWriter
-from phringe.util.device import get_available_memory
-from phringe.util.device import get_device
 from phringe.util.grid import get_meshgrid
+from phringe.util.memory import get_device, iter_time_slices
 
 
 class PHRINGE:
@@ -142,33 +141,6 @@ class PHRINGE:
 
         return normalization
 
-    def _get_time_slices(self):
-        n_times = len(self.simulation_time_steps)
-        n_w = len(self._instrument.wavelength_bin_centers)
-        n_out = self._instrument.number_of_outputs
-        n_pix = self._grid_size
-
-        bytes_per_element = 4  # For float32
-        overhead_factor = 4.0  # Empirical safety factor
-
-        # Dominant tensor in counts calculation is of shape (n_out, n_w, n_t_slice, n_pix, n_pix)
-        bytes_per_time_step = (
-                n_out * n_w * n_pix * n_pix * bytes_per_element * overhead_factor
-        )
-
-        usable_memory = get_available_memory(self._device) / self._extra_memory * 0.9
-
-        chunk_size = max(1, int(usable_memory // bytes_per_time_step))
-
-        time_step_indices = torch.arange(0, n_times + 1, chunk_size)
-
-        if time_step_indices[-1] != n_times:
-            time_step_indices = torch.cat(
-                (time_step_indices, torch.tensor([n_times], device=time_step_indices.device))
-            )
-
-        return time_step_indices
-
     def _get_unbinned_counts(self) -> Tensor:
         """Return the unbinned counts of shape of shape n_kernels x n_wavelengths x n_simulation_time_steps.
 
@@ -176,18 +148,24 @@ class PHRINGE:
         -------
             A tensor of shape n_kernels x n_wavelengths x n_simulation_time_steps containing the counts.
         """
-        counts = torch.zeros(
-            (self._instrument.number_of_outputs,
-             len(self._instrument.wavelength_bin_centers),
-             len(self.simulation_time_steps)),
-            device=self._device
-        )
+        n_time_steps = len(self.simulation_time_steps)
+        n_wavelengths = len(self._instrument.wavelength_bin_centers)
+        n_out = self._instrument.number_of_outputs
+        n_grid = self._grid_size
+
+        counts = torch.zeros((n_out, n_wavelengths, n_time_steps), device=self._device)
         modulation_period = torch.tensor(self._observation.modulation_period, device=self._device, dtype=torch.float32)
         nulling_baseline = torch.tensor(self.get_nulling_baseline(), device=self._device, dtype=torch.float32)
 
         for source in self._scene._get_all_sources():
-            for it_low, it_high in self._iter_time_slices():
-
+            for it_low, it_high in iter_time_slices(
+                    n_time_steps,
+                    n_wavelengths,
+                    n_out,
+                    n_grid,
+                    self._device,
+                    self._extra_memory
+            ):
                 sky_coordinates_x, sky_coordinates_y = source.sky_coordinates
                 sky_brightness_distribution = source.sky_brightness_distribution
                 normalization = self._get_source_normalization(source)
@@ -228,11 +206,6 @@ class PHRINGE:
 
         return counts
 
-    def _iter_time_slices(self):
-        time_step_indices = self._get_time_slices()
-        for i in range(len(time_step_indices) - 1):
-            yield time_step_indices[i].item(), time_step_indices[i + 1].item()
-
     def _prepare_perturbations(self, it_low: int, it_high: int) -> Tuple[
         Union[Tensor, None], Union[Tensor, None], Union[Tensor, None]]:
         """Get the perturbations for a given time step slice.
@@ -257,32 +230,6 @@ class PHRINGE:
             :, None, it_low:it_high, None, None] if self._instrument.polarization_perturbation is not None else None
 
         return amplitude_perturbation, phase_perturbation, polarization_perturbation
-
-    def _prepare_sky_brightness_distribution(self, source: BaseSource, it_low: int, it_high: int) -> Tensor:
-        """Get the sky brightness distribution of a source for a given time step slice.
-
-        Parameters
-        ----------
-        source : BaseSource
-            Source for which to get the sky brightness distribution.
-        it_low : int
-            Lower index of the time step slice.
-        it_high : int
-            Higher index of the time step slice.
-
-        Returns
-        -------
-        Tensor
-            Sky brightness distribution of the source.
-        """
-        if isinstance(source, Planet) and source.has_orbital_motion:
-            sky_brightness_distribution = source.sky_brightness_distribution.swapaxes(0, 1)[
-                None, :, it_low:it_high,
-                :, :]
-        else:
-            sky_brightness_distribution = source.sky_brightness_distribution[None, :, None, :, :]
-
-        return sky_brightness_distribution
 
     def export_nifits(self, path: Path = Path('.'), filename: str = None, name_suffix: str = ''):
         NIFITSWriter().write(self, output_dir=path)
