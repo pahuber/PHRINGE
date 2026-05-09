@@ -71,6 +71,10 @@ class Exozodi(BaseSource):
         return radial_fov_map
 
     @property
+    def n_grid_points(self) -> int:
+        return self._phringe._grid_size ** 2
+
+    @property
     def sky_brightness_distribution(self) -> Tensor:
         device = self._phringe._device
 

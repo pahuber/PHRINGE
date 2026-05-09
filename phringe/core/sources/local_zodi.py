@@ -73,6 +73,10 @@ class LocalZodi(BaseSource):
         )
 
     @property
+    def n_grid_points(self) -> int:
+        return self._phringe._grid_size ** 2
+
+    @property
     def sky_brightness_distribution(self) -> Tensor:
         sky_brightness_distribution = self.spectral_energy_distribution
 

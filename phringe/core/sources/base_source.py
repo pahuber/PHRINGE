@@ -16,6 +16,17 @@ class BaseSource(ABC, BaseEntity):
 
     @property
     @abstractmethod
+    def n_grid_points(self) -> int:
+        """Return the number of grid points (pixels) covered by the source.
+
+        Returns
+        -------
+        int
+            The number of grid points.
+        """
+
+    @property
+    @abstractmethod
     def spectral_energy_distribution(self) -> Tensor:
         """Return the spectral energy distribution of the source of shape n_wavelengths x n_grid x n_grid.
 

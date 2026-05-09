@@ -145,6 +145,10 @@ class Star(BaseSource):
         return ((radius_outer + radius_inner) / 2 * u.au).si.value
 
     @property
+    def n_grid_points(self) -> int:
+        return len(self.sky_brightness_distribution[0][self.sky_brightness_distribution[0] > 0])
+
+    @property
     def sky_coordinates(self) -> Tensor:
         # Add 5% margin to the image
         sky_coordinates = get_meshgrid(

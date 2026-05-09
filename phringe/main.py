@@ -15,9 +15,6 @@ from phringe.core.configuration import Configuration
 from phringe.core.instrument import Instrument
 from phringe.core.observation import Observation
 from phringe.core.scene import Scene
-from phringe.core.sources.base_source import BaseSource
-from phringe.core.sources.planet import Planet
-from phringe.core.sources.star import Star
 from phringe.io.nifits_writer import NIFITSWriter
 from phringe.util.grid import get_meshgrid
 from phringe.util.memory import get_device, iter_time_slices
@@ -118,29 +115,6 @@ class PHRINGE:
             device=self._device
         ) if self._observation is not None else None
 
-    def _get_source_normalization(self, source: BaseSource) -> int:
-        """Get the normalization factor for a source.
-
-        Parameters
-        ----------
-        source : BaseSource
-            Source for which to get the normalization factor.
-
-        Returns
-        -------
-        int
-            Normalization factor for the source.
-        """
-        if isinstance(source, Planet):
-            normalization = 1
-        elif isinstance(source, Star):
-            normalization = len(
-                source.sky_brightness_distribution[0][source.sky_brightness_distribution[0] > 0])
-        else:
-            normalization = self._grid_size ** 2
-
-        return normalization
-
     def _get_unbinned_counts(self) -> Tensor:
         """Return the unbinned counts of shape of shape n_kernels x n_wavelengths x n_simulation_time_steps.
 
@@ -168,7 +142,7 @@ class PHRINGE:
             ):
                 sky_coordinates_x, sky_coordinates_y = source.sky_coordinates
                 sky_brightness_distribution = source.sky_brightness_distribution
-                normalization = self._get_source_normalization(source)
+                normalization = source.n_grid_points
                 amplitude_perturbation, phase_perturbation, polarization_perturbation = self._prepare_perturbations(
                     it_low,
                     it_high

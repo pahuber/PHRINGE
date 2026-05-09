@@ -6,6 +6,7 @@ import torch
 from astropy import units as u
 from astropy.constants.codata2018 import G
 from astropy.units import Quantity
+from phringe.io.input_spectrum import SEDLoader
 from poliastro.bodies import Body
 from poliastro.twobody import Orbit
 from pydantic import field_validator
@@ -13,7 +14,6 @@ from pydantic_core.core_schema import ValidationInfo
 from torch import Tensor
 
 from phringe.core.sources.base_source import BaseSource
-from phringe.io.input_spectrum import SEDLoader
 from phringe.io.validation import validate_quantity_units
 from phringe.util.grid import get_index_of_closest_value, get_meshgrid
 from phringe.util.spectrum import get_blackbody_spectrum_si_units
@@ -267,6 +267,10 @@ class Planet(BaseSource):
             else self._phringe._scene.star.distance
         )
         return self._get_proj_sky_pos() / host_star_distance
+
+    @property
+    def n_grid_points(self) -> int:
+        return 1
 
     @property
     def sky_brightness_distribution(self) -> Tensor:
