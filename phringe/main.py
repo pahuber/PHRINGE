@@ -220,8 +220,12 @@ class PHRINGE:
 
         t, tm, b, q = symbols('t tm b q')
         acm_func = lambdify((t, tm, b, q), acm, modules='numpy')
-        return acm_func(self.simulation_time_steps.cpu().numpy(), self._observation.modulation_period,
-                        self.get_nulling_baseline(), 6)
+        return acm_func(
+            self.simulation_time_steps.cpu().numpy(),
+            self._observation.modulation_period,
+            self.get_nulling_baseline(),
+            6
+        )
 
     def get_counts(self, kernels: bool = False) -> Tensor:
         """Calculate and return the time-binned raw photoelectron counts for all outputs (N_outputs x N_wavelengths x N_time_steps)

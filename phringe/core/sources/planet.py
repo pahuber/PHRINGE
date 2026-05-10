@@ -1,21 +1,17 @@
+import math
 from functools import cached_property
 from typing import Any, Tuple, Union
 
-import numpy as np
 import torch
 from astropy import units as u
-from astropy.constants.codata2018 import G
 from astropy.units import Quantity
-from phringe.io.input_spectrum import SEDLoader
-from poliastro.bodies import Body
-from poliastro.twobody import Orbit
 from pydantic import field_validator
 from pydantic_core.core_schema import ValidationInfo
 from torch import Tensor
 
 from phringe.core.sources.base_source import BaseSource
+from phringe.io.sed_loader import SEDLoader
 from phringe.io.validation import validate_quantity_units
-from phringe.util.grid import get_index_of_closest_value, get_meshgrid
 from phringe.util.spectrum import get_blackbody_spectrum_si_units
 
 
@@ -274,48 +270,15 @@ class Planet(BaseSource):
 
     @property
     def sky_brightness_distribution(self) -> Tensor:
-        n_wavelengths = len(self._phringe._instrument.wavelength_bin_centers)
-        n_grid = self._phringe._grid_size
-        n_time_steps = len(self.sky_coordinates[1])
-        device = self._phringe._device
-
-        sky_brightness_distribution = torch.zeros((n_wavelengths, n_time_steps, n_grid, n_grid), device=device)
-        ang_proj_sky_pos = self._proj_ang_pos
-
-        ix = get_index_of_closest_value(
-            self.sky_coordinates[0, 0, :, 0, :],
-            ang_proj_sky_pos[0]
-        ) if self.grid_position is None else self.grid_position[0]
-
-        iy = get_index_of_closest_value(
-            self.sky_coordinates[1, 0, :, :, 0],
-            ang_proj_sky_pos[1]
-        ) if self.grid_position is None else self.grid_position[1]
-
-        it = torch.arange(n_time_steps, device=device)
-
-        sky_brightness_distribution[:, it, ix, iy] = self.spectral_energy_distribution[:, None, 0, 0]
-
-        return sky_brightness_distribution
+        return self.spectral_energy_distribution[:, None, :, :]
 
     @property
     def sky_coordinates(self) -> Tensor:
-        n_grid = self._phringe._grid_size
-
         ang_proj_pos = self._proj_ang_pos
         ang_proj_pos_x = ang_proj_pos[0]
         ang_proj_pos_y = ang_proj_pos[1]
 
-        angular_radius = torch.sqrt(ang_proj_pos_x ** 2 + ang_proj_pos_y ** 2)
-
-        angular_sky_coordinates = get_meshgrid(
-            2 * (1.2 * angular_radius),
-            n_grid,
-            device=self._phringe._device
-        )
-
-        # Broadcast to time dimension
-        return angular_sky_coordinates[:, None, :, :, :]
+        return torch.stack([ang_proj_pos_y, ang_proj_pos_x], dim=0)[:, None, :, None, None]
 
     @property
     def solid_angle(self) -> Union[float, Tensor]:
@@ -348,6 +311,53 @@ class Planet(BaseSource):
         # Broadcast to wavelength dimension
         return spectral_energy_distribution[:, None, None]
 
+    @staticmethod
+    def _solve_kepler(M: Tensor, e: Tensor, n_iter: int = 8) -> Tensor:
+        E = M.clone()
+
+        for _ in range(n_iter):
+            E = E - (E - e * torch.sin(E) - M) / (1 - e * torch.cos(E))
+
+        return E
+
+    # def _get_proj_sky_pos(self) -> Tensor:
+    #     """Return the projected x- and y-position of the planet on the sky as a tensor of shape 2 x 1 or 2 x n_time_steps.
+    #
+    #     Returns
+    #     -------
+    #     torch.Tensor
+    #         Tensor containing the projected x- and y-position of the planets on the sky.
+    #     """
+    #     host_star_mass = (
+    #         self.host_star_mass
+    #         if self.host_star_mass is not None
+    #         else self._phringe._scene.star.mass
+    #     )
+    #     star = Body(parent=None, k=G * (host_star_mass + self.mass) * u.kg, name='Star')
+    #
+    #     orbit = Orbit.from_classical(
+    #         star,
+    #         a=self.semi_major_axis * u.m,
+    #         ecc=u.Quantity(self.eccentricity),
+    #         inc=self.inclination * u.rad,
+    #         raan=self.raan * u.rad,
+    #         argp=self.argument_of_periapsis * u.rad,
+    #         nu=self.true_anomaly * u.rad
+    #     )
+    #
+    #     if self.has_orbital_motion:
+    #         propagation_time_steps = self._phringe.simulation_time_steps.cpu().numpy()
+    #     else:
+    #         propagation_time_steps = [0]
+    #
+    #     states = [orbit.propagate(t * u.s) for t in propagation_time_steps]
+    #     rr = np.array([state.r.to(u.m).value for state in states])
+    #
+    #     pos_x = torch.tensor(rr[:, 1], device=self._phringe._device)
+    #     pos_y = torch.tensor(rr[:, 0], device=self._phringe._device)
+    #
+    #     return torch.stack([pos_x, pos_y], dim=0)
+
     def _get_proj_sky_pos(self) -> Tensor:
         """Return the projected x- and y-position of the planet on the sky as a tensor of shape 2 x 1 or 2 x n_time_steps.
 
@@ -356,32 +366,85 @@ class Planet(BaseSource):
         torch.Tensor
             Tensor containing the projected x- and y-position of the planets on the sky.
         """
+        times = self._phringe.simulation_time_steps.to(device=self._phringe._device)
+
+        if not self.has_orbital_motion:
+            times = torch.zeros_like(times)
+
+        y, x = self._propagate_kepler_orbit(times)
+
+        return torch.stack([x, y], dim=0)
+
+    def _propagate_kepler_orbit(self, times: Tensor) -> Tuple[Tensor, Tensor]:
+        """Propagate the planet's orbit to the given times.
+
+        Parameters
+        ----------
+        times : torch.Tensor
+            Times to propagate the orbit to.
+
+        Returns
+        -------
+
+        """
+        device = self._phringe._device
+        dtype = torch.float32
+
         host_star_mass = (
             self.host_star_mass
             if self.host_star_mass is not None
             else self._phringe._scene.star.mass
         )
-        star = Body(parent=None, k=G * (host_star_mass + self.mass) * u.kg, name='Star')
 
-        orbit = Orbit.from_classical(
-            star,
-            a=self.semi_major_axis * u.m,
-            ecc=u.Quantity(self.eccentricity),
-            inc=self.inclination * u.rad,
-            raan=self.raan * u.rad,
-            argp=self.argument_of_periapsis * u.rad,
-            nu=self.true_anomaly * u.rad
+        a = torch.tensor(self.semi_major_axis, dtype=dtype, device=device)
+        e = torch.tensor(self.eccentricity, dtype=dtype, device=device)
+        inc = torch.tensor(self.inclination, dtype=dtype, device=device)
+        raan = torch.tensor(self.raan, dtype=dtype, device=device)
+        argp = torch.tensor(self.argument_of_periapsis, dtype=dtype, device=device)
+        f0 = torch.tensor(self.true_anomaly, dtype=dtype, device=device)
+
+        mu = torch.tensor(
+            6.67430e-11 * (host_star_mass + self.mass),
+            dtype=dtype,
+            device=device,
         )
 
-        if self.has_orbital_motion:
-            propagation_time_steps = self._phringe.simulation_time_steps.cpu().numpy()
-        else:
-            propagation_time_steps = [0]
+        # Initial true anomaly -> eccentric anomaly
+        E0 = 2 * torch.atan2(
+            torch.sqrt(1 - e) * torch.sin(f0 / 2),
+            torch.sqrt(1 + e) * torch.cos(f0 / 2),
+        )
 
-        states = [orbit.propagate(t * u.s) for t in propagation_time_steps]
-        rr = np.array([state.r.to(u.m).value for state in states])
+        M0 = E0 - e * torch.sin(E0)
 
-        pos_x = torch.tensor(rr[:, 1], device=self._phringe._device)
-        pos_y = torch.tensor(rr[:, 0], device=self._phringe._device)
+        # Mean motion
+        n = torch.sqrt(mu / a ** 3)
 
-        return torch.stack([pos_x, pos_y], dim=0)
+        M = M0 + n * times
+        M = torch.remainder(M, 2 * math.pi)
+
+        E = self._solve_kepler(M, e)
+
+        # Position in orbital plane
+        x_orb = a * (torch.cos(E) - e)
+        y_orb = a * torch.sqrt(1 - e ** 2) * torch.sin(E)
+
+        cos_O = torch.cos(raan)
+        sin_O = torch.sin(raan)
+        cos_i = torch.cos(inc)
+        sin_i = torch.sin(inc)
+        cos_w = torch.cos(argp)
+        sin_w = torch.sin(argp)
+
+        # Rotate from orbital plane to sky frame
+        x = (
+                (cos_O * cos_w - sin_O * sin_w * cos_i) * x_orb
+                + (-cos_O * sin_w - sin_O * cos_w * cos_i) * y_orb
+        )
+
+        y = (
+                (sin_O * cos_w + cos_O * sin_w * cos_i) * x_orb
+                + (-sin_O * sin_w + cos_O * cos_w * cos_i) * y_orb
+        )
+
+        return x, y
