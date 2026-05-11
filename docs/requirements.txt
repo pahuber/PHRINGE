@@ -10,3 +10,4 @@ myst-nb==1.2.0
 shibuya
 matplotlib
 sphinx-contributors
+sphinx-copybutton
