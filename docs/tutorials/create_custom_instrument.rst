@@ -122,6 +122,7 @@ Note that this list must contain a value for each differential output; they are 
     The maximum of this curve corresponds to the coefficient.
 
 They can then be used to get the optimal nulling baseline as follows:
+
 .. code-block:: python
 
     nulling_baseline=OptimalNullingBaseline(  # Alternatively a fixed value, e.g. 10 * u.m

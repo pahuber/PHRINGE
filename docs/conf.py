@@ -1,69 +1,82 @@
 # Configuration file for the Sphinx documentation builder.
-#
-# This file only contains a selection of the most common options. For a full
-# list see the documentation:
-# https://www.sphinx-doc.org/en/master/usage/configuration.html
-
-# -- Path setup --------------------------------------------------------------
-
-# If extensions (or modules to document with autodoc) are in another directory,
-# add these directories to sys.path here. If the directory is relative to the
-# documentation root, use os.path.abspath to make it absolute, like shown here.
 
 import os
 import sys
 
-sys.path.insert(0, os.path.abspath('../'))
-sys.path.insert(0, os.path.abspath('../phringe'))
-os.environ['PYTHONPATH'] = os.path.abspath('../')
+# -- Path setup --------------------------------------------------------------
+
+sys.path.insert(0, os.path.abspath(".."))
+sys.path.insert(0, os.path.abspath("../phringe"))
+os.environ["PYTHONPATH"] = os.path.abspath("..")
 
 # -- Project information -----------------------------------------------------
 
-project = 'PHRINGE'
-author = 'Philipp A. Huber'
-copyright = f'2024, Philipp A. Huber'
-# html_theme_options = {
-#     "logo_light": "_static/phringe2.png",
-#     "logo_dark": "_static/phringe.png"
-# }
-html_static_path = ['_static']
-# html_logo = "_static/phringe_logo.png"
-html_title = "PHRINGE Docs"
-html_theme_options = {
-    "logo_only": True,  # Show only the logo, not the project name
-    "sidebar_hide_name": True,
-    "light_logo": "phringe2_light.png",
-    "dark_logo": "phringe2_dark.png",
-    "source_repository": "https://github.com/pahuber/PHRINGE/",
-    "source_branch": "main",
-    "source_directory": "docs/",
-}
-pygments_style = "monokai"
-pygments_dark_style = "monokai"
+project = "PHRINGE"
+author = "Philipp A. Huber"
+copyright = "2024, Philipp A. Huber"
 
 # -- General configuration ---------------------------------------------------
 
-# Add any Sphinx extension module names here, as strings. They can be
-# extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
-# ones.
+extensions = [
+    "sphinx_copybutton",
+    "sphinx.ext.autodoc",
+    "sphinx.ext.napoleon",
+    "nbsphinx",
+    "recommonmark",
+    "sphinx_contributors",
+]
 
-extensions = ['sphinx_copybutton',
-              'sphinx.ext.autodoc',
-              'sphinx.ext.napoleon',
-              'nbsphinx',
-              'recommonmark',
-              ]
+master_doc = "index"
 
-# -- Options for HTML output -------------------------------------------------
+# -- Notebook execution ------------------------------------------------------
 
-master_doc = 'index'
-html_theme = "furo"
-html_static_path = ['_static']
+nbsphinx_execute = "never"
+nb_execution_mode = "off"
 
-nbsphinx_execute = 'never'
-nb_execution_mode = 'off'
+# -- HTML output -------------------------------------------------------------
 
-import matplotlib as mpl
+html_theme = "shibuya"
+html_title = "PHRINGE Docs"
+html_static_path = ["_static"]
 
-# Disable TeX rendering on ReadTheDocs to avoid slow font scans
-mpl.rcParams["text.usetex"] = False
+html_theme_options = {
+    "light_logo": "_static/phringe2_light.png",
+    "dark_logo": "_static/phringe2_dark.png",
+    "github_url": "https://github.com/pahuber/PHRINGE",
+    "globaltoc_expand_depth": 1,
+    "accent_color": "blue",
+}
+
+# Shows GitHub repo stats, but no edit-page link because html_sidebars below
+# does not include "sidebars/edit-this-page.html".
+html_context = {
+    "source_type": "github",
+    "source_user": "pahuber",
+    "source_repo": "PHRINGE",
+    "source_version": "main",
+    "source_docs_path": "/docs/",
+}
+
+html_sidebars = {
+    "**": [
+        "sidebars/localtoc.html",
+        "sidebars/repo-stats.html",
+    ]
+}
+
+html_css_files = [
+    "custom.css",
+    # "_static/custom.css",
+]
+
+pygments_style = "monokai"
+pygments_dark_style = "monokai"
+
+# -- Matplotlib configuration ------------------------------------------------
+
+try:
+    import matplotlib as mpl
+
+    mpl.rcParams["text.usetex"] = False
+except ImportError:
+    pass

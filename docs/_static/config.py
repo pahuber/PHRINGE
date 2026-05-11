@@ -54,7 +54,7 @@ config = {
         'planets': [
             {
                 'name': 'Earth',
-                'has_orbital_motion': False,
+                'propagate_orbit': False,
                 'mass': '1 Mearth',
                 'radius': '1 Rearth',
                 'temperature': '254 K',
