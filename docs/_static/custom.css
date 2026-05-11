@@ -25,11 +25,11 @@
 
 /* Footer background */
 html.light {
-    --sy-c-foot-background: #f0f0f0;
+    --sy-c-text: #595959;
 }
 
 html.dark {
-    --sy-c-text: #c7c7c7;
+    --sy-c-text: #a6a6a6;
 }
 
 /* Header background — light mode */
@@ -81,3 +81,12 @@ html.dark .only-light {
 /*.globaltoc > ul a.current {*/
 /*    color: var(--sy-c-text) !important;*/
 /*}*/
+
+html.dark .globaltoc .caption {
+    color: white !important;
+}
+
+
+html.light .globaltoc .caption {
+    color: black !important;
+}
