@@ -38,10 +38,6 @@ html_theme_options = {
     "source_branch": "main",
     "source_directory": "docs/",
 }
-html_context = {
-    "display_github": True,  # Example of context variable
-    "title": ""
-}
 pygments_style = "monokai"
 pygments_dark_style = "monokai"
 
