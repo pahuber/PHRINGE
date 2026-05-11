@@ -1,0 +1,83 @@
+/* docs/_static/custom.css */
+
+:root {
+    --sy-s-navbar-height: 80px;
+}
+
+/*!* Make navbar taller *!*/
+/*.sy-head {*/
+/*    height: 80px !important;*/
+/*    min-height: 80px !important;*/
+/*}*/
+
+/*!* Center contents vertically *!*/
+/*.sy-head-inner {*/
+/*    height: 80px !important;*/
+/*    align-items: center !important;*/
+/*}*/
+
+/* Make logo larger */
+.sy-head-brand img {
+    height: 60px !important;
+    max-height: 60px !important;
+    width: auto !important;
+}
+
+/* Footer background */
+html.light {
+    --sy-c-foot-background: #f0f0f0;
+}
+
+html.dark {
+    --sy-c-text: #c7c7c7;
+}
+
+/* Header background — light mode */
+html.light .sy-head {
+    background-color: white !important;
+    /* remove the default blur/glass effect too if you want solid color: */
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
+/* Header background — dark mode */
+html.dark .sy-head-blur {
+    background-color: transparent !important;
+    /*backdrop-filter: none !important;*/
+    /*-webkit-backdrop-filter: none !important;*/
+}
+
+html.light .only-dark {
+    display: none !important;
+}
+
+html.dark .only-light {
+    display: none !important;
+}
+
+a {
+    color: var(--accent-9) !important;
+    text-decoration: none !important;
+}
+
+a:hover {
+    color: var(--accent-11) !important;
+    text-decoration: none !important;
+}
+
+a:visited {
+    color: var(--accent-9) !important;
+    text-decoration: none !important;
+}
+
+.globaltoc a {
+    color: var(--accent-9) !important;
+}
+
+.globaltoc a:hover {
+    color: var(--accent-11) !important;
+}
+
+.globaltoc > ul a.current {
+    color: var(--sy-c-text) !important;
+}
