@@ -34,6 +34,9 @@ html_theme_options = {
     "sidebar_hide_name": True,
     "light_logo": "phringe2_light.png",
     "dark_logo": "phringe2_dark.png",
+    "source_repository": "https://github.com/pahuber/PHRINGE/",
+    "source_branch": "main",
+    "source_directory": "docs/",
 }
 html_context = {
     "display_github": False,  # Example of context variable
