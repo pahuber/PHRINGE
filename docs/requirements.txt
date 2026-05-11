@@ -7,5 +7,6 @@ jupyter==1.0.0
 pandoc
 recommonmark
 myst-nb==1.2.0
+shibuya
 matplotlib
 sphinx-contributors
