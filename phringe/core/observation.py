@@ -8,7 +8,7 @@ from pydantic_core.core_schema import ValidationInfo
 
 from phringe.core.base_entity import BaseEntity
 from phringe.io.validation import validate_quantity_units
-from phringe.util.baseline import OptimalNullingBaseline
+from phringe.lib.baseline import OptimalNullingBaseline
 
 
 class Observation(BaseEntity):

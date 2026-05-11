@@ -3,7 +3,6 @@ import unittest
 import astropy.units as u
 import numpy as np
 import torch
-
 from phringe.io.input_spectrum import SEDLoader
 
 
@@ -18,7 +17,6 @@ class TestInputSpectrum(unittest.TestCase):
 
         self.sed_ph_s_m3_sr = torch.tensor([1, 2, 3], dtype=torch.float32)
         self.sed_ph_s_m3 = self.sed_ph_s_m3_sr * np.pi * (self.planet_radius / self.star_distance) ** 2
-        ß
 
         # Common setup for tests
         # self.path_to_spectrum = Path("test_spectrum.txt")

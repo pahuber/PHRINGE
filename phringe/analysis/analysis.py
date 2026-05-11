@@ -11,7 +11,7 @@ from scipy.stats import ncx2
 from torch import Tensor
 from torch.distributions import Normal
 
-from phringe.util.baseline import OptimalNullingBaseline
+from phringe.lib.baseline import OptimalNullingBaseline
 from phringe.util.spectrum import get_blackbody_spectrum_si_units
 
 if TYPE_CHECKING:

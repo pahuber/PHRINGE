@@ -1,7 +1,7 @@
 from phringe.core.perturbations.power_law_psd_perturbation import PowerLawPSDPerturbation
 from phringe.lib.array_configuration import XArrayConfiguration
+from phringe.lib.baseline import OptimalNullingBaseline
 from phringe.lib.beam_combiner import DoubleBracewell
-from phringe.util.baseline import OptimalNullingBaseline
 
 config = {
     'observation': {
