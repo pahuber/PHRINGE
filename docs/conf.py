@@ -39,7 +39,7 @@ html_theme_options = {
     "source_directory": "docs/",
 }
 html_context = {
-    "display_github": False,  # Example of context variable
+    "display_github": True,  # Example of context variable
     "title": ""
 }
 pygments_style = "monokai"
