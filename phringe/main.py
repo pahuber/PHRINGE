@@ -4,8 +4,6 @@ from typing import Union, overload, Tuple
 import numpy as np
 import torch
 from astropy.constants.codata2018 import G
-from poliastro.bodies import Body
-from poliastro.twobody import Orbit
 from skimage.measure import block_reduce
 from sympy import lambdify, symbols
 from torch import Tensor
@@ -413,6 +411,8 @@ class PHRINGE:
 
         else:
             import astropy.units as u
+            from poliastro.bodies import Body
+            from poliastro.twobody import Orbit
 
             semi_major_axis = kwargs['semi_major_axis']
             eccentricity = kwargs['eccentricity']
