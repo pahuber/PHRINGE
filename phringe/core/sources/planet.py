@@ -20,8 +20,8 @@ class Planet(BaseSource):
 
     Parameters
     ----------
-    has_orbital_motion: bool
-        Whether the planet has orbital motion. If not, it is assumed to be static in its orbit throughout the simulation.
+    propagate_orbit: bool
+        Whether the planet's orbit is propagated in time. If not, it is assumed to be static.
     mass: float or str or Quantity
         The mass of the planet in units of weight.
     radius: float or str or Quantity
@@ -40,9 +40,9 @@ class Planet(BaseSource):
         The argument of periapsis of the planet's orbit in units of degrees.
     true_anomaly: float or str or Quantity
         The true anomaly of the planet's orbit in units of degrees.
-    sed_loader: InputSpectrum, optional
-        The input spectrum of the planet. If None, a blackbody spectrum is generated.
-    grid_position: Tuple[int, int] , optional
+    sed_loader: SEDLoader, optional
+        The object to load custom SEDs. If None, a blackbody spectrum is generated.
+    grid_position: Tuple[int, int], optional
         The grid position of the planet in the sky. If None, the position is calculated from its orbital elements.
     host_star_distance: float or str or Quantity, optional
         The distance of the host star from the planet in units of length. Only required if no host star is specified in the scene.
@@ -50,7 +50,7 @@ class Planet(BaseSource):
         The mass of the host star in units of weight. Only required if no host star is specified in the scene.
     """
     name: str
-    has_orbital_motion: bool
+    propagate_orbit: bool
     mass: Union[str, float, Quantity]
     radius: Union[str, float, Quantity]
     temperature: Union[str, float, Quantity]
@@ -64,9 +64,6 @@ class Planet(BaseSource):
     grid_position: Tuple = None
     host_star_distance: Union[str, float, Quantity] = None
     host_star_mass: Union[str, float, Quantity] = None
-    _max_ang_sep_from_star_x: Any = None
-    _max_ang_sep_from_star_y: Any = None
-    _simulation_time_steps: Any = None
 
     @field_validator('argument_of_periapsis')
     def _validate_argument_of_periapsis(cls, value: Any, info: ValidationInfo) -> float:
@@ -320,44 +317,6 @@ class Planet(BaseSource):
 
         return E
 
-    # def _get_proj_sky_pos(self) -> Tensor:
-    #     """Return the projected x- and y-position of the planet on the sky as a tensor of shape 2 x 1 or 2 x n_time_steps.
-    #
-    #     Returns
-    #     -------
-    #     torch.Tensor
-    #         Tensor containing the projected x- and y-position of the planets on the sky.
-    #     """
-    #     host_star_mass = (
-    #         self.host_star_mass
-    #         if self.host_star_mass is not None
-    #         else self._phringe._scene.star.mass
-    #     )
-    #     star = Body(parent=None, k=G * (host_star_mass + self.mass) * u.kg, name='Star')
-    #
-    #     orbit = Orbit.from_classical(
-    #         star,
-    #         a=self.semi_major_axis * u.m,
-    #         ecc=u.Quantity(self.eccentricity),
-    #         inc=self.inclination * u.rad,
-    #         raan=self.raan * u.rad,
-    #         argp=self.argument_of_periapsis * u.rad,
-    #         nu=self.true_anomaly * u.rad
-    #     )
-    #
-    #     if self.has_orbital_motion:
-    #         propagation_time_steps = self._phringe.simulation_time_steps.cpu().numpy()
-    #     else:
-    #         propagation_time_steps = [0]
-    #
-    #     states = [orbit.propagate(t * u.s) for t in propagation_time_steps]
-    #     rr = np.array([state.r.to(u.m).value for state in states])
-    #
-    #     pos_x = torch.tensor(rr[:, 1], device=self._phringe._device)
-    #     pos_y = torch.tensor(rr[:, 0], device=self._phringe._device)
-    #
-    #     return torch.stack([pos_x, pos_y], dim=0)
-
     def _get_proj_sky_pos(self) -> Tensor:
         """Return the projected x- and y-position of the planet on the sky as a tensor of shape 2 x 1 or 2 x n_time_steps.
 
@@ -368,7 +327,7 @@ class Planet(BaseSource):
         """
         times = self._phringe.simulation_time_steps.to(device=self._phringe._device)
 
-        if not self.has_orbital_motion:
+        if not self.propagate_orbit:
             times = torch.zeros_like(times)
 
         y, x = self._propagate_kepler_orbit(times)
