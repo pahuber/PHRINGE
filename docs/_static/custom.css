@@ -55,29 +55,29 @@ html.dark .only-light {
     display: none !important;
 }
 
-a {
-    color: var(--accent-9) !important;
-    text-decoration: none !important;
-}
+/*a {*/
+/*    color: var(--accent-9) !important;*/
+/*    text-decoration: none !important;*/
+/*}*/
 
-a:hover {
-    color: var(--accent-11) !important;
-    text-decoration: none !important;
-}
+/*a:hover {*/
+/*    color: var(--accent-11) !important;*/
+/*    text-decoration: none !important;*/
+/*}*/
 
-a:visited {
-    color: var(--accent-9) !important;
-    text-decoration: none !important;
-}
+/*a:visited {*/
+/*    color: var(--accent-9) !important;*/
+/*    text-decoration: none !important;*/
+/*}*/
 
-.globaltoc a {
-    color: var(--accent-9) !important;
-}
+/*.globaltoc a {*/
+/*    color: var(--accent-9) !important;*/
+/*}*/
 
-.globaltoc a:hover {
-    color: var(--accent-11) !important;
-}
+/*.globaltoc a:hover {*/
+/*    color: var(--accent-11) !important;*/
+/*}*/
 
-.globaltoc > ul a.current {
-    color: var(--sy-c-text) !important;
-}
+/*.globaltoc > ul a.current {*/
+/*    color: var(--sy-c-text) !important;*/
+/*}*/
