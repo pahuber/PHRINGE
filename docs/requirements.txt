@@ -8,3 +8,4 @@ pandoc
 recommonmark
 myst-nb==1.2.0
 matplotlib
+sphinx-contributors
