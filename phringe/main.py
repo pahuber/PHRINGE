@@ -157,12 +157,6 @@ class PHRINGE:
                     it_high
                 )
 
-                print(source.name)
-                print(it_low, it_high)
-                # print(self.simulation_time_steps[None, it_low:it_high, None, None].shape)
-                # print(self._instrument.wavelength_bin_centers[:, None, None, None].shape)
-                # print(sky_coordinates_x.shape)
-                # print(sky_coordinates_y.shape)
                 # Calculate counts of shape (N_out x N_wavelengths x N_time_steps) for all time step slices
                 # Within torch.sum, the shape is (N_out x N_wavelengths x N_time_steps x N_pix x N_pix)
                 current_counts = (
