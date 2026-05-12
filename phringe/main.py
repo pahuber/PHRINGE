@@ -139,12 +139,17 @@ class PHRINGE:
                     self._extra_memory
             ):
                 sky_coordinates_x, sky_coordinates_y = source.sky_coordinates
+
+                if sky_coordinates_x.shape[1] != 1:
+                    sky_coordinates_x = sky_coordinates_x[:, it_low:it_high, :, :]
+                    sky_coordinates_y = sky_coordinates_y[:, it_low:it_high, :, :]
+
                 sky_brightness_distribution = source.sky_brightness_distribution
 
-                if sky_brightness_distribution.shape[1] == 1:
-                    sky_brightness_distribution = sky_brightness_distribution[None, :, :, :, :]
-                else:
+                if sky_brightness_distribution.shape[1] != 1:
                     sky_brightness_distribution = sky_brightness_distribution[None, :, it_low:it_high, :, :]
+                else:
+                    sky_brightness_distribution = sky_brightness_distribution[None, :, :, :, :]
 
                 normalization = source.n_grid_points
                 amplitude_perturbation, phase_perturbation, polarization_perturbation = self._prepare_perturbations(
@@ -152,6 +157,12 @@ class PHRINGE:
                     it_high
                 )
 
+                print(source.name)
+                print(it_low, it_high)
+                # print(self.simulation_time_steps[None, it_low:it_high, None, None].shape)
+                # print(self._instrument.wavelength_bin_centers[:, None, None, None].shape)
+                # print(sky_coordinates_x.shape)
+                # print(sky_coordinates_y.shape)
                 # Calculate counts of shape (N_out x N_wavelengths x N_time_steps) for all time step slices
                 # Within torch.sum, the shape is (N_out x N_wavelengths x N_time_steps x N_pix x N_pix)
                 current_counts = (
@@ -160,8 +171,8 @@ class PHRINGE:
                             kernels=False,
                             times=self.simulation_time_steps[None, it_low:it_high, None, None],
                             wavelength_bin_centers=self._instrument.wavelength_bin_centers[:, None, None, None],
-                            x_sky_coordinates=sky_coordinates_x[:, it_low:it_high, :, :],
-                            y_sky_coordinates=sky_coordinates_y[:, it_low:it_high, :, :],
+                            x_sky_coordinates=sky_coordinates_x,
+                            y_sky_coordinates=sky_coordinates_y,
                             modulation_period=modulation_period,
                             nulling_baseline=nulling_baseline,
                             amplitude_perturbation=amplitude_perturbation,

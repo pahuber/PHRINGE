@@ -116,7 +116,7 @@ class Star(BaseSource):
     @property
     def _hz_central_radius(self) -> float:
         """Return the central habitable zone radius of the star in meters.
-        Calculated as defined in Kopparapu et al. 2013.
+        Calculated as defined in Kaltenegger+2017.
 
         :return: The central habitable zone radius in meters.
         """
