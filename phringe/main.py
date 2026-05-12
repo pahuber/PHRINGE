@@ -140,6 +140,12 @@ class PHRINGE:
             ):
                 sky_coordinates_x, sky_coordinates_y = source.sky_coordinates
                 sky_brightness_distribution = source.sky_brightness_distribution
+
+                if sky_brightness_distribution.shape[1] == 1:
+                    sky_brightness_distribution = sky_brightness_distribution[None, :, :, :, :]
+                else:
+                    sky_brightness_distribution = sky_brightness_distribution[None, :, it_low:it_high, :, :]
+
                 normalization = source.n_grid_points
                 amplitude_perturbation, phase_perturbation, polarization_perturbation = self._prepare_perturbations(
                     it_low,
@@ -162,7 +168,7 @@ class PHRINGE:
                             phase_perturbation=phase_perturbation,
                             polarization_perturbation=polarization_perturbation
                         )
-                        * sky_brightness_distribution[None, :, it_low:it_high, :, :]
+                        * sky_brightness_distribution
                         / normalization
                         * self._simulation_time_step_size
                         * self._instrument.wavelength_bin_widths[None, :, None, None, None], dim=(3, 4)

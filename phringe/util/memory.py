@@ -100,7 +100,6 @@ def get_time_slices(
         time_step_indices = torch.cat(
             (time_step_indices, torch.tensor([n_time_steps], device=time_step_indices.device))
         )
-
     return time_step_indices
 
 
