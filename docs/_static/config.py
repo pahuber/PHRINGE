@@ -7,7 +7,7 @@ config = {
     'observation': {
         'solar_ecliptic_latitude': '0 deg',  # Used to determine the local zodi brightness
         'total_integration_time': '4 d',  # Total integration time of the observation
-        'detector_integration_time': '0.02 d',  # Results in 200 time steps; use between 100 and 1000
+        'detector_integration_time': '0.04 d',  # Results in 200 time steps; use between 100 and 1000
         'modulation_period': '4 d',  # Period of the interferometer modulation, e.g. rotation
         'nulling_baseline': OptimalNullingBaseline(  # Alternatively a fixed value, e.g. '10 m'
             angular_star_separation='habitable-zone',  # Alternatively a numerical value, e.g. '0.1 arcsec'
