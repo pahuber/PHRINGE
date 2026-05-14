@@ -22,7 +22,7 @@ config = {
         'aperture_diameter': '3.5 m',
         'nulling_baseline_max': '600 m',
         'nulling_baseline_min': '5 m',
-        'spectral_resolving_power': 30,
+        'spectral_resolving_power': 20,
         'wavelength_min': '4 um',
         'wavelength_max': '18.5 um',
         'wavelength_bands_boundaries': [],
