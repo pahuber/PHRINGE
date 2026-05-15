@@ -25,16 +25,12 @@ To install `PHRINGE` from GitHub, run the following command in your terminal:
     pip install git+https://github.com/pahuber/PHRINGE
 
 
-Alternatively, the repository can be cloned from GitHub using:
+Alternatively, the repository can be cloned from GitHub and then installed using
 
 .. code-block:: console
 
     git clone https://github.com/pahuber/PHRINGE.git
-
-After navigating to the cloned repository, the package can be installed using:
-
-.. code-block:: console
-
+    cd PHRINGE
     pip install .
 
 
