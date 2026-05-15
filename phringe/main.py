@@ -463,7 +463,9 @@ class PHRINGE:
         x_pos = x_positions.item()
         y_pos = y_positions.item()
         for i, fov in enumerate(fovs):
-            if x_pos > fov / 2 or y_pos > fov / 2:
+            # if x_pos > fov / 2 or y_pos > fov / 2:
+            #     factors[i] = 0
+            if abs(x_pos) > fov / 2 or abs(y_pos) > fov / 2:
                 factors[i] = 0
 
         # Return the corresponding counts depending on kernel usage
