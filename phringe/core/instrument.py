@@ -299,7 +299,7 @@ class Instrument(BaseEntity):
                 self.wavelength_bin_centers[-1:] + self.wavelength_bin_widths[-1:] / 2
             )
         )
-    
+
     def _calc_lambdified_response(self):
         """Calculate the lambdified instrument response.
         """
@@ -481,7 +481,7 @@ class Instrument(BaseEntity):
         wavelength_bin_centers = []
         wavelength_bin_widths = []
 
-        while current_min_wavelength <= self.wavelength_max:
+        while current_min_wavelength < self.wavelength_max:
             center_wavelength = current_min_wavelength / (1 - 1 / (2 * self.spectral_resolving_power))
             bin_width = 2 * (center_wavelength - current_min_wavelength)
             if (center_wavelength + bin_width / 2 <= self.wavelength_max):
@@ -491,8 +491,6 @@ class Instrument(BaseEntity):
 
             # If there is not enough space for the last bin, leave it away
             else:
-                wavelength_bin_centers = wavelength_bin_centers[:-1]
-                wavelength_bin_widths = wavelength_bin_widths[:-1]
                 break
 
         return (
