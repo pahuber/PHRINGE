@@ -24,7 +24,7 @@ def get_meshgrid(
         grid_size: int,
         device: torch.device
 ) -> Tensor:
-    full_extent = torch.as_tensor(full_extent, device=device)
+    full_extent = torch.as_tensor(full_extent, device=device, dtype=torch.float32)
 
     base_extent = torch.linspace(
         -0.5,
