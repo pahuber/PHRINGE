@@ -69,7 +69,7 @@ html_css_files = [
     # "_static/custom.css",
 ]
 
-pygments_style = "monokai"
+pygments_style = "friendly"
 pygments_dark_style = "monokai"
 
 # -- Matplotlib configuration ------------------------------------------------
