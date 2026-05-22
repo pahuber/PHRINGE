@@ -4,7 +4,6 @@ from typing import Union, overload, Tuple
 import numpy as np
 import torch
 from astropy.constants.codata2018 import G
-from skimage.measure import block_reduce
 from sympy import lambdify, symbols
 from torch import Tensor
 
@@ -113,6 +112,7 @@ class PHRINGE:
             device=self._device
         ) if self._observation is not None else None
 
+    @torch.inference_mode()
     def _get_unbinned_counts(self) -> Tensor:
         """Return the unbinned counts of shape of shape n_kernels x n_wavelengths x n_simulation_time_steps.
 
@@ -257,15 +257,20 @@ class PHRINGE:
             kernels_torch = torch.tensor(self._instrument.kernels.tolist(), dtype=torch.float32, device=self._device)
             counts_unbinned = torch.einsum('ij, jkl -> ikl', kernels_torch, counts_unbinned)
 
-        return torch.asarray(
-            block_reduce(
-                counts_unbinned.cpu().numpy(),
-                (1, 1, binning_factor),
-                np.sum
-            ),
-            dtype=torch.float32,
-            device=self._device
-        )
+        # return torch.asarray(
+        #     block_reduce(
+        #         counts_unbinned.cpu().numpy(),
+        #         (1, 1, binning_factor),
+        #         np.sum
+        #     ),
+        #     dtype=torch.float32,
+        #     device=self._device
+        # )
+        b = binning_factor
+        t = counts_unbinned.shape[2]
+        t_trimmed = (t // b) * b
+        return counts_unbinned[:, :, :t_trimmed].reshape(counts_unbinned.shape[0], counts_unbinned.shape[1], -1, b).sum(
+            -1)
 
     def get_field_of_view(self) -> Tensor:
         """Return the field of view.

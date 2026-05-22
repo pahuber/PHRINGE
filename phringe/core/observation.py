@@ -7,6 +7,7 @@ from pydantic import field_validator
 from pydantic_core.core_schema import ValidationInfo
 
 from phringe.core.base_entity import BaseEntity
+from phringe.core.sources.star import Star
 from phringe.io.validation import validate_quantity_units
 from phringe.lib.baseline import OptimalNullingBaseline
 
@@ -32,6 +33,12 @@ class Observation(BaseEntity):
     nulling_baseline: Union[str, float, Quantity, OptimalNullingBaseline]
     solar_ecliptic_latitude: Union[str, float, Quantity]
     total_integration_time: Union[str, float, Quantity]
+    host_star_radius: Any = None
+    host_star_temperature: Any = None
+    host_star_mass: Union[str, float, Quantity] = None
+    host_star_distance: Any = None
+    host_star_right_ascension: Union[str, float, Quantity] = None
+    host_star_declination: Union[str, float, Quantity] = None
 
     @field_validator('detector_integration_time')
     def _validate_detector_integration_time(cls, value: Any, info: ValidationInfo) -> float:
@@ -126,6 +133,98 @@ class Observation(BaseEntity):
         """
         return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.s,))
 
+    @field_validator('host_star_radius')
+    def _validate_host_star_radius(cls, value: Any, info: ValidationInfo) -> float:
+        """Validate the host star radius input.
+
+        :param value: Value given as input
+        :param info: ValidationInfo object
+        :return: The host star radius in units of length
+        """
+        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,))
+
+    @field_validator('host_star_temperature')
+    def _validate_host_star_temperature(cls, value: Any, info: ValidationInfo) -> float:
+        """Validate the host star temperature input.
+
+        :param value: Value given as input
+        :param info: ValidationInfo object
+        :return: The host star temperature in units of temperature
+        """
+        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.K,))
+
+    @field_validator('host_star_mass')
+    def _validate_host_star_mass(cls, value: Any, info: ValidationInfo) -> float:
+        """Validate the host star mass input.
+
+        Parameters
+        ----------
+        value : Any
+            Value given as input.
+        info : ValidationInfo
+            Validation information for the field.
+
+        Returns
+        -------
+        float
+            Host star mass in units of kilograms.
+        """
+        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.kg,))
+
+    @field_validator('host_star_distance')
+    def _validate_host_star_distance(cls, value: Any, info: ValidationInfo) -> float:
+        """Validate the host star distance input.
+
+        :param value: Value given as input
+        :param info: ValidationInfo object
+        :return: The host star distance in units of length
+        """
+        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,))
+
+    @field_validator('host_star_right_ascension')
+    def _validate_host_star_right_ascension(cls, value: Any, info: ValidationInfo) -> float:
+        """Validate the right ascension input.
+
+        Parameters
+        ----------
+        value : Any
+            The value given as input.
+        info : ValidationInfo
+            The validation information object.
+
+        Returns
+        -------
+        float
+            The right ascension in units of degrees.
+        """
+        return validate_quantity_units(
+            value=value,
+            field_name=info.field_name,
+            unit_equivalency=(u.deg,)
+        )
+
+    @field_validator('host_star_declination')
+    def _validate_host_star_declination(cls, value: Any, info: ValidationInfo) -> float:
+        """Validate the declination input.
+
+        Parameters
+        ----------
+        value : Any
+            The value given as input.
+        info : ValidationInfo
+            The validation information object.
+
+        Returns
+        -------
+        float
+            The declination in units of degrees.
+        """
+        return validate_quantity_units(
+            value=value,
+            field_name=info.field_name,
+            unit_equivalency=(u.deg,)
+        )
+
     @property
     def _nulling_baseline(self) -> float:
         nulling_baseline = None
@@ -136,11 +235,13 @@ class Observation(BaseEntity):
 
         # Get optimized nulling baseline value in meters
         else:
-            star_habitable_zone_central_angular_radius = self._phringe._scene.star._hz_central_radius_angular \
-                if (self._phringe._scene is not None and self._phringe._scene.star is not None) else None
-            nulling_baseline = self.nulling_baseline.get_value(
-                star_habitable_zone_central_angular_radius,
-            )
+            star_habitable_zone_central_angular_radius = (
+                self._phringe._scene.star._hz_central_radius_angular) \
+                if (self._phringe._scene is not None and self._phringe._scene.star is not None) \
+                else Star.get_habitable_zone_center(self.host_star_temperature,
+                                                    self.host_star_radius) / self.host_star_distance
+
+            nulling_baseline = self.nulling_baseline.get_value(star_habitable_zone_central_angular_radius, )
 
         # Check min and max nulling baseline limits
         nulling_baseline_min = self._phringe._instrument.nulling_baseline_min

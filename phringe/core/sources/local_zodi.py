@@ -1,76 +1,19 @@
-from typing import Union, Any
+from typing import Union
 
 import torch
 from astropy import units as u
 from astropy.units import Quantity
-from pydantic import field_validator
-from pydantic_core.core_schema import ValidationInfo
 from torch import Tensor
 
 from phringe.core.sources.base_source import BaseSource
-from phringe.io.validation import validate_quantity_units
 from phringe.util.coordinates import get_ecliptic_coordinates
 from phringe.util.grid import get_meshgrid
 from phringe.util.spectrum import get_blackbody_spectrum_si_units
 
 
 class LocalZodi(BaseSource):
-    """Class representation of a local zodi.
-
-    Parameters
-    ----------
-    host_star_right_ascension : str, float, or Quantity, optional
-        The right ascension of the host star in units of degrees. Only required if not host star is specified in the scene.
-    host_star_declination : str, float, or Quantity, optional
-        The declination of the host star in units of degrees. Only required if not host star is specified in the scene.
-    """
-    host_star_right_ascension: Union[str, float, Quantity] = None
-    host_star_declination: Union[str, float, Quantity] = None
+    """Class representation of a local zodi."""
     _solar_ecliptic_latitude: Union[str, float, Quantity] = None
-
-    @field_validator('host_star_right_ascension')
-    def _validate_right_ascension(cls, value: Any, info: ValidationInfo) -> float:
-        """Validate the right ascension input.
-
-        Parameters
-        ----------
-        value : Any
-            The value given as input.
-        info : ValidationInfo
-            The validation information object.
-
-        Returns
-        -------
-        float
-            The right ascension in units of degrees.
-        """
-        return validate_quantity_units(
-            value=value,
-            field_name=info.field_name,
-            unit_equivalency=(u.deg,)
-        )
-
-    @field_validator('host_star_declination')
-    def _validate_declination(cls, value: Any, info: ValidationInfo) -> float:
-        """Validate the declination input.
-
-        Parameters
-        ----------
-        value : Any
-            The value given as input.
-        info : ValidationInfo
-            The validation information object.
-
-        Returns
-        -------
-        float
-            The declination in units of degrees.
-        """
-        return validate_quantity_units(
-            value=value,
-            field_name=info.field_name,
-            unit_equivalency=(u.deg,)
-        )
 
     @property
     def n_grid_points(self) -> int:
@@ -105,14 +48,14 @@ class LocalZodi(BaseSource):
         wavelengths = self._phringe._instrument.wavelength_bin_centers
         #
         host_star_right_ascension = (
-            self.host_star_right_ascension
-            if self.host_star_right_ascension is not None
-            else self._phringe._scene.star.right_ascension
+            self._phringe._scene.star.right_ascension
+            if self._phringe._scene.star is not None
+            else self._phringe._observation.host_star_right_ascension
         )
         host_star_declination = (
-            self.host_star_declination
-            if self.host_star_declination is not None
-            else self._phringe._scene.star.declination
+            self._phringe._scene.star.declination
+            if self._phringe._scene.star is not None
+            else self._phringe._observation.host_star_declination
         )
         solar_ecliptic_latitude = (
             self._solar_ecliptic_latitude

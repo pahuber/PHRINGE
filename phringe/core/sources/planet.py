@@ -44,10 +44,6 @@ class Planet(BaseSource):
         The object to load custom SEDs. If None, a blackbody spectrum is generated.
     grid_position: Tuple[int, int], optional
         The grid position of the planet in the sky. If None, the position is calculated from its orbital elements.
-    host_star_distance: float or str or Quantity, optional
-        The distance of the host star from the planet in units of length. Only required if no host star is specified in the scene.
-    host_star_mass: float or str or Quantity, optional
-        The mass of the host star in units of weight. Only required if no host star is specified in the scene.
     """
     name: str
     propagate_orbit: bool
@@ -62,8 +58,6 @@ class Planet(BaseSource):
     true_anomaly: Union[str, float, Quantity]
     sed_loader: Union[SEDLoader, None]
     grid_position: Tuple = None
-    host_star_distance: Union[str, float, Quantity] = None
-    host_star_mass: Union[str, float, Quantity] = None
 
     @field_validator('argument_of_periapsis')
     def _validate_argument_of_periapsis(cls, value: Any, info: ValidationInfo) -> float:
@@ -209,42 +203,6 @@ class Planet(BaseSource):
         """
         return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.deg,))
 
-    @field_validator('host_star_distance')
-    def _validate_host_star_distance(cls, value: Any, info: ValidationInfo) -> float:
-        """Validate the host star distance input.
-
-        Parameters
-        ----------
-        value : Any
-            Value given as input.
-        info : ValidationInfo
-            Validation information for the field.
-
-        Returns
-        -------
-        float
-            Host star distance in units of meters.
-        """
-        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,))
-
-    @field_validator('host_star_mass')
-    def _validate_host_star_mass(cls, value: Any, info: ValidationInfo) -> float:
-        """Validate the host star mass input.
-
-        Parameters
-        ----------
-        value : Any
-            Value given as input.
-        info : ValidationInfo
-            Validation information for the field.
-
-        Returns
-        -------
-        float
-            Host star mass in units of kilograms.
-        """
-        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.kg,))
-
     @cached_property
     def _proj_ang_pos(self) -> Tensor:
         """Return the projected angular position of the planet as a tensor of shape 2 x 1 or 2 x n_time_steps.
@@ -255,9 +213,9 @@ class Planet(BaseSource):
             Tensor containing the projected angular position of the planet.
         """
         host_star_distance = (
-            self.host_star_distance
-            if self.host_star_distance is not None
-            else self._phringe._scene.star.distance
+            self._phringe._scene.star.distance
+            if self._phringe._scene.star is not None
+            else self._phringe._observation.host_star_distance
         )
         return self._get_proj_sky_pos() / host_star_distance
 
@@ -280,9 +238,9 @@ class Planet(BaseSource):
     @property
     def solid_angle(self) -> Union[float, Tensor]:
         host_star_distance = (
-            self.host_star_distance
-            if self.host_star_distance is not None
-            else self._phringe._scene.star.distance
+            self._phringe._scene.star.distance
+            if self._phringe._scene.star is not None
+            else self._phringe._observation.host_star_distance
         )
         return torch.pi * (self.radius / host_star_distance) ** 2
 
@@ -350,9 +308,9 @@ class Planet(BaseSource):
         dtype = torch.float32
 
         host_star_mass = (
-            self.host_star_mass
-            if self.host_star_mass is not None
-            else self._phringe._scene.star.mass
+            self._phringe._scene.star.mass
+            if self._phringe._scene.star is not None
+            else self._phringe._observation.host_star_mass
         )
 
         a = torch.tensor(self.semi_major_axis, dtype=dtype, device=device)

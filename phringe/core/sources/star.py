@@ -120,29 +120,7 @@ class Star(BaseSource):
 
         :return: The central habitable zone radius in meters.
         """
-        incident_solar_flux_inner, incident_solar_flux_outer = 1.7665, 0.3240
-        parameter_a_inner, parameter_a_outer = 1.3351E-4, 5.3221E-5
-        parameter_b_inner, parameter_b_outer = 3.1515E-9, 1.4288E-9
-        parameter_c_inner, parameter_c_outer = -3.3488E-12, -1.1049E-12
-        temperature_difference = self.temperature - 5780
-
-        incident_stellar_flux_inner = (
-                incident_solar_flux_inner
-                + parameter_a_inner * temperature_difference
-                + parameter_b_inner * temperature_difference ** 2
-                + parameter_c_inner * temperature_difference ** 3
-        )
-        incident_stellar_flux_outer = (
-                incident_solar_flux_outer
-                + parameter_a_outer * temperature_difference
-                + parameter_b_outer * temperature_difference ** 2
-                + parameter_c_outer * temperature_difference ** 3
-        )
-
-        radius_inner = np.sqrt(self.luminosity / 3.86e26 / incident_stellar_flux_inner)
-        radius_outer = np.sqrt(self.luminosity / 3.86e26 / incident_stellar_flux_outer)
-
-        return ((radius_outer + radius_inner) / 2 * u.au).si.value
+        return self.get_habitable_zone_center(self.temperature, self.radius)
 
     @property
     def n_grid_points(self) -> int:
@@ -184,3 +162,46 @@ class Star(BaseSource):
 
         # Broadcast to grid dimension
         return spectral_energy_distribution[:, None, None]
+
+    @staticmethod
+    def get_habitable_zone_center(temperature: float, radius: float) -> float:
+        """Return the central habitable zone radius of the star in meters.
+        Calculated as defined in Kaltenegger+2017.
+
+        Parameters
+        ----------
+        temperature : float
+            The temperature of the star in Kelvin.
+        radius : float
+            The radius of the star in meters.
+
+        Returns
+        -------
+        float
+            The central habitable zone radius in meters.
+        """
+        incident_solar_flux_inner, incident_solar_flux_outer = 1.7665, 0.3240
+        parameter_a_inner, parameter_a_outer = 1.3351E-4, 5.3221E-5
+        parameter_b_inner, parameter_b_outer = 3.1515E-9, 1.4288E-9
+        parameter_c_inner, parameter_c_outer = -3.3488E-12, -1.1049E-12
+        temperature_difference = temperature - 5780
+
+        incident_stellar_flux_inner = (
+                incident_solar_flux_inner
+                + parameter_a_inner * temperature_difference
+                + parameter_b_inner * temperature_difference ** 2
+                + parameter_c_inner * temperature_difference ** 3
+        )
+        incident_stellar_flux_outer = (
+                incident_solar_flux_outer
+                + parameter_a_outer * temperature_difference
+                + parameter_b_outer * temperature_difference ** 2
+                + parameter_c_outer * temperature_difference ** 3
+        )
+
+        luminosity = 4 * np.pi * radius ** 2 * sigma * temperature ** 4
+
+        radius_inner = np.sqrt(luminosity / 3.86e26 / incident_stellar_flux_inner)
+        radius_outer = np.sqrt(luminosity / 3.86e26 / incident_stellar_flux_outer)
+
+        return ((radius_outer + radius_inner) / 2 * u.au).si.value

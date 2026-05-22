@@ -52,9 +52,6 @@ class OptimalNullingBaseline(BaseModel):
         :return: The optimized nulling baseline in units of length
         """
         if self.angular_star_separation == 'habitable-zone':
-            if star_habitable_zone_central_angular_radius is None:
-                raise ValueError(
-                    'A star is required to optimize the nulling baseline for the habitable zone. Alternatively, set to an angular value instead of "habitable-zone".')
             angular_star_separation = star_habitable_zone_central_angular_radius
         else:
             angular_star_separation = self.angular_star_separation

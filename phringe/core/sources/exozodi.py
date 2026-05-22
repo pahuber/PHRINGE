@@ -1,13 +1,11 @@
-from typing import Any, Union
+from typing import Union
 
-import astropy.units as u
+import numpy as np
 import torch
-from pydantic import field_validator
-from pydantic_core.core_schema import ValidationInfo
+from scipy.constants import sigma
 from torch import Tensor
 
 from phringe.core.sources.base_source import BaseSource
-from phringe.io.validation import validate_quantity_units
 from phringe.util.grid import get_meshgrid
 from phringe.util.spectrum import get_blackbody_spectrum_si_units
 
@@ -19,34 +17,8 @@ class Exozodi(BaseSource):
     ----------
     level : float
         The level of the exozodi in local zodi levels.
-    host_star_luminosity : float, optional
-        The luminosity of the host star in units of luminosity. Only required if no host star is specified in the scene.
-    host_star_distance : float, optional
-        The distance to the host star in units of length. Only required if no host star is specified in the scene.
     """
     level: float
-    host_star_luminosity: Any = None
-    host_star_distance: Any = None
-
-    @field_validator('host_star_luminosity')
-    def _validate_host_star_luminosity(cls, value: Any, info: ValidationInfo) -> float:
-        """Validate the host star luminosity input.
-
-        :param value: Value given as input
-        :param info: ValidationInfo object
-        :return: The host star luminosity in units of luminosity
-        """
-        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.W,))
-
-    @field_validator('host_star_distance')
-    def _validate_host_star_distance(cls, value: Any, info: ValidationInfo) -> float:
-        """Validate the host star distance input.
-
-        :param value: Value given as input
-        :param info: ValidationInfo object
-        :return: The host star distance in units of length
-        """
-        return validate_quantity_units(value=value, field_name=info.field_name, unit_equivalency=(u.m,))
 
     @property
     def _radial_fov_au(self) -> Tensor:
@@ -59,9 +31,9 @@ class Exozodi(BaseSource):
         """
         meter_to_au = 6.68459e-12
         host_star_distance = (
-            self.host_star_distance
-            if self.host_star_distance is not None
-            else self._phringe._scene.star.distance
+            self._phringe._scene.star.distance
+            if self._phringe._scene.star is not None
+            else self._phringe._observation.host_star_distance
         )
         fov_au = self._phringe._instrument._field_of_view * host_star_distance * meter_to_au
 
@@ -78,11 +50,10 @@ class Exozodi(BaseSource):
     def sky_brightness_distribution(self) -> Tensor:
         device = self._phringe._device
 
-        host_star_luminosity = (
-            self.host_star_luminosity
-            if self.host_star_luminosity is not None
-            else self._phringe._scene.star.luminosity
-        )
+        if self._phringe._scene.star is not None:
+            host_star_luminosity = self._phringe._scene.star.luminosity
+        else:
+            host_star_luminosity = 4 * np.pi * self._phringe._observation.host_star_radius ** 2 * sigma * self._phringe._observation.host_star_temperature ** 4
 
         ref_radius_au = torch.sqrt(torch.tensor(host_star_luminosity / 3.86e26, device=device, dtype=torch.float32))
         surface_maps = self.level * 7.12e-8 * (self._radial_fov_au / ref_radius_au) ** (-0.34)
@@ -109,11 +80,10 @@ class Exozodi(BaseSource):
 
     @property
     def spectral_energy_distribution(self) -> Tensor:
-        host_star_luminosity = (
-            self.host_star_luminosity
-            if self.host_star_luminosity is not None
-            else self._phringe._scene.star.luminosity
-        )
+        if self._phringe._scene.star is not None:
+            host_star_luminosity = self._phringe._scene.star.luminosity
+        else:
+            host_star_luminosity = 4 * np.pi * self._phringe._observation.host_star_radius ** 2 * sigma * self._phringe._observation.host_star_temperature ** 4
 
         # As described by LIFE II (Dannert+2022)
         temperature_map = (278.3 * (host_star_luminosity / 3.86e26) ** 0.25 * self._radial_fov_au ** (-0.5))

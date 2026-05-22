@@ -14,6 +14,12 @@ config = {
             wavelength='10 um',
             sep_at_max_mod_eff=DoubleBracewell.sep_at_max_mod_eff[0]
         ),
+        'host_star_radius': '1 Rsun',  # Only required as a reference if no star is present in the scene
+        'host_star_temperature': '5770 K',  # Only required as a reference if no star is present in the scene
+        'host_star_mass': '1 Msun',  # Only required as a reference if no star is present in the scene
+        'host_star_distance': '10 pc',  # Only required as a reference if no star is present in the scene
+        'host_star_right_ascension': '10 hourangle',  # Only required as a reference if no star is present in the scene
+        'host_star_declination': '45 deg',  # Only required as a reference if no star is present in the scene
     },
     'instrument': {
         'array_configuration_matrix': XArrayConfiguration.acm,  # Array configuration; collector position and motion
@@ -44,13 +50,8 @@ config = {
         },
         'exozodi': {
             'level': 3,
-            # 'host_star_distance': '10 pc', # Only required if no star is present in the scene
-            # 'host_star_luminosity': '1 Lsun', # Only required if no star is present in the scene
         },
-        'local_zodi': {
-            # 'host_star_right_ascension': '10 hourangle', # Only required if no star is present in the scene
-            # 'host_star_declination': '45 deg',}, # Only required if no star is present in the scene
-        },
+        'local_zodi': {},
         'planets': [
             {
                 'name': 'Earth',
