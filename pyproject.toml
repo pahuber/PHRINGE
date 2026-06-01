@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "phringe"
-version = "1.8.0"
+version = "1.8.1"
 description = "PHRINGE"
 authors = ["Philipp A. Huber <huberph@phys.ethz.ch>"]
 license = "MIT"
@@ -24,7 +24,7 @@ pydantic = "^2.6.1"
 torch = ">=2.9.0"
 scikit-image = "^0.23.2"
 tqdm = "^4.66.1"
-astropy = ">=5.3,<6"
+astropy = ">=6, <8"
 spectres = "^2.2.0"
 numpy = "^1.26.3"
 sympy = "^1.13.3"
