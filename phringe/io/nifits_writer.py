@@ -165,8 +165,8 @@ class NIFITSWriter:
         )
 
     @staticmethod
-    def _get_ni_iout(phringe) -> io.NI_IOUT:
-        niout_frames = phringe.get_counts(kernels=False).cpu().numpy().swapaxes(0, 2)  # TODO: Don't recreate this here
+    def _get_ni_iout(counts) -> io.NI_IOUT:
+        niout_frames = counts.swapaxes(0, 2)
 
         Iout_table = Table(data=(niout_frames,),
                            names=("VALUE",),
@@ -178,9 +178,12 @@ class NIFITSWriter:
         return myiout
 
     @staticmethod
-    def _get_ni_kiout(mydata) -> io.NI_KIOUT:
+    def _get_ni_kiout(phringe, counts) -> io.NI_KIOUT:
         # kiout_frames = np.mean(mydata[0, :, :].reshape(n_wl_ch, n_t_frames, dit_per_frame), axis=-1)
-        kiout_frames = np.transpose(mydata, (2, 1, 0))
+        kernels = phringe._instrument.kernels.tolist()
+        kernel_counts = np.einsum('ij, jkl -> ikl', kernels, counts)
+
+        kiout_frames = np.transpose(kernel_counts, (2, 1, 0))
         KIout_table = Table(data=(kiout_frames,), names=("VALUE",), dtype=(float,))
         KIout_header = io.fits.Header()
         mykiout = io.NI_KIOUT(data_table=KIout_table, header=KIout_header, unit=u.photon)
@@ -259,8 +262,8 @@ class NIFITSWriter:
         ni_fov = self._get_ni_fov(phringe, wl_bin_centers, n_t_frames)
         oi_wavelength = self._get_oi_wavelength(wl_bin_centers, wl_bin_widths)
         ni_mod = self._get_ni_mod(n_t_frames, n_wl_ch, n_tel, phringe, time_frames, start_time)
-        ni_iout = self._get_ni_iout(phringe)
-        ni_kiout = self._get_ni_kiout(counts)
+        ni_iout = self._get_ni_iout(counts)
+        ni_kiout = self._get_ni_kiout(phringe, counts)
         ni_kcov = self._get_ni_kcov(counts, n_t_frames)
         ni_kmat = self._get_ni_kmat(phringe)
 

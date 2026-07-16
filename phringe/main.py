@@ -226,6 +226,21 @@ class PHRINGE:
             filename: str = None,
             name_suffix: str = ''
     ):
+        # Check that raw counts (kernels=False) i.e. shape (N_outputs x N_wavelengths x N_time_steps)
+        expected_shape = (
+            self._instrument.number_of_outputs,
+            len(self._instrument.wavelength_bin_centers),
+            len(self.simulation_time_steps),
+        )
+
+        if tuple(counts.shape) != expected_shape:
+            raise ValueError(
+                "Invalid counts shape. Expected raw output counts with shape "
+                f"(N_outputs, N_wavelengths, N_time_steps) = {expected_shape}, "
+                f"but received {tuple(counts.shape)}. "
+                "Make sure the data were generated with kernels=False."
+            )
+
         NIFITSWriter().write(
             phringe=self,
             counts=counts,
