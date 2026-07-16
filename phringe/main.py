@@ -3,6 +3,7 @@ from typing import Union, overload, Tuple
 
 import numpy as np
 import torch
+from astropy.time import Time
 from sympy import lambdify, symbols
 from torch import Tensor
 
@@ -214,8 +215,25 @@ class PHRINGE:
 
         return amplitude_perturbation, phase_perturbation, polarization_perturbation
 
-    def export_nifits(self, counts: torch.Tensor, path: Path = Path('.'), filename: str = None, name_suffix: str = ''):
-        NIFITSWriter().write(self, counts, output_dir=path)
+    def export_nifits(
+            self,
+            counts: torch.Tensor,
+            start_time: Time = Time.now(),
+            array: str = 'Unknown',
+            observer: str = 'Unknown',
+            target_object: str = 'Unknown',
+            path: Path = Path('.'),
+            filename: str = None,
+            name_suffix: str = ''
+    ):
+        NIFITSWriter().write(
+            phringe=self,
+            counts=counts,
+            start_time=start_time,
+            array=array,
+            observer=observer,
+            target_object=target_object,
+            output_dir=path)
 
     def get_collector_positions(self):
         """Return the collector positions of the instrument as a tensor of shape (2 x N_inputs x N_time).

@@ -1,12 +1,20 @@
+from __future__ import annotations
+
 from copy import copy
 from pathlib import Path
+from typing import TYPE_CHECKING
+from typing import Union
 
 import nifits.io.niio as io
 import numpy as np
 import sympy as sp
+import torch
 from astropy import units as u
 from astropy.table import Table, Column
 from astropy.time import Time
+
+if TYPE_CHECKING:
+    from phringe.main import PHRINGE
 
 
 class NIFITSWriter:
@@ -14,8 +22,21 @@ class NIFITSWriter:
     """
 
     @staticmethod
-    def _get_header() -> io.fits.Header:
-        header = io.fits.Header()
+    def _get_header(start_time, array, observer, target_object) -> io.fits.Header:
+        header = copy(
+            io.NI_NIFITS_DEFAULT_HEADER
+            + io.NI_NIFITS_OPTIONAL_KEYWORDS
+        )
+
+        header["DATE"] = Time.now().isot
+        header["DATE-OBS"] = start_time.isot
+        header["MJD-OBS"] = start_time.mjd
+        header["ORIGIN"] = "PHRINGE Simulation"
+        header["TELESCOP"] = array
+        header["INSTRUME"] = array
+        header["OBSERVER"] = observer
+        header["OBJECT"] = target_object
+        header["INSMODE"] = "Nulling Interferometry"
 
         return header
 
@@ -133,7 +154,7 @@ class NIFITSWriter:
         return myiout
 
     @staticmethod
-    def _get_ni_kiout(phringe, mydata) -> io.NI_KIOUT:
+    def _get_ni_kiout(mydata) -> io.NI_KIOUT:
         # kiout_frames = np.mean(mydata[0, :, :].reshape(n_wl_ch, n_t_frames, dit_per_frame), axis=-1)
         kiout_frames = np.transpose(mydata, (2, 1, 0))  # TODO: Are units as expected by NIFITS? ph/s
         KIout_table = Table(data=(kiout_frames,), names=("VALUE",), dtype=(float,))
@@ -168,7 +189,17 @@ class NIFITSWriter:
 
         return io.OI_WAVELENGTH(data_table=Table([oi_wl_col, oi_wlw_col]), )
 
-    def write(self, phringe, counts, output_dir: Path, fits_suffix: str = ''):
+    def write(
+            self,
+            phringe: PHRINGE,
+            counts: Union[torch.Tensor, np.ndarray],
+            start_time: Time,
+            array: str,
+            observer: str,
+            target_object: str,
+            output_dir: Path = Path('.'),
+            fits_suffix: str = ''
+    ):
         """Write data to NIFITS format.
         """
         time_frames = phringe.get_time_steps().cpu().numpy()
@@ -178,13 +209,16 @@ class NIFITSWriter:
         n_wl_ch = len(wl_bin_centers)
         n_tel = phringe.get_collector_positions().shape[1]
 
-        header = self._get_header()
+        if isinstance(counts, torch.Tensor):
+            counts = counts.cpu().numpy()
+
+        header = self._get_header(start_time, array, observer, target_object)
         ni_catm = self._get_ni_catm(phringe, wl_bin_centers)
         ni_fov = self._get_ni_fov(phringe, wl_bin_centers, n_t_frames)
         oi_wavelength = self._get_oi_wavelength(wl_bin_centers, wl_bin_widths)
         ni_mod = self._get_ni_mod(n_t_frames, n_wl_ch, n_tel, phringe, time_frames)
         ni_iout = self._get_ni_iout(phringe)
-        ni_kiout = self._get_ni_kiout(phringe, counts)
+        ni_kiout = self._get_ni_kiout(counts)
         ni_kcov = self._get_ni_kcov(counts, n_t_frames)
         ni_kmat = self._get_ni_kmat(phringe)
 
@@ -199,6 +233,7 @@ class NIFITSWriter:
             ni_kcov=ni_kcov,
             ni_kmat=ni_kmat
         )
+        mynifit.refresh_primary_header(all=True)
 
         filename = output_dir.joinpath(f'data{fits_suffix}.nifits')
         hdu = mynifit.to_nifits(filename, overwrite=True)
