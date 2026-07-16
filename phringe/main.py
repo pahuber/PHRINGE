@@ -214,8 +214,8 @@ class PHRINGE:
 
         return amplitude_perturbation, phase_perturbation, polarization_perturbation
 
-    def export_nifits(self, path: Path = Path('.'), filename: str = None, name_suffix: str = ''):
-        NIFITSWriter().write(self, output_dir=path)
+    def export_nifits(self, counts: torch.Tensor, path: Path = Path('.'), filename: str = None, name_suffix: str = ''):
+        NIFITSWriter().write(self, counts, output_dir=path)
 
     def get_collector_positions(self):
         """Return the collector positions of the instrument as a tensor of shape (2 x N_inputs x N_time).

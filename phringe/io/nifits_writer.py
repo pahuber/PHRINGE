@@ -1,112 +1,149 @@
+from copy import copy
 from pathlib import Path
+
+import nifits.io.niio as io
+import numpy as np
+import sympy as sp
+from astropy import units as u
+from astropy.table import Table, Column
+from astropy.time import Time
 
 
 class NIFITSWriter:
     """Class representation of the NIFITS writer.
     """
 
-    # TODO: Basic implementation of NIFITS
+    @staticmethod
+    def _get_header() -> io.fits.Header:
+        header = io.fits.Header()
 
-    def write(self, phringe, output_dir: Path, fits_suffix: str = '', dit_per_frame=20):
-        """Write data to NIFITS format.
-        To be determined:
-        0. time parameters
-        1. wavelength
-        2. catm
-        3. fov
-        4. mod_phas
-        5. iout
-        6. kiout
-        7. kcov
-        8. appxy
-        9. kmat
-        10. arr_col
-        """
+        return header
 
-        # Import packages
-        import numpy as np
-        import nifits.io.oifits as io
-        from astropy.table import Table, Column
-        from astropy import units as u
-        from copy import copy
-        import torch
-        import sympy as sp
+    @staticmethod
+    def _get_ni_catm(phringe, wl_bin_centers) -> io.NI_CATM:
+        one_catm_numpy = np.array(
+            phringe._instrument.complex_amplitude_transfer_matrix.evalf(),
+            dtype=np.complex_
+        )
+        my_ni_catm = np.array([one_catm_numpy for _ in wl_bin_centers])
 
-        # 0. Time parameters
-        all_time_steps = phringe.get_time_steps().cpu().numpy()
-        n_t_frames = len(phringe.get_time_steps()) \
-                     // dit_per_frame
-        time_frames = np.mean(all_time_steps.reshape(n_t_frames, dit_per_frame), axis=1)
-        seconds = time_frames - time_frames[0]
-        overhead_for_nifits = 1  # Placeholder to include overhead, currently set to 1.
-        exptimes_for_nifits = np.gradient(seconds) * overhead_for_nifits
+        return io.NI_CATM(data_array=my_ni_catm)
 
-        # 1. Wavelengths
-        wl_bin_centers = phringe.get_wavelength_bin_centers().cpu().numpy()
-        wl_bin_widths = phringe.get_wavelength_bin_widths().cpu().numpy()
-        n_wl_ch = len(wl_bin_centers)
-        #
-        oi_wl_col = Column(data=wl_bin_centers, name="EFF_WAVE", dtype=float)
-        oi_wlw_col = Column(data=wl_bin_widths, name="EFF_BAND", dtype=float)
-        my_wl_table = Table([oi_wl_col, oi_wlw_col])
-        myiowl = io.OI_WAVELENGTH(data_table=Table([oi_wl_col, oi_wlw_col]), )
+    @staticmethod
+    def _get_ni_fov(phringe, wl_bin_centers, n_t_frames) -> io.NI_FOV:
+        fov_header = copy(io.NI_FOV_DEFAULT_HEADER)
+        fov_header["FOV_TELDIAM"] = (phringe._instrument.aperture_diameter.item())
+        fov_header["FOV_TELDIAM_UNIT"] = "m"
 
-        # 2. CATM
-        one_catm_numpy = np.array(phringe._instrument.complex_amplitude_transfer_matrix.evalf(),
-                                  dtype=np.complex_)
-        my_ni_catm = np.array([one_catm_numpy for awl in wl_bin_centers])
-        mycatm = io.NI_CATM(data_array=my_ni_catm)
-        n_tel = my_ni_catm.shape[-1]
+        ni_fov = io.NI_FOV.simple_from_header(
+            fov_header,
+            lamb=wl_bin_centers,
+            n=n_t_frames
+        )
 
-        # 3. FOV
-        # inspired from scifysim.director.prepare_injector and scify_space_test
-        copy(io.NI_FOV_DEFAULT_HEADER)
-        my_FOV_header = copy(io.NI_FOV_DEFAULT_HEADER)
-        my_FOV_header["FOV_TELDIAM"] = (phringe._instrument.aperture_diameter.item())
-        my_FOV_header["FOV_TELDIAM_UNIT"] = "m"
-        my_ni_fov = io.NI_FOV.simple_from_header(header=my_FOV_header,
-                                                 lamb=wl_bin_centers,
-                                                 n=n_t_frames)
+        return ni_fov
 
-        # 4. MOD
-        # inspired from scify_space_test
-        mod_phas = []
-        for atime in time_frames:
-            # Placeholder for phase shift due to wavefront effects in space
-            g_wavefront = np.zeros((n_wl_ch, n_tel), dtype=complex)
-            # Placeholder for factor representing amplitude loss inside the instrument
-            g_internal = np.ones((n_wl_ch, n_tel), dtype=complex)
-            throughput = np.ones(n_wl_ch) * phringe._instrument.throughput
-            my_total_phasor = throughput[:, None] * np.exp(1j * g_wavefront) * g_internal
-            # original line: total_phasor = throughput[:, None]
-            #                              * np.exp(1j*g_wavefront) * g_internal
-            mod_phas.append(my_total_phasor)
-        mod_phas = np.array(mod_phas)
+    @staticmethod
+    def _get_ni_mod(n_t_frames, n_wl_ch, n_tel, phringe, time_frames) -> io.NI_MOD:
+        def _get_times_relative():
+            return Column(data=time_frames - time_frames[0], name="TIME", unit="", dtype=float)
 
-        # 5. IOUT
-        niout_frames = np.zeros((n_t_frames, n_wl_ch, n_tel))
-        # get_counts returns dimensions [n app, n wls, n t steps]
-        iout_counts = phringe.get_counts()
-        # nifits expects [n tsteps, n wls, n app]
-        reshaped_iout = iout_counts.unfold(dimension=2, size=dit_per_frame, step=dit_per_frame)
-        mean_iout = torch.mean(reshaped_iout, dim=-1)
-        niout_frames = (mean_iout.permute(2, 1, 0)).cpu().numpy()
+        def _get_int_times():
+            overhead_for_nifits = 1  # Placeholder to include overhead, currently set to 1.
+
+            return Column(
+                data=np.gradient(time_frames - time_frames[0]) * overhead_for_nifits,
+                name="INT_TIME",
+                unit="s",
+                dtype=float
+            )
+
+        def _get_mod_phase():
+            mod_phas = []
+            for atime in time_frames:
+                # Placeholder for phase shift due to wavefront effects in space
+                g_wavefront = np.zeros((n_wl_ch, n_tel), dtype=complex)
+                # Placeholder for factor representing amplitude loss inside the instrument
+                g_internal = np.ones((n_wl_ch, n_tel), dtype=complex)
+                throughput = np.ones(n_wl_ch) * phringe._instrument.throughput
+                my_total_phasor = throughput[:, None] * np.exp(1j * g_wavefront) * g_internal
+                # original line: total_phasor = throughput[:, None]
+                #                              * np.exp(1j*g_wavefront) * g_internal
+                mod_phas.append(my_total_phasor)
+            mod_phas = np.array(mod_phas).swapaxes(0, 1).swapaxes(1, 2)
+
+            return Column(data=mod_phas, name="MOD_PHAS", unit=None, dtype=complex)
+
+        def _get_mjd():
+            return Column(data=Time.now().mjd + np.asarray(times_relative) / 86400.0, name="MJD", unit="d")
+
+        def _get_ap_xy():
+            t, tm, b = sp.symbols('t tm b')
+            acm_w_b_tm = (phringe._instrument.array_configuration_matrix.subs(
+                [(b, phringe._observation._nulling_baseline),
+                 (tm, phringe._observation.modulation_period)]))
+            acm_w_b_tm_num = sp.lambdify([t], acm_w_b_tm, modules="numpy")
+            # arraylocpertimestep = np.array([acm_w_b_tm_num(t) for t in all_time_steps])
+            # reshaped_array = arraylocpertimestep.reshape(n_t_frames, dit_per_frame, *arraylocpertimestep.shape[1:])
+            # appxy_frames_for_nifits = np.mean(reshaped_array, axis=1).transpose(0, 2, 1)
+            ap_xy = phringe.get_collector_positions().swapaxes(0, 1)
+
+            return Column(data=ap_xy, name="AP_XY", unit="m", dtype=float)
+
+        def _get_arr_col():
+            arrcol = np.ones((n_t_frames, n_tel)) * (np.pi * np.array(phringe._instrument.aperture_diameter) ** 2 / 4)
+            arrcol = arrcol.swapaxes(0, 1
+                                     )
+            return Column(data=arrcol, name="COL_AR", unit="m^2", dtype=float)
+
+        def _get_fov_index():
+            fov_index = np.ones(len(time_frames))
+
+            return Column(data=fov_index, name="FOV_INDEX", unit=None, dtype=int)
+
+        times_relative = _get_times_relative()
+        int_times = _get_int_times()
+        mod_phas = _get_mod_phase()
+        mjd = _get_mjd()
+        ap_xy = _get_ap_xy()
+        arr_col = _get_arr_col()
+        fov_index = _get_fov_index()
+
+        mod_phas, ap_xy, arr_col = [
+            np.moveaxis(array, -1, 0)
+            for array in (mod_phas, ap_xy, arr_col)
+        ]
+
+        mymod_table = Table()
+        mymod_table.add_columns((times_relative, int_times, mod_phas, mjd, ap_xy, arr_col, fov_index))
+
+        return io.NI_MOD(mymod_table)
+
+    @staticmethod
+    def _get_ni_iout(phringe) -> io.NI_IOUT:
+        niout_frames = phringe.get_counts().cpu().numpy().swapaxes(0, 2)  # TODO: Are units as expected by NIFITS? ph/s
+
         Iout_table = Table(data=(niout_frames,),
-                           names=("value",),
+                           names=("VALUE",),
                            dtype=(float,), )
         Iout_header = io.fits.Header()
         myiout = io.NI_IOUT(data_table=Iout_table, header=Iout_header,
                             unit=u.photon / u.s)
 
-        # 6. KIOUT
-        # phringe.get_data has shape (n differential outputs, n wavelength bins, n timesteps)
-        mydata = phringe.get_counts(kernels=True).cpu().numpy()
-        kiout_frames = np.mean(mydata[0, :, :].reshape(n_wl_ch, n_t_frames, dit_per_frame), axis=-1)
-        KIout_table = Table(data=(kiout_frames,), names=("value",), dtype=(float,))
+        return myiout
+
+    @staticmethod
+    def _get_ni_kiout(phringe, mydata) -> io.NI_KIOUT:
+        # kiout_frames = np.mean(mydata[0, :, :].reshape(n_wl_ch, n_t_frames, dit_per_frame), axis=-1)
+        kiout_frames = np.transpose(mydata, (2, 1, 0))  # TODO: Are units as expected by NIFITS? ph/s
+        KIout_table = Table(data=(kiout_frames,), names=("VALUE",), dtype=(float,))
         KIout_header = io.fits.Header()
         mykiout = io.NI_KIOUT(data_table=KIout_table, header=KIout_header, unit=u.photon / u.s)
 
-        # 7. KCOV
+        return mykiout
+
+    @staticmethod
+    def _get_ni_kcov(mydata, n_t_frames, dit_per_frame=20) -> io.NI_KCOV:  # TODO: Check dit per frame
         mykcov = np.array([np.cov(mydata[0, :, it * dit_per_frame: it * dit_per_frame + dit_per_frame])
                            for it in range(n_t_frames)])
         kcov_header = io.fits.Header()
@@ -115,62 +152,53 @@ class NIFITSWriter:
         mykcov = io.NI_KCOV(data_array=mykcov, header=kcov_header, unit=u.photon ** 2 / u.s ** 2)
         mykcov.name = "NI_KCOV"
 
-        # 8. APPXY
-        t, tm, b = sp.symbols('t tm b')
-        acm_w_b_tm = (phringe._instrument.array_configuration_matrix.subs(
-            [(b, phringe._observation._nulling_baseline),
-             (tm, phringe._observation.modulation_period)]))
-        acm_w_b_tm_num = sp.lambdify([t], acm_w_b_tm, modules="numpy")
-        arraylocpertimestep = np.array([acm_w_b_tm_num(t) for t in all_time_steps])
-        reshaped_array = arraylocpertimestep.reshape(n_t_frames, dit_per_frame, *arraylocpertimestep.shape[1:])
-        appxy_frames_for_nifits = np.mean(reshaped_array, axis=1).transpose(0, 2, 1)
+        return mykcov
 
-        # 9. KMAT
-        # Currently hard-coded for one differential output. To be revised if there are multiple pairs.
-        # diffouts = phringe._instrument.differential_outputs
-        # diffouts = [(2, 3), ]
-        # kmat = [0] * my_ni_catm.shape[-2]
-        # for i, val in enumerate([1, -1]):
-        #     kmat[diffouts[0][i]] = val
+    @staticmethod
+    def _get_ni_kmat(phringe) -> io.NI_KMAT:
         kmat = phringe._instrument.kernels.tolist()
-        mykmat = io.NI_KMAT(data_array=np.array([kmat], dtype=float))
+        mykmat = io.NI_KMAT(data_array=np.array(kmat, dtype=float))
 
-        # 10. ARRCOL
-        arrcol = np.ones((n_t_frames, n_tel)) * (
-                np.pi * np.array(phringe._instrument.aperture_diameter) ** 2
-                / 4)
+        return mykmat
 
-        # 11. Take everything and save to nifits
-        times_relative = Column(data=time_frames - time_frames[0], name="TIME",
-                                unit="", dtype=float)
-        int_times = Column(data=np.gradient(time_frames - time_frames[0])
-                                * overhead_for_nifits,
-                           name="INT_TIME", unit="s", dtype=float)
-        mod_phas = Column(data=mod_phas, name="MOD_PHAS",
-                          unit=None, dtype=complex)
-        appxy = Column(data=appxy_frames_for_nifits, name="APPXY",
-                       unit="m", dtype=float)
-        arrcol = Column(data=arrcol, name="ARRCOL",
-                        unit="m^2", dtype=float)
-        fov_index = np.ones(len(time_frames))
-        fov_index = Column(data=fov_index, name="FOV_INDEX",
-                           unit=None, dtype=int)
+    @staticmethod
+    def _get_oi_wavelength(wl_bin_centers, wl_bin_widths) -> io.OI_WAVELENGTH:
+        oi_wl_col = Column(data=wl_bin_centers, name="EFF_WAVE", dtype=float)
+        oi_wlw_col = Column(data=wl_bin_widths, name="EFF_BAND", dtype=float)
 
-        mymod_table = Table()
-        mymod_table.add_columns((times_relative, int_times, mod_phas,
-                                 appxy, arrcol, fov_index))
-        mynimod = io.NI_MOD(mymod_table)
-        myheader = io.fits.Header()
+        return io.OI_WAVELENGTH(data_table=Table([oi_wl_col, oi_wlw_col]), )
 
-        mynifit = io.nifits(header=myheader,
-                            ni_catm=mycatm,
-                            ni_fov=my_ni_fov,
-                            oi_wavelength=myiowl,
-                            ni_mod=mynimod,
-                            ni_iout=myiout,
-                            ni_kiout=mykiout,
-                            ni_kcov=mykcov,
-                            ni_kmat=mykmat)
+    def write(self, phringe, counts, output_dir: Path, fits_suffix: str = ''):
+        """Write data to NIFITS format.
+        """
+        time_frames = phringe.get_time_steps().cpu().numpy()
+        n_t_frames = len(time_frames)
+        wl_bin_centers = phringe.get_wavelength_bin_centers().cpu().numpy()
+        wl_bin_widths = phringe.get_wavelength_bin_widths().cpu().numpy()
+        n_wl_ch = len(wl_bin_centers)
+        n_tel = phringe.get_collector_positions().shape[1]
+
+        header = self._get_header()
+        ni_catm = self._get_ni_catm(phringe, wl_bin_centers)
+        ni_fov = self._get_ni_fov(phringe, wl_bin_centers, n_t_frames)
+        oi_wavelength = self._get_oi_wavelength(wl_bin_centers, wl_bin_widths)
+        ni_mod = self._get_ni_mod(n_t_frames, n_wl_ch, n_tel, phringe, time_frames)
+        ni_iout = self._get_ni_iout(phringe)
+        ni_kiout = self._get_ni_kiout(phringe, counts)
+        ni_kcov = self._get_ni_kcov(counts, n_t_frames)
+        ni_kmat = self._get_ni_kmat(phringe)
+
+        mynifit = io.nifits(
+            header=header,
+            ni_catm=ni_catm,
+            ni_fov=ni_fov,
+            oi_wavelength=oi_wavelength,
+            ni_mod=ni_mod,
+            ni_iout=ni_iout,
+            ni_kiout=ni_kiout,
+            ni_kcov=ni_kcov,
+            ni_kmat=ni_kmat
+        )
 
         filename = output_dir.joinpath(f'data{fits_suffix}.nifits')
         hdu = mynifit.to_nifits(filename, overwrite=True)
