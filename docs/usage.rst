@@ -5,11 +5,15 @@ Usage
 A `PHRINGE` script starts with an instance of the :doc:`PHRINGE <source/phringe>` class. Upon its initialization, the user
 has to specify the observation, instrument and astrophysical scene parameters. This can be done in two ways, as described below.
 
+.. note::
+    It is recommended to run `PHRINGE` on a GPU, as the simulation gets computationally expensive quickly and may take a substantial amount of time on CPUs.
+
 1. Using Config Files (Recommended)
 -----------------------------------
 
-The recommended way to set up a `PHRINGE` simulation is to use a configuration `config file <tutorials/first_example.rst>`_ together with a :doc:`Configuration <source/configuration>` object.
+The recommended way to set up a `PHRINGE` simulation is to use a `config file <_static/config.py>`_ together with a :doc:`Configuration <source/configuration>` object (see `First Example <tutorials/first_example_a.rst>`_).
 The following example shows how to calculate the detector counts using this approach:
+
 
 .. code-block:: python
 
@@ -27,7 +31,7 @@ The following example shows how to calculate the detector counts using this appr
 2. Manually Creating Objects (Advanced)
 ---------------------------------------
 
-Manually create the :doc:`Observation <source/observation>`, :doc:`Instrument <source/instrument>` and :doc:`Scene <source/scene>` objects.
+Alternatively, one can manually create the :doc:`Observation <source/observation>`, :doc:`Instrument <source/instrument>` and :doc:`Scene <source/scene>` objects (see `Advanced Example <tutorials/advanced_example_a.rst>`_).
 This might be required for more advanced use cases such as looping through a parameter space.
 The following example shows how to calculate the detector counts using this approach:
 
@@ -52,5 +56,3 @@ The following example shows how to calculate the detector counts using this appr
 
 
 
-.. note::
-    It is recommended to run `PHRINGE` on a GPU, as the simulation gets computationally expensive quickly and may take a substantial amount of time on CPUs.
