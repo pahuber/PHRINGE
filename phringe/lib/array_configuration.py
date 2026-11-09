@@ -7,15 +7,6 @@ class BaseArrayConfiguration:
     acm = None
 
 
-class XArrayConfiguration(BaseArrayConfiguration):
-    q = 6
-    acm = (b / 2
-           * Matrix([[cos(2 * pi / tm * t), -sin(2 * pi / tm * t)],
-                     [sin(2 * pi / tm * t), cos(2 * pi / tm * t)]])
-           * Matrix([[q, q, -q, -q],
-                     [1, -1, -1, 1]]))
-
-
 class KiteArrayConfiguration(BaseArrayConfiguration):
     c = 1.69
     beta = 2 * atan(1 / c)
@@ -28,7 +19,14 @@ class KiteArrayConfiguration(BaseArrayConfiguration):
                      [sin(th[0]), sin(th[1]), sin(th[2]), sin(th[3])]]))
 
 
-class LinearArrayConfiguration(BaseArrayConfiguration):
+class Linear2ArrayConfiguration(BaseArrayConfiguration):
+    acm = (Matrix([[cos(2 * pi / tm * t), -sin(2 * pi / tm * t)],
+                   [sin(2 * pi / tm * t), cos(2 * pi / tm * t)]])
+           * Matrix([[-b / 2, b / 2],
+                     [0, 0]]))
+
+
+class Linear4ArrayConfiguration(BaseArrayConfiguration):
     c = 1.69
     beta = 2 * atan(1 / c)
     th = [pi / 2 - beta, pi / 2, 2 * pi / 2, 3 * pi / 2]
@@ -47,6 +45,15 @@ class PentagonArrayConfiguration(BaseArrayConfiguration):
                      [sin(2 * pi / tm * t), cos(2 * pi / tm * t)]])
            * Matrix([[cos(th[0]), cos(th[1]), cos(th[2]), cos(th[3]), cos(th[4])],
                      [sin(th[0]), sin(th[1]), sin(th[2]), sin(th[3]), sin(th[4])]]))
+
+
+class XArrayConfiguration(BaseArrayConfiguration):
+    q = 6
+    acm = (b / 2
+           * Matrix([[cos(2 * pi / tm * t), -sin(2 * pi / tm * t)],
+                     [sin(2 * pi / tm * t), cos(2 * pi / tm * t)]])
+           * Matrix([[q, q, -q, -q],
+                     [1, -1, -1, 1]]))
 
 
 class Test(BaseArrayConfiguration):
