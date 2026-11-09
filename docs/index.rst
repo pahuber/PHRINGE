@@ -34,7 +34,7 @@ For questions and other inquiries, please contact Philipp A. Huber at `huberph@p
    features
    installation
    usage
-   tutorials/first_example
+   tutorials/first_example_a
 
 .. toctree::
    :maxdepth: 2

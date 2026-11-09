@@ -1,7 +1,7 @@
 .. _use_custom_spectrum:
 
-Custom Spectrum
-===============
+Custom Input Spectrum
+=====================
 
 `PHRINGE` can automatically generate blackbody spectra for the ``Planet`` objects in the ``Scene``, but also allows
 the use of custom spectra. This is specified by the ``sed_loader`` argument of the ``Planet`` class.

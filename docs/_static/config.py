@@ -27,7 +27,7 @@ config = {
         'kernels': DoubleBracewell.kernels,  # Kernel matrix
         'aperture_diameter': '3.5 m',
         'nulling_baseline_max': '600 m', # If the optimal nulling baseline is greater than this value, it will be set to this value
-        'nulling_baseline_min': '25 m', # If the optimal nulling baseline is smaller than this value, it will be set to this value
+        'nulling_baseline_min': '15 m', # If the optimal nulling baseline is smaller than this value, it will be set to this value
         'spectral_resolving_power': 20,  # Usually at least 100 is recommended
         'wavelength_min': '4 um',
         'wavelength_max': '18.5 um',

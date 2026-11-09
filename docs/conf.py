@@ -28,6 +28,11 @@ extensions = [
 
 master_doc = "index"
 
+exclude_patterns = [
+    "_build",
+    "**/.ipynb_checkpoints",
+]
+
 # -- Notebook execution ------------------------------------------------------
 
 nbsphinx_execute = "never"

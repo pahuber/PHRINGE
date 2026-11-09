@@ -3,7 +3,7 @@
 Custom Instrument
 =================
 
-`PHRINGE` provides a couple predefined ``Instrument``s, but also allows the creation of custom instruments.
+`PHRINGE` provides a couple predefined ``Instrument`` objects, but also allows the creation of custom instruments.
 This requires the specification of the ``array_configuration_matrix``, the ``complex_amplitude_transfer_matrix`` and the ``kernels`` arguments,
 
 .. code-block:: Python
@@ -18,6 +18,7 @@ This requires the specification of the ``array_configuration_matrix``, the ``com
         quantum_efficiency=quantum_efficiency,
         spectral_resolving_power=spectral_resolving_power,
         throughput=throughput,
+        wavelength_bands_boundaries: list
         wavelength_min=Union[str, float, Quantity],
         wavelength_max=Union[str, float, Quantity]
     )
@@ -29,7 +30,7 @@ Array Configuration Matrix
 --------------------------
 The array configuration matrix describes the time-dependent positions of the collector spacecraft.
 It has the shape (2 x N_collectors); the two rows corresponding to the x and y coordinates. The matrix is usually a function
-of time, ``t``, the modulation period of the array, ``tm^`` and the nulling baseline, ``b``.
+of time, ``t``, the modulation period of the array, ``tm`` and the nulling baseline, ``b``.
 
 For instance, the baseline design of LIFE features a rotating Emma-X configuration features 4 collectors arranged in an X-shape.
 We can express this as
@@ -89,8 +90,14 @@ Kernels
 -------
 The kernels are created by the difference of pairwise outputs of the beam combiner.
 Different beam combiners can have different numbers of differential outputs. They are specified in
-`PHRINGE` as matrix of shape (N_kernels x N_inputs). For instance, the dual Bracewell nuller has one differnetial output formed by the third and fourth outputs.
-Thus:
+`PHRINGE` as matrix of shape (N_kernels x N_inputs). For instance, the dual Bracewell nuller has one differential output formed by the third and fourth outputs:
+
+.. math::
+    \mathbf{K} = \begin{bmatrix}
+        0 & 0 & 1 & -1
+    \end{bmatrix}.
+
+Thus in Python:
 
 .. code-block:: python
 

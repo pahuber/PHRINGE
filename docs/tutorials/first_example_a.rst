@@ -1,10 +1,10 @@
-.. _first_example:
+.. _first_example_a:
 
 First Example
 =============
 
 This example illustrates the **basic usage of PHRINGE with a config file** that can be downloaded `here <https://github.com/pahuber/PHRINGE/blob/main/docs/_static/config.py>`_.
-For more advanced use cases, see the `Advanced Example <advanced_example.ipynb>`_.
+For more advanced use cases, see the `Advanced Example <advanced_example.rst>`_.
 
 In the following, we will generate and plot a synthetic data set for a double Bracewell nuller in the Emma-X configuration observing an Earth-like exoplanet (with a blackbody spectrum) around a Sun twin at 10 pc.
 
