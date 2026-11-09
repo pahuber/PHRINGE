@@ -47,3 +47,9 @@ class Kernel5(BaseBeamCombiner):
     kernels = Matrix([[0, 1, 0, 0, -1],
                       [0, 0, 1, -1, 0]])
     sep_at_max_mod_eff = [1.03, 0.66]
+
+
+class SingleBracewell(BaseBeamCombiner):
+    catm = 1 / sqrt(2) * Matrix([[1, 1], [1, -1]])
+    kernels = Matrix([[0, 1]])
+    sep_at_max_mod_eff = [0.6]  # TODO: Check this constant
