@@ -18,11 +18,11 @@ To install `PHRINGE` from PyPI, run the following command in your terminal:
 
 Installation From GitHub
 ------------------------
-To install `PHRINGE` from GitHub, run the following command in your terminal:
+To install `PHRINGE` from the main branch on GitHub, run the following command in your terminal:
 
 .. code-block:: console
 
-    pip install git+https://github.com/pahuber/PHRINGE
+    pip install git+https://github.com/pahuber/PHRINGE.git@main
 
 
 Alternatively, the repository can be cloned from GitHub and then installed using:
@@ -45,4 +45,4 @@ You can test the installation in a Python console with:
 
     which_animals_have_fringes()
 
-If everything worked well, you should get an approprioate answer.
+If everything worked well, you should get an appropriate answer.
