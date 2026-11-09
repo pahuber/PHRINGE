@@ -11,7 +11,6 @@ from scipy.stats import ncx2
 from torch import Tensor
 from torch.distributions import Normal
 
-from phringe.lib.baseline import OptimalNullingBaseline
 from phringe.util.spectrum import get_blackbody_spectrum_si_units
 
 if TYPE_CHECKING:
@@ -281,45 +280,47 @@ class Analysis:
 
         return pdet_ed, pdet_np
 
-    def get_sep_at_max_mod_eff(
-            current_nulling_baseline: float,
-            optimal_nulling_baseline: OptimalNullingBaseline,
-            get_instrument_response: classmethod,
-            wavelength_bin_centers: Tensor,
-    ) -> Union[float, tuple]:
-        """Return the separation at maximum modulation efficiency in units of (optimized wavelength / nulling baseline).
-
-        Parameters
-        ----------
-        optimal_nulling_baseline : OptimalNullingBaseline
-            Optimal nulling baseline object to extract the optimized wavelength that was used in the setup.
+    def get_sep_at_max_mod_eff(self):
+        """Return the baseline optimization constant (see 0.59 in LIFE paper II, Dannert+2022 in Equation 12). Note that
+        this is aperture size-dependent due to the FOV taper.
 
         Returns
         -------
-        torch.Tensor
-            Separation at maximum modulation efficiency.
+        np.ndarray
+            Array of baseline optimization constants for all kernels.
         """
-        optimized_wavelength = optimal_nulling_baseline.wavelength
+        fov_horiz = 1e-6
 
-        ir = get_instrument_response(kernels=True, perturbations=False,
-                                     fov=2 * optimized_wavelength / current_nulling_baseline)
+        # Set fix spatial and spectral resolution for local calculation
+        n_grid_orig = self.phringe._grid_size
+        n_grid_local = 200
+        spec_res_power_orig = self.phringe._instrument.spectral_resolving_power
+        spec_res_power_local = 20
 
-        mod_eff = torch.sqrt(torch.sum(ir ** 2, dim=2))
+        self.phringe._grid_size = n_grid_local
+        self.phringe._instrument.spectral_resolving_power = spec_res_power_local
 
-        closest_wavelength_idx = (torch.abs(wavelength_bin_centers - optimized_wavelength)).argmin()
+        # Get instrument response and modulation efficiency for each kernel
+        ir = self.phringe.get_instrument_response(fov=fov_horiz, perturbations=False, kernels=True)
+        mod_effs_per_kernel = torch.sqrt(torch.sum(ir ** 2, dim=2)).diagonal(dim1=-2, dim2=-1)[
+            :, :, n_grid_local // 2:]
 
-        seps = []
+        # Get separation at maximum modulation efficiency for each kernel
+        _, indices = mod_effs_per_kernel.max(dim=-1)
 
-        for i in range(mod_eff.shape[0]):
-            mod_eff_curve = torch.diag(mod_eff[i, closest_wavelength_idx]).cpu().numpy()
+        hfov_diag_linspace = np.linspace(0, np.sqrt(2) * fov_horiz / 2, n_grid_local // 2)
 
-            l = len(mod_eff_curve)
-            mod_eff_curve = mod_eff_curve[l // 2:]
-            # curve += mod_eff_curve
+        max_ang_seps = hfov_diag_linspace[indices.cpu().numpy()]
+        wavelengths = self.phringe.get_wavelength_bin_centers().cpu().numpy()
+        nulling_baseline = self.phringe.get_nulling_baseline()
 
-            max_idx = np.argmax(mod_eff_curve)
-            max_sep = np.linspace(0, np.sqrt(2), l // 2)[max_idx]
+        seps_at_max_mod_eff = max_ang_seps * nulling_baseline / wavelengths[None, :]
 
-            seps.append(max_sep)
+        # Average over all wavelengths for more robust results
+        avg_seps_at_max_mod_eff = np.median(seps_at_max_mod_eff, axis=1)
 
-        return tuple(seps) if len(seps) > 1 else seps[0]
+        # Reset grid size and spectral resolution
+        self.phringe._grid_size = n_grid_orig
+        self.phringe._instrument.spectral_resolving_power = spec_res_power_orig
+
+        return avg_seps_at_max_mod_eff
