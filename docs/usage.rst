@@ -42,13 +42,13 @@ The following example shows how to calculate the detector counts using this appr
 
     # Create objects manually
     obs = Observation(...) # Arguments omitted here for brevity
-    phringe.set(obs) # This will overwrite the the observation if defined in the config file
+    phringe.set(obs) # This will overwrite the observation if previously defined in a Configuration object
 
     inst = Instrument(...) # Arguments omitted here for brevity
-    phringe.set(inst) # This will overwrite the instrument if defined in the config file
+    phringe.set(inst) # This will overwrite the instrument if previously defined in a Configuration object
 
     scene = Scene(...) # Arguments omitted here for brevity
-    phringe.set(scene) # This will overwrite the scene if defined in the config file
+    phringe.set(scene) # This will overwrite the scene if previously defined in a Configuration object
 
     # Calculate counts
     counts = phringe.get_counts()
