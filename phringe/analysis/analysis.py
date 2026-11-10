@@ -11,6 +11,7 @@ from scipy.stats import ncx2
 from torch import Tensor
 from torch.distributions import Normal
 
+from phringe.core.observation import Observation
 from phringe.util.spectrum import get_blackbody_spectrum_si_units
 
 if TYPE_CHECKING:
@@ -291,14 +292,24 @@ class Analysis:
         """
         fov_horiz = 1e-6
 
-        # Set fix spatial and spectral resolution for local calculation
+        # Set fix spatial and spectral resolution and observation for local calculation
         n_grid_orig = self.phringe._grid_size
-        n_grid_local = 200
+        n_grid_local = 140
         spec_res_power_orig = self.phringe._instrument.spectral_resolving_power
         spec_res_power_local = 20
+        obs_orig = self.phringe._observation
+        nulling_baseline = 15 * u.m
+        obs_local = Observation(
+            solar_ecliptic_latitude=0 * u.deg,  # Alternatively: '0 deg' or 0
+            total_integration_time=1 * u.day,  # Alternatively: '1 d' or 86400
+            detector_integration_time=0.002 * u.d,  # Alternatively: '600 s' or 600
+            modulation_period=1 * u.day,  # Alternatively: '1 d' or 86400
+            nulling_baseline=nulling_baseline,
+        )
 
         self.phringe._grid_size = n_grid_local
         self.phringe._instrument.spectral_resolving_power = spec_res_power_local
+        self.phringe.set(obs_local)
 
         # Get instrument response and modulation efficiency for each kernel
         ir = self.phringe.get_instrument_response(fov=fov_horiz, perturbations=False, kernels=True)
@@ -312,15 +323,19 @@ class Analysis:
 
         max_ang_seps = hfov_diag_linspace[indices.cpu().numpy()]
         wavelengths = self.phringe.get_wavelength_bin_centers().cpu().numpy()
-        nulling_baseline = self.phringe.get_nulling_baseline()
 
         seps_at_max_mod_eff = max_ang_seps * nulling_baseline / wavelengths[None, :]
 
         # Average over all wavelengths for more robust results
         avg_seps_at_max_mod_eff = np.median(seps_at_max_mod_eff, axis=1)
 
-        # Reset grid size and spectral resolution
+        # Reset grid size and spectral resolution and observation
         self.phringe._grid_size = n_grid_orig
         self.phringe._instrument.spectral_resolving_power = spec_res_power_orig
+
+        if obs_orig is not None:
+            self.phringe.set(obs_orig)
+        else:
+            self.phringe._observation = None
 
         return avg_seps_at_max_mod_eff

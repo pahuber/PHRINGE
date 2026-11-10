@@ -129,6 +129,11 @@ Note that this list must contain a value for each differential output; they are 
 
     .. code-block:: python
 
+        phringe = PHRINGE(gpu_index=1, seed=1, grid_size=40)
+
+        inst = Instrument(...)  # Define instrument
+        phringe.set(inst)
+
         sep_at_max_mod_eff = phringe.analysis.get_sep_at_max_mod_eff()
 
 They can then be used to get the optimal nulling baseline as follows:
