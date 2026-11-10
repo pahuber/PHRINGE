@@ -129,7 +129,7 @@ Note that this list must contain a value for each differential output; they are 
 
     .. code-block:: python
 
-        phringe = PHRINGE(gpu_index=1, seed=1, grid_size=40)
+        phringe = PHRINGE()
 
         inst = Instrument(...)  # Define instrument
         phringe.set(inst)

@@ -338,4 +338,4 @@ class Analysis:
         else:
             self.phringe._observation = None
 
-        return avg_seps_at_max_mod_eff
+        return avg_seps_at_max_mod_eff.value
