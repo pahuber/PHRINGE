@@ -125,8 +125,11 @@ We specify this in Python as a list containing the coefficient in front of the w
 Note that this list must contain a value for each differential output; they are usually different for different outputs.
 
 .. note::
-    These coefficients can be calculated by calculating the RMS of the instrument response throughout the observation and plotting it as a function of angular separation.
-    The maximum of this curve corresponds to the coefficient.
+    If unknown, the coefficients can be calculated using the following helper function after the instrument has been created:
+
+    .. code-block:: python
+
+        sep_at_max_mod_eff = phringe.analysis.get_sep_at_max_mod_eff()
 
 They can then be used to get the optimal nulling baseline as follows:
 
