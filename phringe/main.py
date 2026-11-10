@@ -273,7 +273,7 @@ class PHRINGE:
             -1)
 
     def get_field_of_view(self) -> Tensor:
-        """Return the field of view.
+        """Return the field of view for each wavelength.
 
         Returns
         -------
@@ -284,7 +284,7 @@ class PHRINGE:
 
     def get_instrument_response(self, fov: float = 7.27e-7, kernels=False, perturbations=True) -> Tensor:
         """Get the empirical instrument response. This corresponds to an array of shape (n_out x n_wavelengths x
-        n_time_steps x n_grid x n_grid) if kernels=False and (n_diff_out x n_wavelengths x n_time_steps x n_grid x
+        n_time_steps x n_grid x n_grid) if kernels=False and (n_kernel x n_wavelengths x n_time_steps x n_grid x
         n_grid) if kernels=True.
 
         Parameters
@@ -388,7 +388,7 @@ class PHRINGE:
 
     def get_model_counts(self, spectral_energy_distribution: np.ndarray, kernels: bool = False, **kwargs) -> np.ndarray:
         """Return the planet template (model) counts for a given spectral energy distribution and  either 1) sky
-        coordinates or 2) orbital elements.The output array has shape (n_diff_out x n_wavelengths x n_time_steps) if
+        coordinates or 2) orbital elements.The output array has shape (n_kernel x n_wavelengths x n_time_steps) if
         kernels=True and (n_out x n_wavelengths x n_time_steps) if kernels=False.
 
         Parameters
@@ -491,7 +491,7 @@ class PHRINGE:
         return counts[:, :, :, 0, 0]
 
     def get_null_depth(self) -> Tensor:
-        """Return the null depth as an array of shape (n_diff_out x n_wavelengths x n_time_steps).
+        """Return the null depth as an array of shape (n_kernel x n_wavelengths x n_time_steps).
 
 
         Returns
